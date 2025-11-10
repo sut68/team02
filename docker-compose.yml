@@ -1,0 +1,37 @@
+version: "3.9"
+
+services:
+  # web:
+  #   build: .
+  #   container_name: next-app
+  #   ports:
+  #     - "3000:3000"
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     # Make sure this matches what your app expects (e.g. Prisma, Drizzle, etc.)
+  #     DATABASE_URL: postgres://postgres:postgres@db:5432/mydb
+  #   depends_on:
+  #     - db
+  #   command: npm run dev
+  #   # For production switch to:
+  #   # command: npm run start
+  #   # and make sure you build in the Dockerfile
+
+  db:
+    image: postgres:16-alpine
+    container_name: next-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mydb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      # Optional: expose to host for direct access (pgAdmin, DBeaver, etc.)
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:
+
