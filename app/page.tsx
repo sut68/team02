@@ -1,14 +1,4 @@
-<<<<<<< HEAD
-import { PrimaryButton, CancelButton } from "./components/ui/Button";
 
-export default function Home(){
-  return (
-    <div className="flex gap-5 p-5  ">
-      <PrimaryButton >ยืนยัน</PrimaryButton>
-      <CancelButton>ยกเลิก</CancelButton>
-      
-    </div>
-=======
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -50,6 +40,5 @@ export default function RootLayout({
         </div>
       </body>
     </html>
->>>>>>> cf25cc46882a7d5c7d4009660fa69b187aa6f7f0
   );
 }
