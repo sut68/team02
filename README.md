@@ -1,10 +1,19 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+***🗄️ Database Migration
+Before running the project, deploy Prisma migrations:
+npx prisma migrate deploy --schema=./prisma/schema.prisma
+***👥 Team Members
+Team 02 – School of Engineering, SUT
+| 👩‍💻 Name | 🆔 Student ID | 💼 System |
+|------------|---------------|----------|
+| นางสาวชุติกาญจน์ ชมกลาง | B6631345 | ระบบสมาชิกและการลงทะเบียน | ระบบจัดการของที่ระลึก |
+| [ชื่อสมาชิกที่ 3] | [รหัสนักศึกษา] | [ชื่อระบบย่อย] |
+| [ชื่อสมาชิกที่ 3] | [รหัสนักศึกษา] | [ชื่อระบบย่อย] |
+| [ชื่อสมาชิกที่ 4] | [รหัสนักศึกษา] | [ชื่อระบบย่อย] |
+| [ชื่อสมาชิกที่ 5] | [รหัสนักศึกษา] | [ชื่อระบบย่อย] |
 
-## Getting Started
 
+***🚀 Getting Started
 First, run the development server:
-
-```bash
 npm run dev
 # or
 yarn dev
@@ -12,27 +21,34 @@ yarn dev
 pnpm dev
 # or
 bun dev
-```
+Then open 👉 http://localhost:3000 in your browser.
+You can start editing the main page by modifying app/page.tsx.  
+The page auto-updates as you edit the file.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+***🧠 Tech Stack
+Next.js 14 – Frontend framework  
+TypeScript – Strongly typed language  
+Prisma ORM – Database ORM  
+PostgreSQL – Database  
+Tailwind CSS – Styling  
+Shadcn/UI – Components  
+Vercel – Deployment  
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+***📦 Deployment
+The easiest way to deploy this app is through Vercel.  
+Check the official Next.js Deployment Guide for more info.
+***🏁 Learn More
+Next.js Documentation
+Learn Next.js
+Prisma Documentation
+Tailwind CSS Docs
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+***🏫 About the Project
+This project was developed for the ENGi Hackathon 2025,  
+aimed at applying Agile Development principles to build innovative web applications  
+that improve processes within the Faculty of Engineering.
+> 💡 Focus on creating a scalable and impactful platform for real-world use.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-npx prisma migrate deploy --schema=./prisma/schema.prisma
+***🧾 License
+© 2025 Faculty of Engineering, Suranaree University of Technology  
+All rights reserved.
