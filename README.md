@@ -1,7 +1,9 @@
-***🗄️ Database Migration
+🗄️ Database Migration
 Before running the project, deploy Prisma migrations:
 npx prisma migrate deploy --schema=./prisma/schema.prisma
-***👥 Team Members
+
+
+👥 Team Members
 Team 02 – School of Engineering, SUT
 | 👩‍💻 Name | 🆔 Student ID | 💼 SubSystem 1 | 💼 SubSystem 2 |
 |------------|---------------|----------|----------|
@@ -12,7 +14,7 @@ Team 02 – School of Engineering, SUT
 | นางสาวพนิดา โต๊ะเหลือ | B6643041 | ระบบพิจารณาและอนุมัติการใช้งบประมาณ | ระบบสรุปผลและติดตามงบประมาณ |
 
 
-***🚀 Getting Started
+🚀 Getting Started
 First, run the development server:
 npm run dev
 # or
@@ -25,7 +27,8 @@ Then open 👉 http://localhost:3000 in your browser.
 You can start editing the main page by modifying app/page.tsx.  
 The page auto-updates as you edit the file.
 
-***🧠 Tech Stack
+
+🧠 Tech Stack
 Next.js 14 – Frontend framework  
 TypeScript – Strongly typed language  
 Prisma ORM – Database ORM  
@@ -34,21 +37,25 @@ Tailwind CSS – Styling
 Shadcn/UI – Components  
 Vercel – Deployment  
 
-***📦 Deployment
+📦 Deployment
 The easiest way to deploy this app is through Vercel.  
 Check the official Next.js Deployment Guide for more info.
-***🏁 Learn More
+
+
+🏁 Learn More
 Next.js Documentation
 Learn Next.js
 Prisma Documentation
 Tailwind CSS Docs
 
-***🏫 About the Project
+
+🏫 About the Project
 This project was developed for the ENGi Hackathon 2025,  
 aimed at applying Agile Development principles to build innovative web applications  
 that improve processes within the Faculty of Engineering.
 > 💡 Focus on creating a scalable and impactful platform for real-world use.
 
-***🧾 License
+
+🧾 License
 © 2025 Faculty of Engineering, Suranaree University of Technology  
 All rights reserved.
