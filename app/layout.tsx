@@ -1,6 +1,11 @@
+
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Roboto } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import Footer from "./components/layout/Footer";
+import Navbar from "./components/layout/Navbar";
+// import HomePage from "./content";
+ // ✅ path ที่ถูก (components อยู่ใน app)
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -9,12 +14,6 @@ const geistSans = Geist({
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const roboto = Roboto({
-  variable: "--font-roboto",
-  weight: ["400", "500", "700"],
   subsets: ["latin"],
 });
 
@@ -31,9 +30,21 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${roboto.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}suppressHydrationWarning={true}
       >
-        {children}
+        {/* ทำ layout ทั้งหน้าจอ */}
+        <div className="flex min-h-screen flex-col">
+          {/* Navbar อยู่ด้านบนทุกหน้า */}
+          <Navbar />
+          
+          {/* พื้นที่เนื้อหาหน้าแต่ละหน้า */}
+          <main className="flex-1 pt-10 md:pt-[100px] lg:pt-[120px]">
+            {children}
+          </main>
+          
+          {/* Footer ล่างสุดทุกหน้า */}
+          <Footer />
+        </div>
       </body>
     </html>
   );
