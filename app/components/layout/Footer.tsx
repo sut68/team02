@@ -22,21 +22,40 @@ export default function Footer() {
             </div>
             
             {/* ที่อยู่ */}
-            <div className="space-y-0.5 text-sm text-zinc-300 mb-8">
+            <a
+              href="https://www.google.com/maps/place/School+of+Engineering+Suranaree+University+of+Technology/@14.879059,102.0165177,17z/data=!3m1!4b1!4m6!3m5!1s0x311eadd139e38b57:0x9f49a4738b9055cf!8m2!3d14.879059!4d102.0190926!16s%2Fg%2F11h06v1vbf?entry=ttu&g_ep=EgoyMDI1MTExMS4wIKXMDSoASAFQAw%3D%3D"
+              target="_blank"
+              rel="noreferrer noopener"
+              aria-label="Open School of Engineering SUT on Google Maps"
+              className="space-y-0.5 text-sm text-zinc-300 mb-8 block hover:text-white"
+            >
               <p>อาคารวิชาการ 1</p>
               <p>มหาวิทยาลัยเทคโนโลยีสุรนารี</p>
               <p>111 ถ.มหาวิทยาลัย ต.สุรนารี</p>
-              <p>อ.เมือง จ.นครราชสีมา 30000</p>
-            </div>
+              <p>อ.เมืองนครราชสีมา จ.นครราชสีมา 30000</p>
+            </a>
             
             {/* เบอร์ + เมล */}
             <div className="space-y-1 text-sm text-zinc-300 mb-10">
-              <p>+66 4422 4224</p>
-              <a 
-                href="mailto:jeadmin@g.sut.ac.th" 
-                className="underline underline-offset-2 hover:text-white block"
+              <a
+                href="tel:+6644224224"
+                aria-label="Call +66 4422 4224"
+                className="flex items-center hover:text-white"
               >
-                jeadmin@g.sut.ac.th
+                <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.08 4.18 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.72c.12.99.37 1.95.73 2.86a2 2 0 0 1-.45 2.11L8.91 10.91a16 16 0 0 0 6 6l1.22-1.22a2 2 0 0 1 2.11-.45c.9.36 1.87.61 2.86.73A2 2 0 0 1 22 16.92z" />
+                </svg>
+                <span>+66 4422 4224</span>
+              </a>
+              <a
+                href="mailto:ieadmin@g.sut.ac.th"
+                aria-label="Email ieadmin@g.sut.ac.th"
+                className="flex items-center underline underline-offset-2 hover:text-white"
+              >
+                <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z" />
+                </svg>
+                <span>ieadmin@g.sut.ac.th</span>
               </a>
             </div>
             
@@ -50,7 +69,7 @@ export default function Footer() {
               ข้อมูลเกี่ยวกับ
             </h3>
             <div className="h-0.5 w-full bg-[#E85D1F] mb-6" />
-            <ul className="space-y-5 text-sm text-zinc-300">
+            <ul className="space-y-4 text-sm text-zinc-300">
               <li className="hover:text-white cursor-pointer">แนะนำ AlumniConnect</li>
               <li className="hover:text-white cursor-pointer">ข่าวสารและกิจกรรม</li>
               <li className="hover:text-white cursor-pointer">โครงการระดมทุนและการบริจาค</li>
@@ -65,7 +84,7 @@ export default function Footer() {
               ข้อมูลสำหรับ
             </h3>
             <div className="h-0.5 w-70 bg-[#E85D1F] mb-6" />
-            <ul className="space-y-5 text-sm text-zinc-300">
+            <ul className="space-y-4 text-sm text-zinc-300">
               <li className="hover:text-white cursor-pointer">ศิษย์เก่าและสมาชิก AlumniConnect</li>
               <li className="hover:text-white cursor-pointer">นักศึกษาปัจจุบันที่ต้องการเข้าร่วมเครือข่าย</li>
               <li className="hover:text-white cursor-pointer">ผู้บริจาคและผู้สนับสนุนโครงการ</li>
@@ -86,7 +105,7 @@ export default function Footer() {
           <div className="flex md-auto mr-0">
             {/* Facebook */}
             <a
-              href="#"
+              href="https://www.facebook.com/EngineeringSUT/?locale=th_TH"
               aria-label="Facebook"
               className="flex h-11 w-11 items-center justify-center rounded-full  text-white transition hover:bg-zinc-300"
             >
@@ -96,7 +115,7 @@ export default function Footer() {
             </a>
             {/* Instagram */}
             <a
-              href="#"
+              href="https://www.instagram.com/engineering.sut/#"
               aria-label="Instagram"
               className="flex h-11 w-11 items-center justify-center rounded-full text-white transition hover:bg-zinc-300"
             >
@@ -106,7 +125,7 @@ export default function Footer() {
             </a>
             {/* YouTube */}
             <a
-              href="#"
+              href="https://www.youtube.com/watch?v=dhI9mhN3TxM"
               aria-label="YouTube"
               className="flex h-11 w-11 items-center justify-center rounded-full text-white transition hover:bg-zinc-300"
             >

@@ -21,23 +21,6 @@ export const PrimaryButton = ({
   );
 };
 
-export const ConfirmButton = ({
-  children,
-  className,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement>) => {
-  return (
-    <button
-      // แก้ไข: เพิ่มช่องว่างหลัง ${base}
-      className={`${base} px-8 py-1 bg-[#F26522] text-white hover:bg-[#FB793C] w-28`}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-};
-
-
 export const CancelButton = ({
   children,
   className,
