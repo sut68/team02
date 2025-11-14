@@ -31,12 +31,14 @@ export default function Footer() {
             
             {/* เบอร์ + เมล */}
             <div className="space-y-1 text-sm text-zinc-300 mb-10">
-              <p>+66 4422 4224</p>
+              <a href="tel:+6644224224" className="hover:text-white block">
+                +66 4422 4224
+              </a>
               <a 
                 href="mailto:jeadmin@g.sut.ac.th" 
                 className="underline underline-offset-2 hover:text-white block"
               >
-                jeadmin@g.sut.ac.th
+                ieadmin@g.sut.ac.th
               </a>
             </div>
             
@@ -50,7 +52,7 @@ export default function Footer() {
               ข้อมูลเกี่ยวกับ
             </h3>
             <div className="h-0.5 w-full bg-[#E85D1F] mb-6" />
-            <ul className="space-y-5 text-sm text-zinc-300">
+            <ul className="space-y-4 text-sm text-zinc-300">
               <li className="hover:text-white cursor-pointer">แนะนำ AlumniConnect</li>
               <li className="hover:text-white cursor-pointer">ข่าวสารและกิจกรรม</li>
               <li className="hover:text-white cursor-pointer">โครงการระดมทุนและการบริจาค</li>
@@ -65,7 +67,7 @@ export default function Footer() {
               ข้อมูลสำหรับ
             </h3>
             <div className="h-0.5 w-70 bg-[#E85D1F] mb-6" />
-            <ul className="space-y-5 text-sm text-zinc-300">
+            <ul className="space-y-4 text-sm text-zinc-300">
               <li className="hover:text-white cursor-pointer">ศิษย์เก่าและสมาชิก AlumniConnect</li>
               <li className="hover:text-white cursor-pointer">นักศึกษาปัจจุบันที่ต้องการเข้าร่วมเครือข่าย</li>
               <li className="hover:text-white cursor-pointer">ผู้บริจาคและผู้สนับสนุนโครงการ</li>
@@ -86,7 +88,7 @@ export default function Footer() {
           <div className="flex md-auto mr-0">
             {/* Facebook */}
             <a
-              href="#"
+              href="https://www.facebook.com/EngineeringSUT/?locale=th_TH"
               aria-label="Facebook"
               className="flex h-11 w-11 items-center justify-center rounded-full  text-white transition hover:bg-zinc-300"
             >
@@ -96,7 +98,7 @@ export default function Footer() {
             </a>
             {/* Instagram */}
             <a
-              href="#"
+              href="https://www.instagram.com/engineering.sut/#"
               aria-label="Instagram"
               className="flex h-11 w-11 items-center justify-center rounded-full text-white transition hover:bg-zinc-300"
             >
@@ -106,7 +108,7 @@ export default function Footer() {
             </a>
             {/* YouTube */}
             <a
-              href="#"
+              href="https://www.youtube.com/watch?v=dhI9mhN3TxM"
               aria-label="YouTube"
               className="flex h-11 w-11 items-center justify-center rounded-full text-white transition hover:bg-zinc-300"
             >
