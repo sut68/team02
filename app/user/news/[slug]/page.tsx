@@ -3,7 +3,15 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-// Mock Data สำหรับหน้า Detail
+// ---------------- Mock Data สำหรับหน้า Detail ----------------
+
+type MetaItem = {
+  label: string;
+  value: string;
+  type: 'text' | 'link';
+  linkText?: string;
+};
+
 const mockDetailData = {
   title: 'DSA Mascot Contest',
   date: '31 ตุลาคม 2568',
@@ -18,8 +26,13 @@ const mockDetailData = {
   `,
   meta: [
     { label: 'ระยะเวลา', value: 'วันนี้ – 15 ต.ค. 2568', type: 'text' as const },
-    { label: 'ส่งผลงาน', value: 'https://forms.gle/HCHAR9JKPTF4wqG46', type: 'link' as const, linkText: 'คลิกที่นี่' },
-  ],
+    {
+      label: 'ส่งผลงาน',
+      value: 'https://forms.gle/HCHAR9JKPTF4wqG46',
+      type: 'link' as const,
+      linkText: 'คลิกที่นี่',
+    },
+  ] as MetaItem[],
   footerTags: [
     { text: '#DSAMascotContest', href: '#' },
     { text: '#SUT', href: '#' },
@@ -28,9 +41,8 @@ const mockDetailData = {
   author: 'ส่วนกิจกรรมนักศึกษา',
 };
 
-type MetaItem = (typeof mockDetailData.meta)[number];
+// ---------------- ฟังก์ชันแสดง meta data ----------------
 
-// ฟังก์ชันสำหรับแสดงผล meta data
 const renderMetaItem = (item: MetaItem) => (
   <div key={item.label} className="py-2">
     <p className="text-sm font-semibold text-gray-700">{item.label}</p>
@@ -49,10 +61,11 @@ const renderMetaItem = (item: MetaItem) => (
   </div>
 );
 
-// Main Component
+// ---------------- Main Component ----------------
+
 export default function NewsDetailPage({ params }: { params: { slug: string } }) {
   const data = mockDetailData;
-  // ถ้าอยากใช้ slug ภายหลังก็เอา params.slug มาเช็คได้
+  // ถ้าอยากใช้ slug จริงทีหลัง ค่อยมา map slug → data อีกที
 
   return (
     <div className="container mx-auto py-10 px-4 max-w-4xl text-left">
@@ -77,9 +90,10 @@ export default function NewsDetailPage({ params }: { params: { slug: string } })
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+      {/* Content + Sidebar (เรียงบน-ล่าง) */}
+      <div className="grid grid-cols-1 gap-8">
         {/* Content */}
-        <div className="md:col-span-8">
+        <div>
           <h2 className="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">
             รายละเอียดกิจกรรม
           </h2>
@@ -89,8 +103,8 @@ export default function NewsDetailPage({ params }: { params: { slug: string } })
         </div>
 
         {/* Sidebar */}
-        <aside className="md:col-span-4 space-y-4">
-          <div className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-200">
+        <aside className="space-y-4">
+          <div className="space-y-3">
             {data.meta.map(renderMetaItem)}
           </div>
 
@@ -113,29 +127,26 @@ export default function NewsDetailPage({ params }: { params: { slug: string } })
 
       <hr className="mt-8 border-gray-200" />
 
-      {/* Footer */}
-      <footer className="mt-5 flex ">
-  <div className="flex items-center gap-4">
+      {/* Footer ผู้เขียน (แบบในรูป) */}
+      <footer className="mt-6 flex ">
+        <div className="flex items-center gap-4">
+          {/* Avatar */}
+          <div className="w-12 h-12 rounded-full bg-gray-300 flex-shrink-0" />
 
-    {/* Avatar */}
-    <div className="w-12 h-12 rounded-full bg-gray-300 flex-shrink-0" />
+          {/* Author name */}
+          <span className="text-base font-semibold text-[#F26522]">
+            {data.author}
+          </span>
 
-    {/* Author Name */}
-    <span className="text-base font-semibold text-[#F26522]">
-      {data.author}
-    </span>
+          {/* Divider */}
+          <span className="text-gray-300">|</span>
 
-    {/* Divider */}
-    <span className="text-gray-300">|</span>
-
-    {/* ผู้เขียน */}
-    <span className="text-base text-gray-600">
-      ผู้เขียน
-    </span>
-
-  </div>
-</footer>
-
+          {/* ผู้เขียน */}
+          <span className="text-base text-gray-600">
+            ผู้เขียน
+          </span>
+        </div>
+      </footer>
     </div>
   );
 }
