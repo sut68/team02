@@ -11,7 +11,7 @@ export default function Navbar() {
   // (ในโปรเจกต์จริง คุณต้องดึงค่านี้มาจาก Auth Context หรือ Session)
   const [user, setUser] = useState({
     isAuthenticated: true, // ทดสอบการล็อกอิน
-    role: 'admi',         // 👈 ลองเปลี่ยนเป็น 'user' หรือ 'admin' เพื่อทดสอบ
+    role: 'admin',         // 👈 ลองเปลี่ยนเป็น 'user' หรือ 'admin' เพื่อทดสอบ
   });
 
   // 💡 2. ตัวแปรตรวจสอบ Role (นี่คือ Logic ที่คุณต้องการ)

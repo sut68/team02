@@ -4,6 +4,7 @@ import "./globals.css";
 import Footer from "./components/layout/Footer";
 import Navbar from "./components/layout/Navbar";
 
+
 const sutFont = localFont({
   src: [
     {
