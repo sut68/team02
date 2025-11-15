@@ -30,6 +30,8 @@ export default function ProfileEditForm() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [originalData, setOriginalData] = useState<FormData | null>(null);
 
   // ดึงข้อมูล profile ของผู้ใช้
   useEffect(() => {
@@ -42,10 +44,11 @@ export default function ProfileEditForm() {
       // const response = await fetch('/api/user/profile');
       // const data = await response.json();
       // setFormData(data);
+      // setOriginalData(data);
       
       // Mock data สำหรับทดสอบ
       setTimeout(() => {
-        setFormData({
+        const userData = {
           fullName: 'ธนวา กวดล',
           email: 'thanwa.eng@sut.ac.th',
           address: '199 หมู่ 9 ถนนมิตรภาพ',
@@ -56,7 +59,9 @@ export default function ProfileEditForm() {
           phone: '086-245-7930',
           password: '',
           confirmPassword: ''
-        });
+        };
+        setFormData(userData);
+        setOriginalData(userData);
         setLoading(false);
       }, 500);
     } catch (err) {
@@ -102,15 +107,22 @@ export default function ProfileEditForm() {
       // Mock update
       alert('อัปเดตข้อมูลสำเร็จ');
       setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
+      setIsEditing(false);
     } catch (err) {
       console.error('Error updating profile:', err);
       setError('เกิดข้อผิดพลาดในการอัปเดตข้อมูล');
     }
   };
 
+  const handleCancel = () => {
+    setIsEditing(false);
+    setError(null);
+    fetchUserProfile();
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-600">กำลังโหลดข้อมูล...</div>
       </div>
     );
@@ -118,23 +130,31 @@ export default function ProfileEditForm() {
 
 
   return (
-    <div className="min-h-screen py-12 px-4">
+    <div className="min-h-screen py-8 px-4">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold text-gray-800 mb-10">แก้ไขข้อมูลส่วนตัว</h1>
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl font-medium text-gray-800">แก้ไขข้อมูลส่วนตัว</h2>
+          <button
+            onClick={() => setIsEditing(true)}
+            className={`px-6 py-2 bg-orange-500 text-white rounded-md text-sm hover:bg-orange-600 transition ${isEditing ? 'invisible' : 'visible'}`}
+          >
+            แก้ไขข้อมูล
+          </button>
+        </div>
         
         {error && (
-          <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-md text-red-600">
+          <div className="text-red-500 text-sm mb-6">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          <div className="space-y-8">
+          <div className="space-y-6">
             {/* แถวที่ 1: ชื่อ-นามสกุล และ ที่อยู่ */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm text-gray-600 mb-2">
-                  ชื่อ-นามสกุล <span className="text-orange-500">*</span>
+                <label className="block text-sm text-gray-500 mb-2">
+                  ชื่อ-นามสกุล <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -143,12 +163,13 @@ export default function ProfileEditForm() {
                   onChange={handleChange}
                   placeholder="ธนวา กวดล"
                   required
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400 focus:border-orange-400 bg-white"
+                  disabled={!isEditing}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:outline-none focus:border-orange-400 disabled:bg-gray-50 disabled:text-gray-600 disabled:cursor-not-allowed"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-600 mb-2">
-                  ที่อยู่ <span className="text-orange-500">*</span>
+                <label className="block text-sm text-gray-500 mb-2">
+                  ที่อยู่ <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -157,16 +178,17 @@ export default function ProfileEditForm() {
                   onChange={handleChange}
                   placeholder="199 หมู่ 9 ถนนมิตรภาพ ตำบลสุรนารี อำเภอเมือง"
                   required
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400 focus:border-orange-400 bg-white"
+                  disabled={!isEditing}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:outline-none focus:border-orange-400 disabled:bg-gray-50 disabled:text-gray-600 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
 
             {/* แถวที่ 2: อีเมล และ ตำบล/อำเภอ */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm text-gray-600 mb-2">
-                  อีเมล <span className="text-orange-500">*</span>
+                <label className="block text-sm text-gray-500 mb-2">
+                  อีเมล <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
@@ -175,13 +197,14 @@ export default function ProfileEditForm() {
                   onChange={handleChange}
                   placeholder="thanwa.eng@sut.ac.th"
                   required
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400 focus:border-orange-400 bg-white"
+                  disabled={!isEditing}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:outline-none focus:border-orange-400 disabled:bg-gray-50 disabled:text-gray-600 disabled:cursor-not-allowed"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-600 mb-2">
-                    ตำบล <span className="text-orange-500">*</span>
+                  <label className="block text-sm text-gray-500 mb-2">
+                    ตำบล <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -190,12 +213,13 @@ export default function ProfileEditForm() {
                     onChange={handleChange}
                     placeholder="สุรนารี"
                     required
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400 focus:border-orange-400 bg-white"
+                    disabled={!isEditing}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:outline-none focus:border-orange-400 disabled:bg-gray-50 disabled:text-gray-600 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-2">
-                    อำเภอ <span className="text-orange-500">*</span>
+                  <label className="block text-sm text-gray-500 mb-2">
+                    อำเภอ <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -204,17 +228,18 @@ export default function ProfileEditForm() {
                     onChange={handleChange}
                     placeholder="เมืองนครราชสีมา"
                     required
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400 focus:border-orange-400 bg-white"
+                    disabled={!isEditing}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:outline-none focus:border-orange-400 disabled:bg-gray-50 disabled:text-gray-600 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
             </div>
 
             {/* แถวที่ 3: รหัสผ่าน และ จังหวัด/รหัสไปรษณีย์ */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm text-gray-600 mb-2">
-                  รหัสผ่าน <span className="text-orange-500">*</span>
+                <label className="block text-sm text-gray-500 mb-2">
+                  รหัสผ่าน <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="password"
@@ -222,13 +247,14 @@ export default function ProfileEditForm() {
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="ต้องมีอย่างน้อย 8 ตัวอักษร (เช่น Thanwa2025)"
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400 focus:border-orange-400 bg-white"
+                  disabled={!isEditing}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:outline-none focus:border-orange-400 disabled:bg-gray-50 disabled:text-gray-600 disabled:cursor-not-allowed"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-600 mb-2">
-                    จังหวัด <span className="text-orange-500">*</span>
+                  <label className="block text-sm text-gray-500 mb-2">
+                    จังหวัด <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -237,12 +263,13 @@ export default function ProfileEditForm() {
                     onChange={handleChange}
                     placeholder="นครราชสีมา"
                     required
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400 focus:border-orange-400 bg-white"
+                    disabled={!isEditing}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:outline-none focus:border-orange-400 disabled:bg-gray-50 disabled:text-gray-600 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-2">
-                    รหัสไปรษณีย์ <span className="text-orange-500">*</span>
+                  <label className="block text-sm text-gray-500 mb-2">
+                    รหัสไปรษณีย์ <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -252,17 +279,18 @@ export default function ProfileEditForm() {
                     placeholder="30000"
                     pattern="[0-9]{5}"
                     required
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400 focus:border-orange-400 bg-white"
+                    disabled={!isEditing}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:outline-none focus:border-orange-400 disabled:bg-gray-50 disabled:text-gray-600 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
             </div>
 
             {/* แถวที่ 4: ยืนยันรหัสผ่าน และ เบอร์โทรศัพท์ */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm text-gray-600 mb-2">
-                  ยืนยันรหัสผ่าน <span className="text-orange-500">*</span>
+                <label className="block text-sm text-gray-500 mb-2">
+                  ยืนยันรหัสผ่าน <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="password"
@@ -270,12 +298,13 @@ export default function ProfileEditForm() {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   placeholder="พิมพ์รหัสผ่านอีกครั้ง"
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400 focus:border-orange-400 bg-white"
+                  disabled={!isEditing}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:outline-none focus:border-orange-400 disabled:bg-gray-50 disabled:text-gray-600 disabled:cursor-not-allowed"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-600 mb-2">
-                  เบอร์โทรศัพท์ <span className="text-orange-500">*</span>
+                <label className="block text-sm text-gray-500 mb-2">
+                  เบอร์โทรศัพท์ <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="tel"
@@ -284,28 +313,31 @@ export default function ProfileEditForm() {
                   onChange={handleChange}
                   placeholder="086-245-7930"
                   required
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400 focus:border-orange-400 bg-white"
+                  disabled={!isEditing}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:outline-none focus:border-orange-400 disabled:bg-gray-50 disabled:text-gray-600 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
           </div>
 
           {/* Submit Buttons */}
-          <div className="flex justify-end gap-4 mt-10">
-            <button
-              type="button"
-              onClick={() => window.history.back()}
-              className="px-8 py-2.5 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition"
-            >
-              ยกเลิก
-            </button>
-            <button
-              type="submit"
-              className="px-8 py-2.5 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition"
-            >
-              บันทึก
-            </button>
-          </div>
+          {isEditing && (
+            <div className="flex justify-end gap-4 mt-8">
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="px-8 py-3 border border-gray-300 rounded-md text-gray-700 text-sm hover:bg-gray-50 transition"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="submit"
+                className="px-8 py-3 bg-orange-500 text-white rounded-md text-sm hover:bg-orange-600 transition"
+              >
+                บันทึก
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>
