@@ -225,12 +225,12 @@ export default function AdminManagementPage() {
                               onChange={(e) =>
                                 handleStatusChange(member.id, e.target.value as 'pending' | 'approved' | 'rejected')
                               }
-                              className={`appearance-none px-3 py-1 pr-8 rounded-full text-xs font-medium border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-orange-400 ${
+                              className={`appearance-none px-3 py-1 pr-8 rounded-full text-xs font-medium border-0 outline-none cursor-pointer transition-colors ${
                                 member.status === 'pending'
-                                  ? 'bg-gray-200 text-gray-700'
+                                  ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                   : member.status === 'approved'
-                                  ? 'bg-orange-100 text-orange-700'
-                                  : 'bg-red-100 text-red-700'
+                                  ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                                  : 'bg-red-100 text-red-700 hover:bg-red-200'
                               }`}
                             >
                               <option value="pending">รอดำเนินการ</option>
@@ -240,7 +240,13 @@ export default function AdminManagementPage() {
 
                             {/* ไอคอนลูกศรที่เราคุมตำแหน่งเองได้ */}
                             <ChevronDown
-                              className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-orange-700"
+                              className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 ${
+                                member.status === 'pending'
+                                  ? 'text-gray-700'
+                                  : member.status === 'approved'
+                                  ? 'text-orange-700'
+                                  : 'text-red-700'
+                              }`}
                             />
                           </div>
                         </td>
