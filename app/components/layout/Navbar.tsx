@@ -1,45 +1,111 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { LogOut } from "lucide-react";
 
 export default function Navbar() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [user, setUser] = useState<{
+    isAuthenticated: boolean;
+    role: string;
+    name?: string;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // 💡 1. สถานะผู้ใช้ (จำลอง)
-  // (ในโปรเจกต์จริง คุณต้องดึงค่านี้มาจาก Auth Context หรือ Session)
-  const [user, setUser] = useState({
-    isAuthenticated: true, // ทดสอบการล็อกอิน
-    role: 'admi',         // 👈 ลองเปลี่ยนเป็น 'user' หรือ 'admin' เพื่อทดสอบ
-  });
+  // Check authentication status (เรียกแค่ครั้งแรกเท่านั้น)
+  useEffect(() => {
+    let isMounted = true;
+    
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me', {
+          cache: 'no-store',
+        });
+        if (response.ok && isMounted) {
+          const userData = await response.json();
+          setUser({
+            isAuthenticated: true,
+            role: userData.userType,
+            name: userData.fullName,
+          });
+        } else if (isMounted) {
+          setUser(null);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setUser(null);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+    
+    checkAuth();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
-  // 💡 2. ตัวแปรตรวจสอบ Role (นี่คือ Logic ที่คุณต้องการ)
-  const isAdmin = user.isAuthenticated && user.role === 'admin';
-  const isLoggedIn = user.isAuthenticated;
+  const isAdmin = useMemo(() => user?.isAuthenticated && user?.role === 'admin', [user]);
+  const isLoggedIn = useMemo(() => user?.isAuthenticated, [user]);
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      setUser(null);
+      router.push('/auth/login');
+      window.location.href = '/auth/login'; // Force reload
+    } catch (error) {
+      // Silent error
+    }
+  }, [router]);
 
   useEffect(() => {
+    let ticking = false;
+    
     const handleScroll = () => {
-      if (window.scrollY === 0) {
-        setIsScrolled(false);
-      } else {
-        setIsScrolled(true);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (window.scrollY === 0) {
+            setIsScrolled(false);
+          } else {
+            setIsScrolled(true);
+          }
+          ticking = false;
+        });
+        ticking = true;
       }
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   // ----------------------------------------------------
   // Component ย่อย: ชุดเมนู (แสดงผลตาม Role)
   // ----------------------------------------------------
-  const DesktopMenu = () => (
-    <div className="hidden md:flex space-x-10 text-gray-700 font-medium item-center"
-    >
+  const DesktopMenu = useMemo(() => {
+    if (loading) {
+      return (
+        <div className="hidden md:flex space-x-10 text-gray-700 font-medium item-center min-h-10">
+          {/* Placeholder to prevent layout shift */}
+        </div>
+      );
+    }
 
-      {/* --- เมนูสำหรับผู้ใช้ทั่วไป --- */}
-      {!isAdmin && (
+    return (
+      <div className="hidden md:flex space-x-10 text-gray-700 font-medium item-center">
+
+        {/* --- เมนูสำหรับผู้ใช้ทั่วไป --- */}
+        {!isAdmin && (
         <>
           <div className="relative group">
             <Link href="/apply" className="flex items-center hover:text-[#F26522] transition-colors duration-200">
@@ -55,9 +121,9 @@ export default function Navbar() {
           <Link href="/forum" className="hover:text-gray-900">รับสมัครงาน</Link>
 
           <div className="relative group">
-            <button className="flex items-center hover:text-[#F26522] transition-colors duration-200">
-              <span className="material-icons ml-1 text-base">การระดมทุน</span>
-            </button>
+            <span className="flex items-center hover:text-[#F26522] transition-colors duration-200 cursor-pointer">
+              การระดมทุน
+            </span>
             <div className="absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50">
               <Link href="/donation" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">ระดมทุน</Link>
               <Link href="/fund" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">การบริจาค</Link>
@@ -65,7 +131,7 @@ export default function Navbar() {
           </div>
 
           <Link href="/budget" className="hover:text-gray-900">รายงานงบประมาณ</Link>
-          <Link href="/login" className="hover:text-gray-900">กระดานสนทนา</Link>
+          <Link href="/user/talk" className="hover:text-gray-900">กระดานสนทนา</Link>
         </>
       )}
 
@@ -97,9 +163,9 @@ export default function Navbar() {
           {/* 💡 1. L0: ตั้งชื่อ group เป็น group/l0 */}
           <div className="relative group/l0">
             {/* L0: ปุ่มหลัก "การระดมทุนและงบ" */}
-            <button className="flex items-center hover:text-[#F26522] transition-colors duration-200">
-              <span className="material-icons ml-1 text-base">การระดมทุนและงบ</span>
-            </button>
+            <span className="flex items-center hover:text-[#F26522] transition-colors duration-200 cursor-pointer">
+              การระดมทุนและงบ
+            </span>
 
             {/* 💡 2. L1: Dropdown Container (ฟัง group-hover/l0) */}
             <div className="absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover/l0:opacity-100 invisible group-hover/l0:visible transition-all duration-200 z-50">
@@ -107,10 +173,10 @@ export default function Navbar() {
               {/* 💡 3. L1 Item 1: "การระดมทุน" (ตั้งชื่อ group/l1) */}
               <div className="relative group/l1">
                 {/* ปุ่มสำหรับเปิดเมนู L2 */}
-                <button className="w-full flex justify-between items-center px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">
-                  <span className="material-icons ml-1 text-base">การระดมทุน</span>
+                <span className="w-full flex justify-between items-center px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200 cursor-pointer">
+                  การระดมทุน
                   {/* <span className="material-icons text-sm">chevron_right</span> */}
-                </button>
+                </span>
 
                 {/* 💡 4. L2: Dropdown (ฟัง group-hover/l1) */}
                 <div className="absolute left-full top-0 mt-0 w-48 bg-white shadow-lg group-hover/l1:opacity-100 invisible group-hover/l1:visible transition-all duration-200 z-50">
@@ -133,23 +199,38 @@ export default function Navbar() {
           </div>
 
           {/* <Link href="/budget" className="hover:text-gray-900">รายงานงบประมาณ</Link> */}
-          <Link href="/login" className="hover:text-gray-900">กระดานสนทนา</Link>
+          <Link href="/admin/talk" className="hover:text-gray-900">กระดานสนทนา</Link>
         </>
       )}
 
-      {/* --- เมนู Login/Profile --- */}
-      {isLoggedIn ? (
-        <Link href="/profile" className="hover:text-gray-900 mr-6">
-          โปรไฟล์
-        </Link>
-      ) : (
-        <Link href="/login" className="bg-[#F26522] text-white py-2 px-4 rounded hover:bg-orange-700">
-          เข้าสู่ระบบ
-        </Link>
-      )}
+      {/* --- เมนู Login/Profile/Logout --- */}
+      <div className={`transition-opacity duration-300 ${loading ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        {isLoggedIn ? (
+          <div className="flex items-center space-x-4">
+            {user?.name && (
+              <span className="text-sm text-gray-600">
+                สวัสดี, {user.name}
+              </span>
+            )}
+            <button
+              onClick={handleLogout}
+              className="flex items-center space-x-2 text-red-600 hover:text-red-700 transition-colors duration-200"
+              title="ออกจากระบบ"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>ออกจากระบบ</span>
+            </button>
+          </div>
+        ) : (
+          <Link href="/auth/login" className="bg-[#F26522] text-white py-2 px-4 rounded hover:bg-orange-700">
+            เข้าสู่ระบบ
+          </Link>
+        )}
+      </div>
 
-    </div>
-  );
+      </div>
+    );
+  }, [loading, isAdmin, isLoggedIn, user, handleLogout]);
 
   // ----------------------------------------------------
   // 💡 Main Component Render
@@ -169,12 +250,14 @@ export default function Navbar() {
               alt="ENGi logo"
               width={isScrolled ? 150 : 200}
               height={isScrolled ? 30 : 40}
+              priority
+              loading="eager"
             />
           </div>
         </Link>
 
         {/* 💡 แสดงเมนู Desktop (ที่ตรวจสอบ Role แล้ว) */}
-        <DesktopMenu />
+        {DesktopMenu}
 
         {/* Mobile Menu Button */}
         <button
@@ -195,14 +278,14 @@ export default function Navbar() {
           <Link href="/forum" className="py-2" onClick={() => setIsOpen(false)}>กระดานสนทนา</Link>
 
           {/* 💡 เมนูแอดมินใน Mobile */}
-          {isAdmin && (
+          {!loading && isAdmin && (
             <Link href="/admin" className="py-2 font-bold text-red-600" onClick={() => setIsOpen(false)}>
               แผงควบคุมแอดมิน
             </Link>
           )}
 
-          <Link href={isLoggedIn ? "/profile" : "/login"} className="py-2" onClick={() => setIsOpen(false)}>
-            {isLoggedIn ? "โปรไฟล์" : "เข้าสู่ระบบ"}
+          <Link href={isLoggedIn ? "/profile" : "/auth/login"} className="py-2" onClick={() => setIsOpen(false)}>
+            {loading ? "กำลังโหลด..." : (isLoggedIn ? "โปรไฟล์" : "เข้าสู่ระบบ")}
           </Link>
         </div>
       )}

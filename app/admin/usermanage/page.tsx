@@ -89,14 +89,34 @@ export default function AdminManagementPage() {
     return members.filter(m => m.status === status).length;
   };
 
-  const handleStatusChange = (memberId: string, newStatus: 'pending' | 'approved' | 'rejected') => {
+  const handleStatusChange = async (memberId: string, newStatus: 'pending' | 'approved' | 'rejected') => {
     const statusText = newStatus === 'pending' ? 'รอดำเนินการ' : newStatus === 'approved' ? 'อนุมัติแล้ว' : 'ไม่อนุมัติ';
-    const confirmed = confirm(`คุณต้องการเปลี่ยนสถานะเป็น "${statusText}" หรือไม่?`);
+    const confirmed = confirm(`คุณต้องการเปลี่ยนสถานะเป็น "${statusText}" หรือไม่?\n\n${newStatus !== 'pending' ? 'ระบบจะส่งอีเมลแจ้งเตือนไปยังผู้ใช้' : ''}`);
     
     if (confirmed) {
-      setMembers(members.map(member =>
-        member.id === memberId ? { ...member, status: newStatus } : member
-      ));
+      try {
+        const response = await fetch('/api/admin/update-status', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: memberId,
+            status: newStatus,
+          }),
+        });
+
+        if (response.ok) {
+          // Update local state
+          setMembers(members.map(member =>
+            member.id === memberId ? { ...member, status: newStatus } : member
+          ));
+          alert(`✅ อัปเดตสถานะสำเร็จ${newStatus !== 'pending' ? ' และส่งอีเมลแจ้งเตือนแล้ว' : ''}`);
+        } else {
+          const data = await response.json();
+          alert(`❌ เกิดข้อผิดพลาด: ${data.error}`);
+        }
+      } catch (error) {
+        alert('❌ เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      }
     }
   };
 

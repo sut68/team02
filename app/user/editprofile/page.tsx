@@ -65,7 +65,6 @@ export default function ProfileEditForm() {
         setLoading(false);
       }, 500);
     } catch (err) {
-      console.error('Error fetching profile:', err);
       setError('ไม่สามารถโหลดข้อมูลได้');
       setLoading(false);
     }
@@ -109,7 +108,6 @@ export default function ProfileEditForm() {
       setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
       setIsEditing(false);
     } catch (err) {
-      console.error('Error updating profile:', err);
       setError('เกิดข้อผิดพลาดในการอัปเดตข้อมูล');
     }
   };

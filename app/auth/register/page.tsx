@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { GraduationCap, Book, Upload, UserCheck } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 type UserType = 'student' | 'alumni' | null;
 
@@ -42,10 +43,13 @@ const initialFormData: FormData = {
 const stepLabels = ['ข้อมูลส่วนตัว', 'ประวัติการศึกษา', 'การยืนยันตัว'];
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [userType, setUserType] = useState<UserType>(null);
   const [step, setStep] = useState<number>(1);
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState<boolean>(false);
 
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -96,18 +100,62 @@ export default function RegisterPage() {
         setError('กรุณาระบุปีที่จบการศึกษา');
         return false;
       }
-      if (!formData.transcript) {
-        setError('กรุณาอัปโหลดไฟล์หลักฐานการศึกษา (Transcript หรือเอกสารรับรอง)');
-        return false;
-      }
+      // Note: transcript is optional for now (file upload can be implemented later)
     }
 
     return true;
   };
 
+  const handleRegister = async () => {
+    setError(null);
+    setLoading(true);
+
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          fullName: formData.name,
+          phone: formData.phone,
+          address: formData.addressLine,
+          subdistrict: formData.subdistrict,
+          district: formData.district,
+          province: formData.province,
+          postalCode: formData.postalCode,
+          studentCode: formData.studentCode || undefined,
+          major: formData.major || undefined,
+          gradYear: formData.gradYear || undefined,
+          userType: userType || 'student',
+          transcriptUrl: formData.transcript?.name || undefined, // TODO: implement file upload
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'เกิดข้อผิดพลาดในการลงทะเบียน');
+      }
+
+      setRegistrationSuccess(true);
+      setStep(3);
+    } catch (err: any) {
+      setError(err.message || 'เกิดข้อผิดพลาดในการลงทะเบียน');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const onNext = () => {
     if (!validateStep(step)) return;
-    setStep((s) => Math.min(3, s + 1));
+    
+    if (step === 2) {
+      // After step 2 validation passes, submit the form
+      handleRegister();
+    } else {
+      setStep((s) => Math.min(3, s + 1));
+    }
   };
 
   const onBack = () => {
@@ -499,21 +547,27 @@ export default function RegisterPage() {
         {step === 2 && userType === 'alumni' && AlumniStep2()}
         {step === 3 && SuccessStep()}
 
-        {error && <div className="text-red-500 text-sm mt-6 text-center">{error}</div>}
+        {error && (
+          <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-md text-sm mt-6 text-center">
+            {error}
+          </div>
+        )}
 
         <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
           <button
             onClick={onBack}
-            className="px-8 py-3 border border-gray-300 rounded-md text-gray-700 text-sm hover:bg-gray-50 transition"
+            disabled={loading || step === 3}
+            className="px-8 py-3 border border-gray-300 rounded-md text-gray-700 text-sm hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ย้อนกลับ
           </button>
           {step < 3 ? (
             <button
               onClick={onNext}
-              className="px-10 py-3 bg-orange-500 text-white rounded-md text-sm hover:bg-orange-600 transition font-medium"
+              disabled={loading}
+              className="px-10 py-3 bg-orange-500 text-white rounded-md text-sm hover:bg-orange-600 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              ถัดไป
+              {loading ? 'กำลังดำเนินการ...' : step === 2 ? 'ลงทะเบียน' : 'ถัดไป'}
             </button>
           ) : (
             <a

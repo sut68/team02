@@ -2,18 +2,59 @@
 
 import React, { useState } from 'react';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 const LoginClient: React.FC = () => {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({ email: '', password: '' });
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    setError(null);
   };
 
-  const handleLogin = () => {
-    console.log('login with', formData);
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    console.log('🔄 เริ่มต้นการเข้าสู่ระบบ...');
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
+        setLoading(false);
+        return;
+      }
+
+      // Success - redirect based on user type
+      console.log('✅ เข้าสู่ระบบสำเร็จ, กำลัง redirect...');
+      console.log('User type:', data.user.userType);
+      
+      const redirectUrl = data.user.userType === 'admin' ? '/admin/usermanage' : '/user/news';
+      console.log('Redirecting to:', redirectUrl);
+      
+      // Use window.location for immediate redirect
+      window.location.href = redirectUrl;
+    } catch (err) {
+      console.error('❌ Login error:', err);
+      setError('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+      setLoading(false);
+    }
   };
 
   return (
@@ -38,7 +79,13 @@ const LoginClient: React.FC = () => {
               กรุณาเข้าสู่ระบบด้วยอีเมลและรหัสผ่านของคุณ
             </p>
 
-            <div className="space-y-5">
+            {error && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleLogin} className="space-y-5">
               {/* Email Field */}
               <div>
                 <label className="block text-sm text-gray-700 mb-2">ที่อยู่อีเมล</label>
@@ -86,11 +133,11 @@ const LoginClient: React.FC = () => {
 
               {/* Login Button */}
               <button
-                type="button"
-                onClick={handleLogin}
-                className="w-full bg-orange-500 text-white py-3 rounded-lg hover:bg-orange-600 transition font-medium"
+                type="submit"
+                disabled={loading}
+                className="w-full bg-orange-500 text-white py-3 rounded-lg hover:bg-orange-600 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                เข้าสู่ระบบ
+                {loading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
               </button>
 
               {/* Divider */}
@@ -103,7 +150,7 @@ const LoginClient: React.FC = () => {
                   สมัครสมาชิกที่นี่
                 </a>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       </div>

@@ -14,7 +14,22 @@ generator client {
 }
 
 model User {
-  id    Int    @default(autoincrement())
-  name  String
-  email String @unique
+  id              Int       @id @default(autoincrement())
+  email           String    @unique
+  password        String    // hashed password
+  fullName        String
+  phone           String
+  address         String
+  subdistrict     String
+  district        String
+  province        String
+  postalCode      String
+  studentCode     String?
+  major           String?
+  gradYear        String?
+  userType        String    // 'student' or 'alumni'
+  status          String    @default("pending") // 'pending', 'approved', 'rejected'
+  transcriptUrl   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }
