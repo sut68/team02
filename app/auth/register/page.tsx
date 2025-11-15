@@ -312,10 +312,10 @@ export default function RegisterPage() {
   );
 
   const StudentStep2 = () => (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-medium text-gray-800 mb-8">ประวัติการศึกษา</h2>
+    <div className="grid grid-cols-2 gap-16">
+      <div className="space-y-6">
+        <h2 className="text-2xl font-medium text-gray-800 mb-8">ประวัติการศึกษา</h2>
 
-      <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-sm text-gray-500 mb-2">
             รหัสนักศึกษา <span className="text-red-500">*</span>
@@ -328,11 +328,29 @@ export default function RegisterPage() {
             placeholder="B6610456"
           />
         </div>
+
         <div>
+          <label className="block text-sm text-gray-500 mb-2">
+            สาขาวิชา <span className="text-red-500">*</span>
+          </label>
+          <input
+            name="major"
+            value={formData.major}
+            onChange={handleInputChange}
+            className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
+            placeholder="วิศวกรรมคอมพิวเตอร์"
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col">
+        <h2 className="text-2xl font-medium text-gray-800 mb-8 invisible">ข้อมูลเพิ่มเติม</h2>
+
+        <div className="flex-1">
           <label className="block text-sm text-gray-500 mb-2">
             ไฟล์หลักฐานการศึกษา <span className="text-red-500">*</span>
           </label>
-          <label className="w-full px-4 py-12 border-2 border-dashed border-gray-300 rounded-md flex flex-col items-center text-gray-400 cursor-pointer hover:border-orange-400 transition">
+          <label className="w-full h-[calc(100%-2rem)] px-4 py-12 border-2 border-dashed border-gray-300 rounded-md flex flex-col items-center justify-center text-gray-400 cursor-pointer hover:border-orange-400 transition">
             <Upload className="w-10 h-10 mb-3 text-gray-300" strokeWidth={1.5} />
             <input
               type="file"
@@ -349,28 +367,15 @@ export default function RegisterPage() {
             )}
           </label>
         </div>
-      </div>
-
-      <div>
-        <label className="block text-sm text-gray-500 mb-2">
-          สาขาวิชา <span className="text-red-500">*</span>
-        </label>
-        <input
-          name="major"
-          value={formData.major}
-          onChange={handleInputChange}
-          className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
-          placeholder="วิศวกรรมคอมพิวเตอร์"
-        />
       </div>
     </div>
   );
 
   const AlumniStep2 = () => (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-medium text-gray-800 mb-8">ประวัติการศึกษา</h2>
+    <div className="grid grid-cols-2 gap-16">
+      <div className="space-y-6">
+        <h2 className="text-2xl font-medium text-gray-800 mb-8">ประวัติการศึกษา</h2>
 
-      <div className="grid grid-cols-2 gap-6">
         <div>
           <label className="block text-sm text-gray-500 mb-2">
             รหัสนักศึกษา <span className="text-red-500">*</span>
@@ -383,11 +388,42 @@ export default function RegisterPage() {
             placeholder="B6610456"
           />
         </div>
+
         <div>
+          <label className="block text-sm text-gray-500 mb-2">
+            ปีที่จบการศึกษา <span className="text-red-500">*</span>
+          </label>
+          <input
+            name="gradYear"
+            value={formData.gradYear}
+            onChange={handleInputChange}
+            className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
+            placeholder="2568"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm text-gray-500 mb-2">
+            สาขาวิชา <span className="text-red-500">*</span>
+          </label>
+          <input
+            name="major"
+            value={formData.major}
+            onChange={handleInputChange}
+            className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
+            placeholder="วิศวกรรมคอมพิวเตอร์"
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col">
+        <h2 className="text-2xl font-medium text-gray-800 mb-8 invisible">ข้อมูลเพิ่มเติม</h2>
+
+        <div className="flex-1">
           <label className="block text-sm text-gray-500 mb-2">
             ไฟล์หลักฐานการศึกษา <span className="text-red-500">*</span>
           </label>
-          <label className="w-full px-4 py-12 border-2 border-dashed border-gray-300 rounded-md flex flex-col items-center text-gray-400 cursor-pointer hover:border-orange-400 transition">
+          <label className="w-full h-[calc(100%-2rem)] px-4 py-12 border-2 border-dashed border-gray-300 rounded-md flex flex-col items-center justify-center text-gray-400 cursor-pointer hover:border-orange-400 transition">
             <Upload className="w-10 h-10 mb-3 text-gray-300" strokeWidth={1.5} />
             <input
               type="file"
@@ -404,32 +440,6 @@ export default function RegisterPage() {
             )}
           </label>
         </div>
-      </div>
-
-      <div>
-        <label className="block text-sm text-gray-500 mb-2">
-          ปีที่จบการศึกษา <span className="text-red-500">*</span>
-        </label>
-        <input
-          name="gradYear"
-          value={formData.gradYear}
-          onChange={handleInputChange}
-          className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
-          placeholder="2568"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm text-gray-500 mb-2">
-          สาขาวิชา <span className="text-red-500">*</span>
-        </label>
-        <input
-          name="major"
-          value={formData.major}
-          onChange={handleInputChange}
-          className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
-          placeholder="วิศวกรรมคอมพิวเตอร์"
-        />
       </div>
     </div>
   );
