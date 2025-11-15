@@ -11,7 +11,7 @@ export default function Navbar() {
   // (ในโปรเจกต์จริง คุณต้องดึงค่านี้มาจาก Auth Context หรือ Session)
   const [user, setUser] = useState({
     isAuthenticated: true, // ทดสอบการล็อกอิน
-    role: 'admin',         // 👈 ลองเปลี่ยนเป็น 'user' หรือ 'admin' เพื่อทดสอบ
+    role: 'admi',         // 👈 ลองเปลี่ยนเป็น 'user' หรือ 'admin' เพื่อทดสอบ
   });
 
   // 💡 2. ตัวแปรตรวจสอบ Role (นี่คือ Logic ที่คุณต้องการ)
@@ -32,7 +32,7 @@ export default function Navbar() {
   }, []);
 
   // ----------------------------------------------------
-  // 💡 Component ย่อย: ชุดเมนู (แสดงผลตาม Role)
+  // Component ย่อย: ชุดเมนู (แสดงผลตาม Role)
   // ----------------------------------------------------
   const DesktopMenu = () => (
     <div className="hidden md:flex space-x-10 text-gray-700 font-medium item-center"
@@ -41,7 +41,6 @@ export default function Navbar() {
       {/* --- เมนูสำหรับผู้ใช้ทั่วไป --- */}
       {!isAdmin && (
         <>
-        <div className="px-100">
           <div className="relative group">
             <Link href="/apply" className="flex items-center hover:text-[#F26522] transition-colors duration-200">
               <span className="material-icons ml-1 text-base">กิจกรรม</span>
@@ -67,7 +66,6 @@ export default function Navbar() {
 
           <Link href="/budget" className="hover:text-gray-900">รายงานงบประมาณ</Link>
           <Link href="/login" className="hover:text-gray-900">กระดานสนทนา</Link>
-        </div>
         </>
       )}
 
