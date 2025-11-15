@@ -130,8 +130,8 @@ export default function ProfileEditForm() {
 
 
   return (
-    <div className="min-h-screen py-8 px-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen px-8 pt-16 pb-2">
+      <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-medium text-gray-800">แก้ไขข้อมูลส่วนตัว</h2>
           <button
@@ -149,9 +149,9 @@ export default function ProfileEditForm() {
         )}
 
         <form onSubmit={handleSubmit}>
-          <div className="space-y-6">
+          <div className="space-y-8">
             {/* แถวที่ 1: ชื่อ-นามสกุล และ ที่อยู่ */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
               <div>
                 <label className="block text-sm text-gray-500 mb-2">
                   ชื่อ-นามสกุล <span className="text-red-500">*</span>
@@ -185,7 +185,7 @@ export default function ProfileEditForm() {
             </div>
 
             {/* แถวที่ 2: อีเมล และ ตำบล/อำเภอ */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
               <div>
                 <label className="block text-sm text-gray-500 mb-2">
                   อีเมล <span className="text-red-500">*</span>
@@ -236,7 +236,7 @@ export default function ProfileEditForm() {
             </div>
 
             {/* แถวที่ 3: รหัสผ่าน และ จังหวัด/รหัสไปรษณีย์ */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
               <div>
                 <label className="block text-sm text-gray-500 mb-2">
                   รหัสผ่าน <span className="text-red-500">*</span>
@@ -287,7 +287,7 @@ export default function ProfileEditForm() {
             </div>
 
             {/* แถวที่ 4: ยืนยันรหัสผ่าน และ เบอร์โทรศัพท์ */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
               <div>
                 <label className="block text-sm text-gray-500 mb-2">
                   ยืนยันรหัสผ่าน <span className="text-red-500">*</span>
