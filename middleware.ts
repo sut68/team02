@@ -6,6 +6,7 @@ import { jwtVerify } from 'jose';
 const protectedRoutes = {
   admin: ['/admin'],
   user: ['/user'],
+  api: ['/api/user'], // Protected API routes
 };
 
 export async function middleware(request: NextRequest) {
@@ -24,16 +25,23 @@ export async function middleware(request: NextRequest) {
   // Check if route requires authentication
   const isAdminRoute = protectedRoutes.admin.some((route) => pathname.startsWith(route));
   const isUserRoute = protectedRoutes.user.some((route) => pathname.startsWith(route));
+  const isApiRoute = protectedRoutes.api.some((route) => pathname.startsWith(route));
 
   // If not a protected route, allow access with security headers
-  if (!isAdminRoute && !isUserRoute) {
+  if (!isAdminRoute && !isUserRoute && !isApiRoute) {
     const response = NextResponse.next();
     headers.forEach((value, key) => response.headers.set(key, value));
     return response;
   }
 
-  // If no token, redirect to login
+  // If no token, redirect to login (for page routes) or return 401 (for API routes)
   if (!token) {
+    if (isApiRoute) {
+      return NextResponse.json(
+        { error: 'ไม่พบข้อมูลการยืนยันตัวตน' },
+        { status: 401 }
+      );
+    }
     const loginUrl = new URL('/auth/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
@@ -55,12 +63,27 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/user/news', request.url));
     }
 
-    // Allow access with security headers
+    // Allow access with security headers and user info
     const response = NextResponse.next();
     headers.forEach((value, key) => response.headers.set(key, value));
+    
+    // Add user info to headers for API routes
+    response.headers.set('x-user-id', decoded.userId.toString());
+    response.headers.set('x-user-email', decoded.email);
+    response.headers.set('x-user-type', decoded.userType);
+    
     return response;
   } catch (error) {
-    // Invalid token, redirect to login
+    // Invalid token, redirect to login for page routes or return 401 for API routes
+    const currentIsApiRoute = protectedRoutes.api.some((route) => pathname.startsWith(route));
+    
+    if (currentIsApiRoute) {
+      return NextResponse.json(
+        { error: 'Token ไม่ถูกต้อง' },
+        { status: 401 }
+      );
+    }
+    
     const loginUrl = new URL('/auth/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     
@@ -83,5 +106,6 @@ export const config = {
   matcher: [
     '/admin/:path*',
     '/user/:path*',
+    '/api/user/:path*',
   ],
 };

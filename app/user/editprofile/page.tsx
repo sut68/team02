@@ -40,30 +40,24 @@ export default function ProfileEditForm() {
 
   const fetchUserProfile = async () => {
     try {
-      // TODO: เรียก API เพื่อดึงข้อมูลผู้ใช้
-      // const response = await fetch('/api/user/profile');
-      // const data = await response.json();
-      // setFormData(data);
-      // setOriginalData(data);
+      const response = await fetch('/api/user/profile', {
+        cache: 'no-store',
+      });
       
-      // Mock data สำหรับทดสอบ
-      setTimeout(() => {
-        const userData = {
-          fullName: 'ธนวา กวดล',
-          email: 'thanwa.eng@sut.ac.th',
-          address: '199 หมู่ 9 ถนนมิตรภาพ',
-          subdistrict: 'สุรนารี',
-          district: 'เมืองนครราชสีมา',
-          province: 'นครราชสีมา',
-          postalCode: '30000',
-          phone: '086-245-7930',
-          password: '',
-          confirmPassword: ''
-        };
-        setFormData(userData);
-        setOriginalData(userData);
-        setLoading(false);
-      }, 500);
+      if (!response.ok) {
+        throw new Error('Failed to fetch profile');
+      }
+      
+      const data = await response.json();
+      const userData = {
+        ...data,
+        password: '',
+        confirmPassword: ''
+      };
+      
+      setFormData(userData);
+      setOriginalData(userData);
+      setLoading(false);
     } catch (err) {
       setError('ไม่สามารถโหลดข้อมูลได้');
       setLoading(false);
@@ -93,22 +87,34 @@ export default function ProfileEditForm() {
     }
 
     try {
-      // TODO: เรียก API เพื่ออัปเดตข้อมูล
-      // const response = await fetch('/api/user/profile', {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formData)
-      // });
-      // if (response.ok) {
-      //   alert('อัปเดตข้อมูลสำเร็จ');
-      // }
-
-      // Mock update
+      const response = await fetch('/api/user/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: formData.fullName,
+          email: formData.email,
+          address: formData.address,
+          subdistrict: formData.subdistrict,
+          district: formData.district,
+          province: formData.province,
+          postalCode: formData.postalCode,
+          phone: formData.phone,
+          password: formData.password || undefined,
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'เกิดข้อผิดพลาด');
+      }
+      
       alert('อัปเดตข้อมูลสำเร็จ');
       setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
       setIsEditing(false);
-    } catch (err) {
-      setError('เกิดข้อผิดพลาดในการอัปเดตข้อมูล');
+      await fetchUserProfile();
+    } catch (err: any) {
+      setError(err.message || 'เกิดข้อผิดพลาดในการอัปเดตข้อมูล');
     }
   };
 
