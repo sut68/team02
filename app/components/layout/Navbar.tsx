@@ -22,6 +22,12 @@ export default function Navbar() {
     let isMounted = true;
     
     const checkAuth = async () => {
+      // Skip auth check on auth pages to avoid 401 errors
+      if (pathname?.startsWith('/auth/')) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const response = await fetch('/api/auth/me', {
           cache: 'no-store',
@@ -52,7 +58,7 @@ export default function Navbar() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [pathname]);
 
   const isAdmin = useMemo(() => user?.isAuthenticated && user?.role === 'admin', [user]);
   const isLoggedIn = useMemo(() => user?.isAuthenticated, [user]);
