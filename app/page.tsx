@@ -6,16 +6,7 @@ import { News } from './user/news/page';
 export default function HomePage() {
   return (
     <>
-      {/* 🔶 Full-width Banner */}
-      <div className="w-full h-[420px] relative">
-        <Image
-          src="/25.jpg"
-          alt="Home"
-          fill
-          className="object-cover object-center"
-          priority
-        />
-      </div>
+
 
       {/* 🔶 ส่วนเนื้อหาใน container */}
       <div className="container mx-auto px-4 py-16 min-h-[calc(100vh-128px)]">
