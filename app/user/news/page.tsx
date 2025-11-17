@@ -48,7 +48,17 @@ export function News() {
   const { featured, secondary, archives, upcoming } = mockData;
 
   return (
-    <section className="w-full py-10">
+    <section className="container mx-auto px-4 py-16 ">
+      {/* 🔶 Full-width Banner */}
+            <div className="relative w-screen h-[420px] left-[50%] right-[50%] mb-25 -ml-[50vw] -mr-[50vw] overflow-hidden">
+              <Image
+                src="/25.jpg"
+                alt="Home"
+                fill
+                className="object-cover object-center"
+                priority
+              />
+            </div>
       
       {/* บรรทัดหัวข้อ + ปุ่มคำขอยื่นเรื่อง */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
