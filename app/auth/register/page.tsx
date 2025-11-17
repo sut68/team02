@@ -58,6 +58,13 @@ export default function RegisterPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // แทน handleInputChange ด้วย onBlur
+const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const { name, value } = e.target;
+  setFormData((prev) => ({ ...prev, [name]: value }));
+};
+
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: keyof FormData) => {
     const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
     setFormData((prev) => ({ ...prev, [field]: file as any }));
@@ -129,6 +136,9 @@ export default function RegisterPage() {
       });
 
       const data = await response.json();
+      console.log('Register payload:', data);
+      console.log('Register payload:', formData);
+
 
       if (!response.ok) {
         throw new Error(data.error || 'เกิดข้อผิดพลาดในการลงทะเบียน');
@@ -177,8 +187,9 @@ export default function RegisterPage() {
           </label>
           <Input
             name="name"
-            value={formData.name}
-            onChange={handleInputChange}
+            defaultValue={formData.name}
+            // onChange={handleInputChange}
+            onBlur={handleInputBlur} 
             placeholder="ธนวา กุวัสต"
             required
             size="md"
@@ -193,8 +204,9 @@ export default function RegisterPage() {
           <Input
             name="email"
             type="email"
-            value={formData.email}
-            onChange={handleInputChange}
+            defaultValue={formData.email}
+            // onChange={handleInputChange}
+            onBlur={handleInputBlur}
             placeholder="thanwa.eng@sut.ac.th"
             required
             size="md"
@@ -209,8 +221,9 @@ export default function RegisterPage() {
           <Input
             name="password"
             type="password"
-            value={formData.password}
-            onChange={handleInputChange}
+            defaultValue={formData.password}
+            // onChange={handleInputChange}
+            onBlur={handleInputBlur}
             placeholder="ต้องมีอย่างน้อย 8 ตัวอักษร (เช่น Thanwa2025)"
             required
             size="md"
@@ -225,8 +238,9 @@ export default function RegisterPage() {
           <Input
             name="confirmPassword"
             type="password"
-            value={formData.confirmPassword}
-            onChange={handleInputChange}
+            defaultValue={formData.confirmPassword}
+            // onChange={handleInputChange}
+            onBlur={handleInputBlur}
             placeholder="พิมพ์รหัสผ่านอีกครั้ง"
             required
             size="md"
@@ -244,8 +258,9 @@ export default function RegisterPage() {
           </label>
           <Input
             name="addressLine"
-            value={formData.addressLine}
-            onChange={handleInputChange}
+            defaultValue={formData.addressLine}
+            // onChange={handleInputChange}
+            onBlur={handleInputBlur}
             placeholder="199 หมู่ 9 ถนนมิตรภาพ"
             required
             size="md"
@@ -260,8 +275,9 @@ export default function RegisterPage() {
             </label>
             <Input
               name="subdistrict"
-              value={formData.subdistrict}
-              onChange={handleInputChange}
+              defaultValue={formData.subdistrict}
+              // onChange={handleInputChange}
+              onBlur={handleInputBlur}
               placeholder="สุรนารี"
               required
               size="md"
@@ -274,8 +290,9 @@ export default function RegisterPage() {
             </label>
             <Input
               name="district"
-              value={formData.district}
-              onChange={handleInputChange}
+              defaultValue={formData.district}
+              // onChange={handleInputChange}
+              onBlur={handleInputBlur}
               placeholder="เมืองนครราชสีมา"
               required
               size="md"
@@ -291,8 +308,9 @@ export default function RegisterPage() {
             </label>
             <Input
               name="province"
-              value={formData.province}
-              onChange={handleInputChange}
+              defaultValue={formData.province}
+              // onChange={handleInputChange}
+              onBlur={handleInputBlur}
               placeholder="นครราชสีมา"
               required
               size="md"
@@ -305,8 +323,9 @@ export default function RegisterPage() {
             </label>
             <Input
               name="postalCode"
-              value={formData.postalCode}
-              onChange={handleInputChange}
+              defaultValue={formData.postalCode}
+              // onChange={handleInputChange}
+              onBlur={handleInputBlur}
               placeholder="30000"
               required
               size="md"
@@ -321,8 +340,9 @@ export default function RegisterPage() {
           </label>
           <Input
             name="phone"
-            value={formData.phone}
-            onChange={handleInputChange}
+            defaultValue={formData.phone}
+            // onChange={handleInputChange}
+            onBlur={handleInputBlur}
             placeholder="086-245-7930"
             required
             size="md"
@@ -391,8 +411,9 @@ export default function RegisterPage() {
           </label>
           <Input
             name="studentCode"
-            value={formData.studentCode}
-            onChange={handleInputChange}
+            defaultValue={formData.studentCode}
+            // onChange={handleInputChange}
+            onBlur={handleInputBlur}
             placeholder="B6610456"
             required
             size="md"
@@ -406,8 +427,9 @@ export default function RegisterPage() {
           </label>
           <Input
             name="major"
-            value={formData.major}
-            onChange={handleInputChange}
+            defaultValue={formData.major}
+            // onChange={handleInputChange}
+            onBlur={handleInputBlur}
             placeholder="วิศวกรรมคอมพิวเตอร์"
             required
             size="md"
@@ -455,8 +477,9 @@ export default function RegisterPage() {
           </label>
           <Input
             name="studentCode"
-            value={formData.studentCode}
-            onChange={handleInputChange}
+            defaultValue={formData.studentCode}
+            // onChange={handleInputChange}
+            onBlur={handleInputBlur}
             placeholder="B6610456"
             required
             size="md"
@@ -470,8 +493,9 @@ export default function RegisterPage() {
           </label>
           <Input
             name="gradYear"
-            value={formData.gradYear}
-            onChange={handleInputChange}
+            defaultValue={formData.gradYear}
+            // onChange={handleInputChange}
+            onBlur={handleInputBlur}
             placeholder="2568"
             required
             size="md"
@@ -485,8 +509,9 @@ export default function RegisterPage() {
           </label>
           <Input
             name="major"
-            value={formData.major}
-            onChange={handleInputChange}
+            defaultValue={formData.major}
+            // onChange={handleInputChange}
+            onBlur={handleInputBlur}
             placeholder="วิศวกรรมคอมพิวเตอร์"
             required
             size="md"
@@ -629,3 +654,4 @@ export default function RegisterPage() {
 
   return <RegistrationForm />;
 }
+
