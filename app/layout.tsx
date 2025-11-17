@@ -38,7 +38,7 @@ export default function RootLayout({
   return (
     <html lang="th" className={sutFont.variable}>
       <body
-        className={`antialiased`} 
+        className={`${sutFont.className} antialiased`} 
         suppressHydrationWarning={true}
       >
        
