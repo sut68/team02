@@ -1,4 +1,4 @@
-// app/create-project/page.tsx (หรือ path ของคุณ)
+// app/create-project/page.tsx
 'use client';
 
 import { useState } from 'react';
@@ -11,7 +11,7 @@ import { Input } from '@/app/components/ui/Input';
 import { InputIcon } from '@/app/components/ui/InputIcon';
 import { Textarea } from '@/app/components/ui/InputTextArea';
 import { CancelButton, PrimaryButton } from '@/app/components/ui/Button';
-import SuccessModal from '@/app/components/ui/SuccessModal'; // Import Modal เข้ามา
+import SuccessModal from '@/app/components/ui/SuccessModal';
 
 export default function CreateProjectPage() {
   const router = useRouter();
