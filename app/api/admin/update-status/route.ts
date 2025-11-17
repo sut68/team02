@@ -80,17 +80,21 @@ export async function PATCH(request: NextRequest) {
 
 async function sendStatusEmail(email: string, fullName: string, status: string, remark?: string) {
   try {
+    // Check if Resend API key exists
+    if (!process.env.RESEND_API_KEY) {
+      console.error('❌ RESEND_API_KEY ไม่ได้ตั้งค่าใน .env');
+      console.log('💡 กรุณาตั้งค่าใน .env:');
+      console.log('   RESEND_API_KEY=re_xxxxx');
+      return;
+    }
+
     const statusText = status === 'APPROVED' ? 'อนุมัติ' : 'ไม่อนุมัติ';
     const statusColor = status === 'APPROVED' ? '#f97316' : '#ef4444';
     const message = status === 'APPROVED' 
       ? 'บัญชีของคุณได้รับการอนุมัติแล้ว คุณสามารถเข้าสู่ระบบได้ทันที'
       : 'ขออภัย บัญชีของคุณไม่ได้รับการอนุมัติ หากต้องการข้อมูลเพิ่มเติม กรุณาติดต่อผู้ดูแลระบบ';
 
-    await resend.emails.send({
-      from: 'ระบบศิษย์เก่าวิศวกรรมศาสตร์ <onboarding@resend.dev>',
-      to: email,
-      subject: `แจ้งผลการพิจารณาบัญชี - ${statusText}`,
-      html: `
+    const htmlContent = `
         <!DOCTYPE html>
         <html>
         <head>
@@ -104,6 +108,7 @@ async function sendStatusEmail(email: string, fullName: string, status: string, 
             .button { display: inline-block; padding: 12px 30px; background: #f97316; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px; }
             .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 14px; }
             .remark { background: #fef3c7; padding: 15px; border-left: 4px solid #f59e0b; margin: 15px 0; }
+            .warning { background: #fee2e2; padding: 15px; border-left: 4px solid #ef4444; margin: 15px 0; }
           </style>
         </head>
         <body>
@@ -114,6 +119,10 @@ async function sendStatusEmail(email: string, fullName: string, status: string, 
             </div>
             <div class="content">
               <h2>สวัสดี คุณ ${fullName}</h2>
+              <div class="warning">
+                <strong>⚠️ ข้อความนี้ส่งผ่าน Gmail</strong><br>
+                อีเมลนี้ส่งจากระบบทดสอบ กรุณาตรวจสอบความถูกต้อง
+              </div>
               <p>ผลการพิจารณาบัญชีของคุณ:</p>
               <div class="status-badge">${statusText}</div>
               <p>${message}</p>
@@ -124,7 +133,7 @@ async function sendStatusEmail(email: string, fullName: string, status: string, 
                 </div>
               ` : ''}
               ${status === 'APPROVED' ? `
-                <a href="${process.env.NEXTAUTH_URL}/auth/login" class="button">เข้าสู่ระบบ</a>
+                <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/login" class="button">เข้าสู่ระบบ</a>
               ` : ''}
               <p style="margin-top: 30px;">หากมีข้อสงสัย กรุณาติดต่อ:</p>
               <p>📧 Email: ${process.env.NEXT_PUBLIC_EMAIL || 'ieadmin@g.sut.ac.th'}<br>
@@ -137,12 +146,29 @@ async function sendStatusEmail(email: string, fullName: string, status: string, 
           </div>
         </body>
         </html>
-      `,
-    });
+      `;
 
-    console.log(`✅ ส่งอีเมลไปยัง ${email} สำเร็จ`);
-  } catch (error) {
+    const result = await resend.emails.send({
+      from: 'ระบบศิษย์เก่าวิศวกรรมศาสตร์ <onboarding@resend.dev>',
+      to: email,
+      subject: `แจ้งผลการพิจารณาบัญชี - ${statusText}`,
+      html: htmlContent,
+    });
+  } catch (error: any) {
     console.error('❌ ส่งอีเมลล้มเหลว:', error);
+    console.error('📋 Error details:', {
+      message: error.message,
+      statusCode: error.statusCode,
+      name: error.name
+    });
+    
+    if (error.message?.includes('API key')) {
+      console.log('\n💡 ปัญหา API Key:');
+      console.log('   1. ไปที่ https://resend.com สมัครบัญชี (ฟรี)');
+      console.log('   2. สร้าง API Key ในแดชบอร์ด');
+      console.log('   3. เพิ่มใน .env.local: RESEND_API_KEY=re_xxxxxxxxxxxxx');
+      console.log('   4. Restart server (npm run dev)');
+    }
     // Don't throw error - allow status update to succeed even if email fails
   }
 }
