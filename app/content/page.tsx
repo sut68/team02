@@ -44,7 +44,6 @@ export default function DonationPage() {
       setQrCodeUrl("/qr_test.png"); // 👈 ใช้รูปภาพทดสอบ
       
     } catch (err: any) {
-      console.error(err);
       setError(err.message);
     }
     
