@@ -23,7 +23,7 @@ export default function DonationPage() {
             <div className="relative w-full h-[300px] md:h-[500px] bg-gray-800">
                 {/* 💡 หมายเหตุ: คุณต้องใช้รูปภาพจริงมาแทนที่ placeholder */}
                 <Image
-                    src="/donation.jpeg" // 👈 1. Placeholder สำหรับ Hero
+                    src="/donation_poster/00.png" // 👈 1. Placeholder สำหรับ Hero
                     alt="นักศึกษาวิศวกรรมศาสตร์ สุรนารี"
                     layout="fill"
                     objectFit="cover"
@@ -45,7 +45,7 @@ export default function DonationPage() {
                     {/* รูปภาพ (ซ้าย) */}
                     <div className="md:w-1/3 bg-white-100 flex items-center justify-center p-4">
                         <Image
-                            src="/donation_poster/class350.png"
+                            src="/donation_poster/donation_poster01.png"
                             alt="ของที่ระลึก"
                             className="rounded-lg object-contain h-48 w-48 md:h-full md:w-full"
                             width={300}
@@ -83,7 +83,7 @@ export default function DonationPage() {
                     {/* รูปภาพ (ซ้าย) */}
                     <div className="md:w-1/3 bg-white-100 flex items-center justify-center p-4">
                         <Image
-                            src="/donation_poster/poster02.png"
+                            src="/donation_poster/donation_poster02.png"
                             alt="project_poster"
                             className="rounded-lg object-contain h-48 w-48 md:h-full md:w-full"
                             width={300}
@@ -120,7 +120,7 @@ export default function DonationPage() {
                     {/* รูปภาพ (ซ้าย) */}
                     <div className="md:w-1/3 bg-white-100 flex items-center justify-center p-4">
                         <Image
-                            src="/donation_poster/class350.png"
+                            src="/donation_poster/donation_poster01.png"
                             alt="ของที่ระลึก"
                             className="rounded-lg object-contain h-48 w-48 md:h-full md:w-full"
                             width={300}

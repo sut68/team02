@@ -114,11 +114,11 @@ export default function Navbar() {
         {!isAdmin && (
         <>
           <div className="relative group">
-            <Link href="/apply" className="flex items-center hover:text-[#F26522] transition-colors duration-200">
+            <Link href="/" className="flex items-center hover:text-[#F26522] transition-colors duration-200">
               <span className="material-icons ml-1 text-base">กิจกรรม</span>
             </Link>
             <div className="absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50">
-              <Link href="/apply" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">จองเข้าร่วมกิจกรรม</Link>
+              <Link href="/user/booking" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">จองเข้าร่วมกิจกรรม</Link>
               <Link href="/fund" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">ขอโพสกิจกรรม</Link>
               <Link href="/fund" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">ของที่ระลึก</Link>
             </div>
@@ -156,16 +156,16 @@ export default function Navbar() {
           </div>
 
           <div className="relative group">
-            <Link href="/apply" className="flex items-center hover:text-[#F26522] transition-colors duration-200">
+            <Link href="/admin/souvenir" className="flex items-center hover:text-[#F26522] transition-colors duration-200">
               <span className="material-icons ml-1 text-base">ของที่ระลึก</span>
             </Link>
             <div className="absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50">
-              <Link href="/apply" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">กิจกรรม</Link>
-              <Link href="/fund" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">บริจาค</Link>
+              <Link href="/admin/souvenir" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">กิจกรรม</Link>
+              <Link href="/admin/souvenir" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">บริจาค</Link>
             </div>
           </div>
 
-          <Link href="/forum" className="hover:text-gray-900">รับสมัครงาน</Link>
+          <Link href="/user/job" className="hover:text-gray-900">รับสมัครงาน</Link>
           {/* 💡 1. L0: ตั้งชื่อ group เป็น group/l0 */}
           <div className="relative group/l0">
             {/* L0: ปุ่มหลัก "การระดมทุนและงบ" */}
@@ -192,12 +192,12 @@ export default function Navbar() {
               </div>
 
               {/* L1 Item 2: "บริจาค" */}
-              <Link href="/fund" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">
+              <Link href="/admin/fund" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">
                 บริจาค
               </Link>
 
               {/* L1 Item 3: "การเงิน" */}
-              <Link href="/fund" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">
+              <Link href="/admin/payment" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">
                 การเงิน
               </Link>
 
