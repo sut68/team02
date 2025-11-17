@@ -1,9 +1,11 @@
-// app/news/News.tsx
 
+// app/news/News.tsx
+'use client';
+import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardHeader, CardContent } from '../../components/ui/Card';
-import { PrimaryButton, CancelButton } from '../../components/ui/Button';
+import { PrimaryButton } from '../../components/ui/Button';
 
 // ** Mock Data **
 export const mockData = {
@@ -130,7 +132,7 @@ export function News() {
             <Link
               key={item.id}
               href={`/user/news/${item.slug}`}
-              className="block group flex-grow" // เพิ่ม flex-grow เพื่อให้แต่ละ archive card ยืดเต็มพื้นที่ใน aside
+              className="block group flex-grow" 
             >
               <Card className="overflow-hidden !p-0 rounded-2xl shadow-md bg-white flex flex-col h-full"> {/* เพิ่ม flex flex-col h-full */}
 
@@ -209,3 +211,5 @@ export function News() {
     </section>
   );
 }
+
+
