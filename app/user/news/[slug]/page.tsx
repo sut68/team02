@@ -63,7 +63,7 @@ const renderMetaItem = (item: MetaItem) => (
 
 // ---------------- Main Component ----------------
 
-export default function NewsDetailPage({ params }: { params: { slug: string } }) {
+export  function NewsDetailPage({ params }: { params: { slug: string } }) {
   const data = mockDetailData;
   // ถ้าอยากใช้ slug จริงทีหลัง ค่อยมา map slug → data อีกที
 
@@ -150,3 +150,4 @@ export default function NewsDetailPage({ params }: { params: { slug: string } })
     </div>
   );
 }
+export default NewsDetailPage;

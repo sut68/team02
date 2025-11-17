@@ -213,3 +213,4 @@ export function News() {
 }
 
 
+export default News;
