@@ -16,7 +16,7 @@ type InputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> & {
   radius?: "none" | "md" | "full"
 }
 
-const Input = React.forwardRef<HTMLInputElement, InputProps>(
+const Input = React.memo(React.forwardRef<HTMLInputElement, InputProps>(
   ({ className, type, size = "md", radius = "md", ...props }, ref) => {
     const sizeCls =
       size === "sm" ? "h-7 text-sm px-3" :
@@ -45,7 +45,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       />
     )
   }
-)
+))
 
 Input.displayName = "Input"
 
