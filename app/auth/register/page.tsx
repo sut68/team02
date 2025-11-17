@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { GraduationCap, Book, Upload, UserCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { Input } from '@/app/components/ui/Input';
+import { Card, CardContent } from '@/app/components/ui/Card';
 
 type UserType = 'student' | 'alumni' | null;
 
@@ -51,21 +53,15 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState<boolean>(false);
   const [registrationSuccess, setRegistrationSuccess] = useState<boolean>(false);
 
-  const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const { name, value } = e.target;
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    },
-    []
-  );
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-  const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>, field: keyof FormData) => {
-      const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
-      setFormData((prev) => ({ ...prev, [field]: file as any }));
-    },
-    []
-  );
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: keyof FormData) => {
+    const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+    setFormData((prev) => ({ ...prev, [field]: file as any }));
+  };
 
   const validateStep = (s: number) => {
     setError(null);
@@ -169,50 +165,8 @@ export default function RegisterPage() {
     }
   };
 
-  const RegisterSelect = () => (
-    <div className="min-h-screen py-6 px-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-20">
-          <h2 className="text-3xl font-light text-blue-600 mb-3">
-            กรุณาเลือกประเภทของคุณ
-          </h2>
-          <p className="text-gray-500 text-sm">
-            เพื่อเริ่มต้นการลงทะเบียนในระบบศิษย์เก่าวิศวกรรมศาสตร์
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-16 max-w-5xl mx-auto">
-          <button
-            onClick={() => {
-              setUserType('alumni');
-              setStep(1);
-            }}
-            className="bg-orange-50 border-2 border-orange-200 rounded-3xl p-20 hover:border-orange-400 transition group"
-          >
-            <div className="flex justify-center mb-8">
-              <GraduationCap className="w-40 h-40 text-orange-500" strokeWidth={1.5} />
-            </div>
-            <h3 className="text-2xl font-normal text-gray-800">ศิษย์เก่า</h3>
-          </button>
-
-          <button
-            onClick={() => {
-              setUserType('student');
-              setStep(1);
-            }}
-            className="bg-orange-50 border-2 border-orange-200 rounded-3xl p-20 hover:border-orange-400 transition group"
-          >
-            <div className="flex justify-center mb-8">
-              <Book className="w-40 h-40 text-orange-500" strokeWidth={1.5} />
-            </div>
-            <h3 className="text-2xl font-normal text-gray-800">ศิษย์ปัจจุบัน</h3>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const CommonStep1 = (
+  // Step 1: Personal Information
+  const renderStep1 = () => (
     <div className="grid grid-cols-2 gap-16">
       <div className="space-y-6">
         <h2 className="text-2xl font-medium text-gray-800 mb-8">ข้อมูลส่วนตัว</h2>
@@ -221,12 +175,14 @@ export default function RegisterPage() {
           <label className="block text-sm text-gray-500 mb-2">
             ชื่อ-นามสกุล <span className="text-red-500">*</span>
           </label>
-          <input
+          <Input
             name="name"
             value={formData.name}
             onChange={handleInputChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
             placeholder="ธนวา กุวัสต"
+            required
+            size="md"
+            radius="md"
           />
         </div>
 
@@ -234,13 +190,15 @@ export default function RegisterPage() {
           <label className="block text-sm text-gray-500 mb-2">
             อีเมล <span className="text-red-500">*</span>
           </label>
-          <input
+          <Input
             name="email"
             type="email"
             value={formData.email}
             onChange={handleInputChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
             placeholder="thanwa.eng@sut.ac.th"
+            required
+            size="md"
+            radius="md"
           />
         </div>
 
@@ -248,13 +206,15 @@ export default function RegisterPage() {
           <label className="block text-sm text-gray-500 mb-2">
             รหัสผ่าน <span className="text-red-500">*</span>
           </label>
-          <input
+          <Input
             name="password"
             type="password"
             value={formData.password}
             onChange={handleInputChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
             placeholder="ต้องมีอย่างน้อย 8 ตัวอักษร (เช่น Thanwa2025)"
+            required
+            size="md"
+            radius="md"
           />
         </div>
 
@@ -262,13 +222,15 @@ export default function RegisterPage() {
           <label className="block text-sm text-gray-500 mb-2">
             ยืนยันรหัสผ่าน <span className="text-red-500">*</span>
           </label>
-          <input
+          <Input
             name="confirmPassword"
             type="password"
             value={formData.confirmPassword}
             onChange={handleInputChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
             placeholder="พิมพ์รหัสผ่านอีกครั้ง"
+            required
+            size="md"
+            radius="md"
           />
         </div>
       </div>
@@ -280,12 +242,14 @@ export default function RegisterPage() {
           <label className="block text-sm text-gray-500 mb-2">
             ที่อยู่ <span className="text-red-500">*</span>
           </label>
-          <input
+          <Input
             name="addressLine"
             value={formData.addressLine}
             onChange={handleInputChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
             placeholder="199 หมู่ 9 ถนนมิตรภาพ"
+            required
+            size="md"
+            radius="md"
           />
         </div>
 
@@ -294,24 +258,28 @@ export default function RegisterPage() {
             <label className="block text-sm text-gray-500 mb-2">
               ตำบล <span className="text-red-500">*</span>
             </label>
-            <input
+            <Input
               name="subdistrict"
               value={formData.subdistrict}
               onChange={handleInputChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
               placeholder="สุรนารี"
+              required
+              size="md"
+              radius="md"
             />
           </div>
           <div>
             <label className="block text-sm text-gray-500 mb-2">
               อำเภอ <span className="text-red-500">*</span>
             </label>
-            <input
+            <Input
               name="district"
               value={formData.district}
               onChange={handleInputChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
               placeholder="เมืองนครราชสีมา"
+              required
+              size="md"
+              radius="md"
             />
           </div>
         </div>
@@ -321,24 +289,28 @@ export default function RegisterPage() {
             <label className="block text-sm text-gray-500 mb-2">
               จังหวัด <span className="text-red-500">*</span>
             </label>
-            <input
+            <Input
               name="province"
               value={formData.province}
               onChange={handleInputChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
               placeholder="นครราชสีมา"
+              required
+              size="md"
+              radius="md"
             />
           </div>
           <div>
             <label className="block text-sm text-gray-500 mb-2">
               รหัสไปรษณีย์ <span className="text-red-500">*</span>
             </label>
-            <input
+            <Input
               name="postalCode"
               value={formData.postalCode}
               onChange={handleInputChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
               placeholder="30000"
+              required
+              size="md"
+              radius="md"
             />
           </div>
         </div>
@@ -347,13 +319,62 @@ export default function RegisterPage() {
           <label className="block text-sm text-gray-500 mb-2">
             เบอร์โทรศัพท์ <span className="text-red-500">*</span>
           </label>
-          <input
+          <Input
             name="phone"
             value={formData.phone}
             onChange={handleInputChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
             placeholder="086-245-7930"
+            required
+            size="md"
+            radius="md"
           />
+        </div>
+      </div>
+    </div>
+  );
+
+  const RegisterSelect = () => (
+    <div className="min-h-screen py-6 px-8">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-20">
+          <h2 className="text-3xl font-medium text-gray-700 mb-3">
+            กรุณาเลือกประเภทของคุณ
+          </h2>
+          <p className="text-gray-500 text-sm">
+            เพื่อเริ่มต้นการลงทะเบียนในระบบศิษย์เก่าวิศวกรรมศาสตร์
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-16 max-w-5xl mx-auto">
+          <Card
+            className="cursor-pointer border-2 border-orange-100 hover:border-orange-300 transition-all"
+            onClick={() => {
+              setUserType('alumni');
+              setStep(1);
+            }}
+          >
+            <CardContent className="p-20 text-center">
+              <div className="flex justify-center mb-8">
+                <GraduationCap className="w-40 h-40 text-orange-500" strokeWidth={1.5} />
+              </div>
+              <h3 className="text-2xl font-normal text-gray-700">ศิษย์เก่า</h3>
+            </CardContent>
+          </Card>
+
+          <Card
+            className="cursor-pointer border-2 border-orange-100 hover:border-orange-300 transition-all"
+            onClick={() => {
+              setUserType('student');
+              setStep(1);
+            }}
+          >
+            <CardContent className="p-20 text-center">
+              <div className="flex justify-center mb-8">
+                <Book className="w-40 h-40 text-orange-500" strokeWidth={1.5} />
+              </div>
+              <h3 className="text-2xl font-normal text-gray-700">ศิษย์ปัจจุบัน</h3>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
@@ -368,12 +389,14 @@ export default function RegisterPage() {
           <label className="block text-sm text-gray-500 mb-2">
             รหัสนักศึกษา <span className="text-red-500">*</span>
           </label>
-          <input
+          <Input
             name="studentCode"
             value={formData.studentCode}
             onChange={handleInputChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
             placeholder="B6610456"
+            required
+            size="md"
+            radius="md"
           />
         </div>
 
@@ -381,12 +404,14 @@ export default function RegisterPage() {
           <label className="block text-sm text-gray-500 mb-2">
             สาขาวิชา <span className="text-red-500">*</span>
           </label>
-          <input
+          <Input
             name="major"
             value={formData.major}
             onChange={handleInputChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
             placeholder="วิศวกรรมคอมพิวเตอร์"
+            required
+            size="md"
+            radius="md"
           />
         </div>
       </div>
@@ -428,12 +453,14 @@ export default function RegisterPage() {
           <label className="block text-sm text-gray-500 mb-2">
             รหัสนักศึกษา <span className="text-red-500">*</span>
           </label>
-          <input
+          <Input
             name="studentCode"
             value={formData.studentCode}
             onChange={handleInputChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
             placeholder="B6610456"
+            required
+            size="md"
+            radius="md"
           />
         </div>
 
@@ -441,12 +468,14 @@ export default function RegisterPage() {
           <label className="block text-sm text-gray-500 mb-2">
             ปีที่จบการศึกษา <span className="text-red-500">*</span>
           </label>
-          <input
+          <Input
             name="gradYear"
             value={formData.gradYear}
             onChange={handleInputChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
             placeholder="2568"
+            required
+            size="md"
+            radius="md"
           />
         </div>
 
@@ -454,12 +483,14 @@ export default function RegisterPage() {
           <label className="block text-sm text-gray-500 mb-2">
             สาขาวิชา <span className="text-red-500">*</span>
           </label>
-          <input
+          <Input
             name="major"
             value={formData.major}
             onChange={handleInputChange}
-            className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-orange-400 placeholder-gray-400"
             placeholder="วิศวกรรมคอมพิวเตอร์"
+            required
+            size="md"
+            radius="md"
           />
         </div>
       </div>
@@ -506,8 +537,19 @@ export default function RegisterPage() {
     </div>
   );
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateStep(step)) return;
+
+    if (step === 2) {
+      handleRegister();
+    } else {
+      setStep((s) => Math.min(3, s + 1));
+    }
+  };
+
   const RegistrationForm = () => (
-    <div className="min-h-screen pt-6 pb-4 px-8">
+    <form onSubmit={handleSubmit} className="min-h-screen pt-6 pb-4 px-8">
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-center mb-14">
           {stepLabels.map((label, i) => {
@@ -542,7 +584,7 @@ export default function RegisterPage() {
           })}
         </div>
 
-        {step === 1 && CommonStep1}
+        {step === 1 && renderStep1()}
         {step === 2 && userType === 'student' && StudentStep2()}
         {step === 2 && userType === 'alumni' && AlumniStep2()}
         {step === 3 && SuccessStep()}
@@ -555,6 +597,7 @@ export default function RegisterPage() {
 
         <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
           <button
+            type="button"
             onClick={onBack}
             disabled={loading || step === 3}
             className="px-8 py-3 border border-gray-300 rounded-md text-gray-700 text-sm hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
@@ -563,7 +606,7 @@ export default function RegisterPage() {
           </button>
           {step < 3 ? (
             <button
-              onClick={onNext}
+              type="submit"
               disabled={loading}
               className="px-10 py-3 bg-orange-500 text-white rounded-md text-sm hover:bg-orange-600 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -579,7 +622,7 @@ export default function RegisterPage() {
           )}
         </div>
       </div>
-    </div>
+    </form>
   );
 
   if (!userType) return <RegisterSelect />;

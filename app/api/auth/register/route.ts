@@ -30,9 +30,25 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validation - Basic fields
-    if (!email || !password || !fullName) {
+    if (!email || !password || !fullName || !phone || !address || !subdistrict || !district || !province || !postalCode) {
       return NextResponse.json(
         { error: 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน' },
+        { status: 400 }
+      );
+    }
+
+    // Validate education fields
+    if (!studentCode || !major) {
+      return NextResponse.json(
+        { error: 'กรุณากรอกข้อมูลการศึกษาให้ครบถ้วน' },
+        { status: 400 }
+      );
+    }
+
+    // Validate gradYear for alumni
+    if (userType === 'alumni' && !gradYear) {
+      return NextResponse.json(
+        { error: 'กรุณาระบุปีที่จบการศึกษา' },
         { status: 400 }
       );
     }
@@ -57,6 +73,7 @@ export async function POST(request: NextRequest) {
     // Sanitize inputs
     const sanitizedFullName = sanitizeInput(fullName);
     const sanitizedEmail = email.toLowerCase().trim();
+    const sanitizedStudentCode = sanitizeInput(studentCode);
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -70,37 +87,72 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if student code already exists
+    const existingStudentCode = await prisma.educationRecord.findUnique({
+      where: { studentCode: sanitizedStudentCode },
+    });
+
+    if (existingStudentCode) {
+      return NextResponse.json(
+        { error: 'รหัสนักศึกษานี้ถูกใช้งานแล้ว' },
+        { status: 400 }
+      );
+    }
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        email: sanitizedEmail,
-        password: hashedPassword,
-        fullName: sanitizedFullName,
-        phone: sanitizeInput(phone || ''),
-        address: address || '',
-        subdistrict: subdistrict || '',
-        district: district || '',
-        province: province || '',
-        postalCode: postalCode || '',
-        studentCode: studentCode || null,
-        major: major || null,
-        gradYear: gradYear || null,
-        userType: userType || 'student',
-        status: 'pending', // รอการอนุมัติจาก admin
-      },
+    // Determine role and study status
+    const role = userType === 'alumni' ? 'ALUMNI' : 'STUDENT';
+    const studyStatus = userType === 'alumni' ? 'GRADUATED' : 'ACTIVE';
+
+    // Create user with education record and verification in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create user
+      const user = await tx.user.create({
+        data: {
+          email: sanitizedEmail,
+          password: hashedPassword,
+          fullName: sanitizedFullName,
+          phone: sanitizeInput(phone),
+          address: sanitizeInput(address),
+          subdistrict: sanitizeInput(subdistrict),
+          district: sanitizeInput(district),
+          province: sanitizeInput(province),
+          postalCode: sanitizeInput(postalCode),
+          role: role,
+        },
+      });
+
+      // Create education record
+      await tx.educationRecord.create({
+        data: {
+          userId: user.id,
+          studentCode: sanitizedStudentCode,
+          major: sanitizeInput(major),
+          gradYear: gradYear ? parseInt(gradYear) : null,
+          status: studyStatus,
+        },
+      });
+
+      // Create verification record (pending by default)
+      await tx.verification.create({
+        data: {
+          userId: user.id,
+          status: 'PENDING',
+        },
+      });
+
+      return user;
     });
 
     return NextResponse.json(
       {
         message: 'ลงทะเบียนสำเร็จ กรุณารอการอนุมัติจากแอดมิน',
         user: {
-          id: user.id,
-          email: user.email,
-          fullName: user.fullName,
-          status: user.status,
+          id: result.id,
+          email: result.email,
+          fullName: result.fullName,
         },
       },
       { status: 201 }

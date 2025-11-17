@@ -22,6 +22,12 @@ export default function Navbar() {
     let isMounted = true;
     
     const checkAuth = async () => {
+      // Skip auth check on auth pages to avoid 401 errors
+      if (pathname?.startsWith('/auth/')) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const response = await fetch('/api/auth/me', {
           cache: 'no-store',
@@ -52,7 +58,7 @@ export default function Navbar() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [pathname]);
 
   const isAdmin = useMemo(() => user?.isAuthenticated && user?.role === 'admin', [user]);
   const isLoggedIn = useMemo(() => user?.isAuthenticated, [user]);
@@ -208,9 +214,16 @@ export default function Navbar() {
         {isLoggedIn ? (
           <div className="flex items-center space-x-4">
             {user?.name && (
-              <span className="text-sm text-gray-600">
-                สวัสดี, {user.name}
-              </span>
+              <div className="relative group">
+                <span className="text-gray-500 cursor-pointer hover:text-[#F26522] transition-colors duration-200">
+                  สวัสดี, {user.name}
+                </span>
+                <div className="absolute left-0 mt-2 w-48 bg-white shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  <Link href="/user/editprofile" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">
+                    แก้ไขโปรไฟล์
+                  </Link>
+                </div>
+              </div>
             )}
             <button
               onClick={handleLogout}
