@@ -186,8 +186,8 @@ export default function Navbar() {
 
                 {/* 💡 4. L2: Dropdown (ฟัง group-hover/l1) */}
                 <div className="absolute left-full top-0 mt-0 w-48 bg-white shadow-lg group-hover/l1:opacity-100 invisible group-hover/l1:visible transition-all duration-200 z-50">
-                  <Link href="/apply" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">พิจารณา</Link>
-                  <Link href="/fund" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">รายงานงบ</Link>
+                  <Link href="/admin/budget_approval" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">พิจารณา</Link>
+                  <Link href="/admin/budget_report" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">รายงานงบ</Link>
                 </div>
               </div>
 
