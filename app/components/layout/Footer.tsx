@@ -16,6 +16,7 @@ export default function Footer() {
                   src="/ENGi Lettermark-TH-White.png"
                   alt="SUT Engineering"
                   fill
+                  sizes="(max-width: 768px) 100vw, 384px"
                   className="object-contain object-left"
                 />
               </div>

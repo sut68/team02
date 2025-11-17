@@ -16,11 +16,11 @@ type InputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> & {
   radius?: "none" | "md" | "full"
 }
 
-const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, size = "md", radius = "full", ...props }, ref) => {
+const Input = React.memo(React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, size = "md", radius = "md", ...props }, ref) => {
     const sizeCls =
       size === "sm" ? "h-7 text-sm px-3" :
-      size === "md" ? "h-9 text-sm px-4 py-2" :
+      size === "md" ? "px-4 py-3 text-sm" :
       "h-11 text-base px-4 py-2"
 
     const radiusCls =
@@ -33,12 +33,10 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         type={type}
         ref={ref}
         className={cn(
-          "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input",
-          "w-full min-w-0 border bg-transparent shadow-xs transition-[color,box-shadow] outline-none",
+          "w-full border border-gray-300 bg-transparent placeholder-gray-400 transition-all outline-none",
+          "focus:outline-none focus:border-orange-400",
+          "disabled:bg-gray-50 disabled:text-gray-600 disabled:cursor-not-allowed disabled:opacity-50",
           "file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium",
-          "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-          "focus-visible:border-ring focus-visible:border-primary focus-visible:ring-1",
-          "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
           sizeCls,
           radiusCls,
           className
@@ -47,7 +45,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       />
     )
   }
-)
+))
 
 Input.displayName = "Input"
 

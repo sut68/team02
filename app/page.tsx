@@ -15,25 +15,10 @@ export default function HomePage() {
         🎉 ยินดีต้อนรับสู่เว็บไซต์อย่างเป็นทางการ 🎉
       </h1>
 
-      <p className="text-xl text-gray-600 mb-8 text-center max-w-3xl">
-        เราคือศูนย์กลางการระดมทุน การบริจาค และการแลกเปลี่ยนข้อมูลที่โปร่งใส
-        เพื่อสนับสนุนพันธกิจหลักของคณะวิศวกรรมศาสตร์
-      </p>
-
-      {/* 💡 ปุ่มตัวอย่าง */}
-      <div className="space-x-20">
-        <Link
-          href="/content"
-          // className="bg-[#F26522] text-white-800 font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-300 transition duration-300"
-          className="bg-[#F26522] text-white font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-orange-700 transition duration-300"
-          >
-          เริ่มต้นระดมทุน
-        </Link>
-        <button className="bg-gray-200 text-gray-800 font-semibold py-3 px-6 rounded-lg shadow-md hover:bg-gray-300 transition duration-300">
-          ดูรายงานงบประมาณ
-        </button>
+        <p className="text-xl text-gray-600 mb-8 text-center max-w-3xl mx-auto">
+          เราคือศูนย์กลางการระดมทุน การบริจาค และการแลกเปลี่ยนข้อมูลที่โปร่งใส
+        </p>
       </div>
-
-    </div>
+    </>
   );
 }

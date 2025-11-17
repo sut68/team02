@@ -1,8 +1,11 @@
+'use client';
+
 import type { Metadata } from "next";
 import localFont from "next/font/local"; // ✅ นำเข้า localFont
 import "./globals.css";
 import Footer from "./components/layout/Footer";
 import Navbar from "./components/layout/Navbar";
+import { usePathname } from "next/navigation";
 
 
 const sutFont = localFont({
@@ -36,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="th" className={sutFont.variable}>
       <body
-        className={`antialiased`} 
+        className={`${sutFont.className} antialiased`} 
         suppressHydrationWarning={true}
       >
        
@@ -47,9 +50,17 @@ export default function RootLayout({
             {children}
           </main>
           
-          <Footer />
+          <ConditionalFooter />
         </div>
       </body>
     </html>
   );
+}
+
+function ConditionalFooter() {
+  const pathname = usePathname();
+  const isAdminPage = pathname?.startsWith('/admin');
+  
+  if (isAdminPage) return null;
+  return <Footer />;
 }
