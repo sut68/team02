@@ -537,8 +537,19 @@ export default function RegisterPage() {
     </div>
   );
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateStep(step)) return;
+
+    if (step === 2) {
+      handleRegister();
+    } else {
+      setStep((s) => Math.min(3, s + 1));
+    }
+  };
+
   const RegistrationForm = () => (
-    <div className="min-h-screen pt-6 pb-4 px-8">
+    <form onSubmit={handleSubmit} className="min-h-screen pt-6 pb-4 px-8">
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-center mb-14">
           {stepLabels.map((label, i) => {
@@ -586,6 +597,7 @@ export default function RegisterPage() {
 
         <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
           <button
+            type="button"
             onClick={onBack}
             disabled={loading || step === 3}
             className="px-8 py-3 border border-gray-300 rounded-md text-gray-700 text-sm hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
@@ -594,7 +606,7 @@ export default function RegisterPage() {
           </button>
           {step < 3 ? (
             <button
-              onClick={onNext}
+              type="submit"
               disabled={loading}
               className="px-10 py-3 bg-orange-500 text-white rounded-md text-sm hover:bg-orange-600 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -610,7 +622,7 @@ export default function RegisterPage() {
           )}
         </div>
       </div>
-    </div>
+    </form>
   );
 
   if (!userType) return <RegisterSelect />;
