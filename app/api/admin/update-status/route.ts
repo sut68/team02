@@ -6,6 +6,53 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function PATCH(request: NextRequest) {
   try {
+    // Get admin info from token
+    const token = request.cookies.get('token')?.value;
+    if (!token) {
+      return NextResponse.json(
+        { error: 'กรุณาเข้าสู่ระบบ' },
+        { status: 401 }
+      );
+    }
+
+    let adminInfo;
+    try {
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || '') as {
+        userId: number;
+        email: string;
+        role: string;
+      };
+
+      // Check if user is admin
+      if (decoded.role !== 'ADMIN') {
+        return NextResponse.json(
+          { error: 'คุณไม่มีสิทธิ์ในการดำเนินการนี้' },
+          { status: 403 }
+        );
+      }
+
+      // Get admin data
+      const admin = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: { id: true, fullName: true, email: true, role: true }
+      });
+
+      if (!admin) {
+        return NextResponse.json(
+          { error: 'ไม่พบข้อมูลผู้ดูแลระบบ' },
+          { status: 404 }
+        );
+      }
+
+      adminInfo = admin;
+    } catch (error) {
+      return NextResponse.json(
+        { error: 'การยืนยันตัวตนไม่ถูกต้อง' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { userId, status, remark } = body;
 
@@ -39,21 +86,21 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Update or create verification record
+    // Update or create verification record with real admin info
     const verification = await prisma.verification.upsert({
       where: { userId: parseInt(userId) },
       update: {
         status: upperStatus as 'PENDING' | 'APPROVED' | 'REJECTED',
         reviewedAt: new Date(),
         remark: remark || null,
-        reviewedBy: 'Admin' // TODO: Get actual admin name from session
+        reviewedBy: `${adminInfo.fullName} (${adminInfo.email})`
       },
       create: {
         userId: parseInt(userId),
         status: upperStatus as 'PENDING' | 'APPROVED' | 'REJECTED',
         reviewedAt: new Date(),
         remark: remark || null,
-        reviewedBy: 'Admin'
+        reviewedBy: `${adminInfo.fullName} (${adminInfo.email})`
       }
     });
 

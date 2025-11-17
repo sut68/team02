@@ -33,9 +33,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user
+    // Find user with relations
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() },
+      include: {
+        verification: true,
+        educationRecords: {
+          orderBy: { createdAt: 'desc' },
+          take: 1
+        }
+      }
     });
 
     if (!user) {
@@ -55,16 +62,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user is approved
-    if (user.status !== 'approved') {
-      return NextResponse.json(
-        {
-          error: user.status === 'pending'
-            ? 'บัญชีของคุณรอการอนุมัติจากแอดมิน'
-            : 'บัญชีของคุณถูกปฏิเสธ',
-        },
-        { status: 403 }
-      );
+    // Check verification status (skip for ADMIN)
+    if (user.role !== 'ADMIN') {
+      if (!user.verification || user.verification.status !== 'APPROVED') {
+        const verificationStatus = user.verification?.status || 'PENDING';
+        return NextResponse.json(
+          {
+            error: verificationStatus === 'PENDING'
+              ? 'บัญชีของคุณรอการอนุมัติจากแอดมิน'
+              : 'บัญชีของคุณถูกปฏิเสธ กรุณาติดต่อผู้ดูแลระบบ',
+          },
+          { status: 403 }
+        );
+      }
     }
 
     // Generate JWT token
@@ -72,7 +82,7 @@ export async function POST(request: NextRequest) {
       {
         userId: user.id,
         email: user.email,
-        userType: user.userType,
+        role: user.role,
       },
       JWT_SECRET,
       { expiresIn: '7d' }
@@ -86,7 +96,7 @@ export async function POST(request: NextRequest) {
           id: user.id,
           email: user.email,
           fullName: user.fullName,
-          userType: user.userType,
+          role: user.role,
         },
       },
       { status: 200 }
