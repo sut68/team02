@@ -20,6 +20,7 @@ type TransformedUser = {
     major: string;
     gradYear: number | null;
     status: string;
+    transcript: string | null;
   } | null;
   verification: {
     id: number;
@@ -40,6 +41,21 @@ export default function UserManagementClient({ initialUsers }: Props) {
   const [activeStatus, setActiveStatus] = useState<FilterStatus>('all');
   const [users, setUsers] = useState<TransformedUser[]>(initialUsers);
   const [searchTerm, setSearchTerm] = useState('');
+  const [previewUrl, setPreviewUrl] = useState<string | undefined>(undefined);
+  const [previewType, setPreviewType] = useState<'image' | 'pdf' | 'other' | undefined>(undefined);
+
+  const openPreview = (url: string) => {
+    const lower = url.toLowerCase();
+    if (lower.endsWith('.pdf')) setPreviewType('pdf');
+    else if (lower.match(/\.(png|jpg|jpeg|gif|webp)$/)) setPreviewType('image');
+    else setPreviewType('other');
+    setPreviewUrl(url);
+  };
+
+  const closePreview = () => {
+    setPreviewUrl(undefined);
+    setPreviewType(undefined);
+  };
 
   const filteredUsers = users.filter(user => {
     const verifyStatus = user.verification?.status.toLowerCase() || 'pending';
@@ -124,6 +140,7 @@ export default function UserManagementClient({ initialUsers }: Props) {
   };
 
   return (
+    <>
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-medium text-gray-700 mb-8">การจัดการสมาชิก</h1>
@@ -222,6 +239,7 @@ export default function UserManagementClient({ initialUsers }: Props) {
                     <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">สาขาวิชา</th>
                     <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">สถานะการศึกษา</th>
                     <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">อีเมลล์</th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">เอกสารแนบ</th>
                     <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">สถานะ</th>
                   </tr>
                 </thead>
@@ -247,6 +265,19 @@ export default function UserManagementClient({ initialUsers }: Props) {
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600">{getEducationDisplay(user)}</td>
                           <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            {user.educationRecord?.transcript ? (
+                              <button
+                                type="button"
+                                onClick={() => openPreview(user.educationRecord!.transcript!)}
+                                className="text-orange-600 hover:underline text-sm"
+                              >
+                                เปิดดู
+                              </button>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
                           <td className="px-6 py-4">
                             <div className="relative inline-block">
                               <select
@@ -289,5 +320,55 @@ export default function UserManagementClient({ initialUsers }: Props) {
         </Card>
       </div>
     </div>
+    {previewUrl && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6">
+        <div className="bg-white w-full max-w-4xl rounded-lg shadow-lg flex flex-col max-h-[90vh]">
+          <div className="flex items-center justify-between px-6 py-4 border-b">
+            <h2 className="text-lg font-medium text-gray-700">แสดงเอกสารแนบ</h2>
+            <button
+              onClick={closePreview}
+              className="text-sm text-gray-500 hover:text-orange-600 transition"
+            >ปิด</button>
+          </div>
+          <div className="flex-1 overflow-auto p-4">
+            {previewType === 'pdf' && previewUrl && (
+              <iframe
+                src={previewUrl || ''}
+                className="w-full h-[70vh] border rounded"
+                title="Transcript PDF"
+              />
+            )}
+            {previewType === 'image' && previewUrl && (
+              <img
+                src={previewUrl || ''}
+                alt="Transcript"
+                className="max-h-[70vh] mx-auto object-contain"
+              />
+            )}
+            {previewType === 'other' && (
+              <div className="text-center text-gray-600 text-sm">
+                ไม่รองรับการแสดงไฟล์นี้โดยตรง กรุณาดาวน์โหลด
+                <div className="mt-4">
+                  <a
+                    href={previewUrl || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-orange-600 hover:underline"
+                  >ดาวน์โหลดไฟล์</a>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="px-6 py-3 border-t flex justify-end">
+            <a
+              href={previewUrl || '#'}
+              download
+              className="text-sm px-4 py-2 rounded bg-orange-500 text-white hover:bg-orange-600 transition"
+            >ดาวน์โหลด</a>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

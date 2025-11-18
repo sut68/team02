@@ -48,16 +48,28 @@ export function News() {
   const { featured, secondary, archives, upcoming } = mockData;
 
   return (
-    <section className="container mx-auto px-4 py-16 ">
+    <section className="container mx-auto mb-16 px-4 py-0 ">
       {/* 🔶 Full-width Banner */}
-            <div className="relative w-screen h-[420px] left-[50%] right-[50%] mb-25 -ml-[50vw] -mr-[50vw] overflow-hidden">
+            <div className="relative w-screen h-[500px] left-[50%] right-[50%] mb-25 -ml-[50vw] -mr-[50vw] overflow-hidden">
               <Image
-                src="/25.jpg"
+                src="/42.jpg"
                 alt="Home"
                 fill
                 className="object-cover object-center"
                 priority
               />
+              <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+
+              {/* Text Container */}
+              <div className="absolute inset-0 flex flex-col justify-end items-start text-left p-8 md:p-16 font-sans">
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white/95 mb-4 drop-shadow-lg">
+                  AlumniConnext
+                </h1>
+                <p className="text-lg md:text-xl text-white/75 max-w-2xl font-light leading-relaxed drop-shadow-md">
+                  เชื่อมโยงศิษย์เก่าและมหาวิทยาลัย สร้างเครือข่ายที่เข้มแข็ง <br className="hidden md:block" />
+                  เพื่ออนาคตที่ยั่งยืนและการเรียนรู้ตลอดชีวิต
+                </p>
+              </div>
             </div>
       
       {/* บรรทัดหัวข้อ + ปุ่มคำขอยื่นเรื่อง */}
@@ -82,10 +94,10 @@ export function News() {
 
         {/* A. Featured (ใหญ่สุด ซ้าย) */}
         <Link href={`/user/news/${featured.slug}`} className="lg:col-span-6 block group h-full"> {/* เพิ่ม h-full */}
-          <Card className="h-full overflow-hidden !p-0 rounded-2xl shadow-md bg-white flex flex-col"> {/* เพิ่ม flex flex-col */}
+          <Card className="h-full overflow-hidden p-0! rounded-2xl shadow-md bg-white flex flex-col"> {/* เพิ่ม flex flex-col */}
             
             {/* รูป */}
-            <div className="relative w-full h-60 md:h-72 flex-shrink-0"> {/* เพิ่ม flex-shrink-0 เพื่อให้รูปไม่ถูกบีบ */}
+            <div className="relative w-full h-60 md:h-72 shrink-0"> {/* เพิ่ม flex-shrink-0 เพื่อให้รูปไม่ถูกบีบ */}
               <Image
                 src={featured.imageSrc}
                 alt={featured.title}
@@ -96,11 +108,11 @@ export function News() {
             </div>
 
             {/* เนื้อหา */}
-            <div className="p-5 flex-grow"> {/* เพิ่ม flex-grow เพื่อให้เนื้อหายืดเต็มพื้นที่ที่เหลือ */}
-              <CardHeader className="!mb-2 !text-lg md:!text-xl font-semibold group-hover:text-orange-600 transition">
+            <div className="p-5 grow"> {/* เพิ่ม flex-grow เพื่อให้เนื้อหายืดเต็มพื้นที่ที่เหลือ */}
+              <CardHeader className="mb-2! text-lg! md:text-xl! font-semibold group-hover:text-orange-600 transition">
                 {featured.title}
               </CardHeader>
-              <CardContent className="!p-0 text-sm text-gray-600 line-clamp-3">
+              <CardContent className="p-0! text-sm text-gray-600 line-clamp-3">
                 {featured.desc}
               </CardContent>
             </div>
@@ -110,9 +122,9 @@ export function News() {
 
         {/* B. Secondary (ตรงกลาง) */}
         <Link href={`/user/news/${secondary.slug}`} className="lg:col-span-3 block group h-full"> {/* เพิ่ม h-full */}
-          <Card className="h-full overflow-hidden !p-0 rounded-2xl shadow-md bg-white flex flex-col"> {/* เพิ่ม flex flex-col */}
+          <Card className="h-full overflow-hidden p-0! rounded-2xl shadow-md bg-white flex flex-col"> {/* เพิ่ม flex flex-col */}
             
-            <div className="relative w-full h-60 md:h-72 flex-shrink-0"> {/* เพิ่ม flex-shrink-0 */}
+            <div className="relative w-full h-60 md:h-72 shrink-0"> {/* เพิ่ม flex-shrink-0 */}
               <Image
                 src={secondary.imageSrc}
                 alt={secondary.title}
@@ -123,11 +135,11 @@ export function News() {
             </div> 
 
               {/* เนื้อหา */}
-            <div className="p-5 flex-grow"> {/* เพิ่ม flex-grow */}
-              <CardHeader className="!mb-2 !text-lg md:!text-xl font-semibold group-hover:text-orange-600 transition">
+            <div className="p-5 grow"> {/* เพิ่ม flex-grow */}
+              <CardHeader className="mb-2! text-lg! md:text-xl! font-semibold group-hover:text-orange-600 transition">
                 {secondary.title} {/* แก้จาก featured.title เป็น secondary.title */}
               </CardHeader>
-              <CardContent className="!p-0 text-sm text-gray-600 line-clamp-3">
+              <CardContent className="p-0! text-sm text-gray-600 line-clamp-3">
                 {secondary.desc} {/* แก้จาก featured.desc เป็น secondary.desc */}
               </CardContent>
             </div>
@@ -142,12 +154,12 @@ export function News() {
             <Link
               key={item.id}
               href={`/user/news/${item.slug}`}
-              className="block group flex-grow" 
+              className="block group grow" 
             >
-              <Card className="overflow-hidden !p-0 rounded-2xl shadow-md bg-white flex flex-col h-full"> {/* เพิ่ม flex flex-col h-full */}
+              <Card className="overflow-hidden p-0! rounded-2xl shadow-md bg-white flex flex-col h-full"> {/* เพิ่ม flex flex-col h-full */}
 
                 {/* รูปด้านบน */}
-                <div className="relative w-full h-32 flex-shrink-0"> {/* เพิ่ม flex-shrink-0 */}
+                <div className="relative w-full h-32 shrink-0"> {/* เพิ่ม flex-shrink-0 */}
                   <Image
                     src={item.imageSrc}
                     alt={item.title}
@@ -158,7 +170,7 @@ export function News() {
                 </div>
 
                 {/* เนื้อหาด้านล่าง */}
-                <div className="p-4 flex-grow"> {/* เพิ่ม flex-grow */}
+                <div className="p-4 grow"> {/* เพิ่ม flex-grow */}
                   <p className="text-sm font-medium text-gray-800 leading-snug group-hover:text-orange-600 transition">
                     {item.title}
                   </p>
@@ -185,7 +197,7 @@ export function News() {
         <div className="flex items-center gap-4">
 
           {/* รูปวงกลมด้านซ้าย */}
-          <div className="relative w-32 h-32 rounded-full overflow-hidden shadow-sm flex-shrink-0">
+          <div className="relative w-32 h-32 rounded-full overflow-hidden shadow-sm shrink-0">
             <Image
               src={event.imageSrc}
               alt={event.title}
