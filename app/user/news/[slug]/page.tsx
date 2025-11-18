@@ -13,30 +13,64 @@ type MetaItem = {
 };
 
 const mockDetailData = {
-  title: 'DSA Mascot Contest',
+  title: 'SUT Global Entrepreneurship Camp 2026',
   date: '31 ตุลาคม 2568',
-  imageUrl: '/25.jpg',
+  imageUrl: '/Content/Event6.jpg',
   content: `
-ขอเชิญชวนนักศึกษา ผู้เรียน และศิษย์เก่า มกส. มาท้าทายไอเดียสุดครีเอทีฟของคนคุณ 
-"DSA Mascot Contest" การออกแบบมาสคอต 
-ผู้ชนะรับเงินรางวัลมูลค่ารวมกว่า 10,000 บาท พร้อมเกียรติบัตรสุดสดุดี
-อ่านรายละเอียดเพิ่มเติมผ่าน QR Code ในภาพ หรือ http://bit.ly/45cFH92
-ทั้งเวลาเรียนอยู่, ความคิดสร้างสรรค์ของคุณ 
-อาจกลายเป็นตัวแทนของความเป็นส่วนหนึ่งการนักศึกษา มกส. ในอนาคต
+Be brave to try. Be proud to grow. Be part of GEC2026 !
+.
+Got the spirit to try, learn, and make new international friends?
+This camp is for YOU!
+.
+SUT Global Entrepreneurship Camp 2026
+🎟️ FREE for 30 SUT students only!
+📅 Jan 31 – Feb 8, 2026
+📍 Bangkok & SUT (Nakhon Ratchasima)
+💡 Theme: “Sustainable and Resilient Communities: Innovating for a Healthier Planet and People”
+.
+What you’ll experience
+.
+Explore – Discover Thailand’s innovation, startup ecosystem, and culture.
+Experience – Learn sustainability, teamwork, and problem-solving with friends from 10+ countries.
+Entrepreneurship – Spot problems, validate ideas, and create innovative solutions with real value.
+Friendships – Build lasting global connections and memories that inspire.
+.
+📝 Application Schedule (SUT Internal)
+Application period: 13 – 24 November 2025 (until 23:59 hrs, GMT+7)
+Announcement of shortlisted candidates: 25 November 2025
+40 applicants will be shortlisted based on Google Form responses and a one-page CV.
+Shortlisted candidates will book an interview slot.
+Interviews: 28 November 2025 (conducted in English at SEDA)
+Pre-camp Workshop (Design Thinking): 9 or 10 January 2026 (mandatory for selected participants)
+.
+💰 Deposit: 300 THB (refunded after full participation; non-refundable upon cancellation)
+
+.
+GEC2026 Website: https://sites.google.com/view/sut-gec/home
+If you require any further clarifications about the programme and application, please email:
+📧 global.entrepreneurship.sut@gmail.com
+📞 044-22-3225 (P’Mew, SEDA)
+SEDA Website: https://seda.sut.ac.th/.../03b6f758-c078-11f0-b923...
+.
+✨ You don’t need perfect English — just the courage to try! ✨
+
   `,
   meta: [
-    { label: 'ระยะเวลา', value: 'วันนี้ – 15 ต.ค. 2568', type: 'text' as const },
+    { label: 'ระยะเวลา', value: '31 มกราคม - 8 กุมภาพันธุ์ 2569', type: 'text' as const },
     {
-      label: 'ส่งผลงาน',
-      value: 'https://forms.gle/HCHAR9JKPTF4wqG46',
+      label: 'ส่งเอกสารสมัครก่อนวันที่ 24 พฤศจิกายน 2565',
+      value: 'https://forms.gle/KHHiVL2fZQZ8WTXc7',
       type: 'link' as const,
       linkText: 'คลิกที่นี่',
     },
   ] as MetaItem[],
   footerTags: [
-    { text: '#DSAMascotContest', href: '#' },
+    { text: '#SUTGEC2026', href: '#' },
+    { text: '#SUTStudentsGoGlobal', href: '#' },
+    { text: '#SUTEntrepreneurship', href: '#' },
+    { text: '#SEDA', href: '#' },
     { text: '#SUT', href: '#' },
-    { text: '#ส่วนกิจกรรมนักศึกษา', href: '#' },
+    { text: '#ExploreExperienceEntrepreneurshipFriendships', href: '#' },
   ],
   author: 'ส่วนกิจกรรมนักศึกษา',
 };
