@@ -36,7 +36,7 @@ export default function Navbar() {
           const userData = await response.json();
           setUser({
             isAuthenticated: true,
-            role: userData.userType,
+            role: userData.role,
             name: userData.fullName,
           });
         } else if (isMounted) {
@@ -60,7 +60,7 @@ export default function Navbar() {
     };
   }, [pathname]);
 
-  const isAdmin = useMemo(() => user?.isAuthenticated && user?.role === 'admin', [user]);
+  const isAdmin = useMemo(() => user?.isAuthenticated && user?.role?.toUpperCase() === 'ADMIN', [user]);
   const isLoggedIn = useMemo(() => user?.isAuthenticated, [user]);
 
   const handleLogout = useCallback(async () => {
@@ -206,6 +206,7 @@ export default function Navbar() {
 
           {/* <Link href="/budget" className="hover:text-gray-900">รายงานงบประมาณ</Link> */}
           <Link href="/admin/talk" className="hover:text-gray-900">กระดานสนทนา</Link>
+          <Link href="/admin/usermanage" className="hover:text-gray-900">จัดการสมาชิก</Link>
         </>
       )}
 
@@ -263,6 +264,7 @@ export default function Navbar() {
               alt="ENGi logo"
               width={isScrolled ? 150 : 200}
               height={isScrolled ? 30 : 40}
+              style={{ width: 'auto', height: 'auto' }}
               priority
               loading="eager"
             />
