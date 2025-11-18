@@ -55,11 +55,11 @@ export async function middleware(request: NextRequest) {
     const decoded = payload as {
       userId: number;
       email: string;
-      userType: string;
+      role: string;
     };
 
     // Check admin access
-    if (isAdminRoute && decoded.userType !== 'admin') {
+    if (isAdminRoute && decoded.role !== 'ADMIN') {
       return NextResponse.redirect(new URL('/user/news', request.url));
     }
 
@@ -70,7 +70,7 @@ export async function middleware(request: NextRequest) {
     // Add user info to headers for API routes
     response.headers.set('x-user-id', decoded.userId.toString());
     response.headers.set('x-user-email', decoded.email);
-    response.headers.set('x-user-type', decoded.userType);
+    response.headers.set('x-user-role', decoded.role);
     
     return response;
   } catch (error) {

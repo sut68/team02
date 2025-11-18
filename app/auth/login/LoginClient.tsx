@@ -41,11 +41,22 @@ const LoginClient: React.FC = () => {
         return;
       }
 
-      // Success - redirect based on user type
+      // Success - redirect based on user role
       console.log('✅ เข้าสู่ระบบสำเร็จ, กำลัง redirect...');
-      console.log('User type:', data.user.userType);
+      console.log('User role:', data.user.role);
       
-      const redirectUrl = data.user.userType === 'admin' ? '/admin/usermanage' : '/user/news';
+      // Check if there's a redirect parameter in URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirectParam = urlParams.get('redirect');
+      
+      // Use redirect parameter if exists, otherwise redirect based on role
+      let redirectUrl = '/user/news'; // default
+      if (redirectParam) {
+        redirectUrl = redirectParam;
+      } else if (data.user.role === 'ADMIN') {
+        redirectUrl = '/admin/usermanage';
+      }
+      
       console.log('Redirecting to:', redirectUrl);
       
       // Use window.location for immediate redirect
