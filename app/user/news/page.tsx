@@ -48,16 +48,28 @@ export function News() {
   const { featured, secondary, archives, upcoming } = mockData;
 
   return (
-    <section className="container mx-auto px-4 py-16 ">
+    <section className="container mx-auto mb-16 px-4 py-0 ">
       {/* 🔶 Full-width Banner */}
-            <div className="relative w-screen h-[420px] left-[50%] right-[50%] mb-25 -ml-[50vw] -mr-[50vw] overflow-hidden">
+            <div className="relative w-screen h-[500px] left-[50%] right-[50%] mb-25 -ml-[50vw] -mr-[50vw] overflow-hidden">
               <Image
-                src="/25.jpg"
+                src="/42.jpg"
                 alt="Home"
                 fill
                 className="object-cover object-center"
                 priority
               />
+              <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+
+              {/* Text Container */}
+              <div className="absolute inset-0 flex flex-col justify-end items-start text-left p-8 md:p-16 font-sans">
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white/95 mb-4 drop-shadow-lg">
+                  AlumniConnext
+                </h1>
+                <p className="text-lg md:text-xl text-white/75 max-w-2xl font-light leading-relaxed drop-shadow-md">
+                  เชื่อมโยงศิษย์เก่าและมหาวิทยาลัย สร้างเครือข่ายที่เข้มแข็ง <br className="hidden md:block" />
+                  เพื่ออนาคตที่ยั่งยืนและการเรียนรู้ตลอดชีวิต
+                </p>
+              </div>
             </div>
       
       {/* บรรทัดหัวข้อ + ปุ่มคำขอยื่นเรื่อง */}
