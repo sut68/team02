@@ -5,6 +5,7 @@ import Link from 'next/link';
 import React from 'react';
 import { PrimaryButton } from './../../components/ui/Button';
 import { Card } from './../../components/ui/Card';
+import CentralFundDonationPage from './donate';
 
 // 💡 Component สำหรับแสดง Tag (เช่น "กิจกรรม", "ของที่ระลึก")
 const Tag = ({ text }: { text: string }) => (
@@ -17,35 +18,41 @@ const Tag = ({ text }: { text: string }) => (
 export default function DonationPage() {
     return (
         // 1. Container หลักของหน้า (ใช้สีพื้นหลังอ่อนๆ เหมือนในดีไซน์)
-        <div className="bg-gray-100 min-h-screen mb">
+        <div className="bg-gray-100 min-h-screen mb-8">
 
             {/* 2. ส่วน Hero Image (ภาพนักศึกษา) */}
-            <div className="relative w-full h-[300px] md:h-[500px] bg-gray-800">
-                {/* 💡 หมายเหตุ: คุณต้องใช้รูปภาพจริงมาแทนที่ placeholder */}
+            <div className="relative w-full h-[300px] md:h-[500px] bg-gray-800 mb-4">
+                💡 หมายเหตุ: คุณต้องใช้รูปภาพจริงมาแทนที่ placeholder
                 <Image
-                    src="/donation.jpeg" // 👈 1. Placeholder สำหรับ Hero
+                    src="/donation_poster/00.png" 
                     alt="นักศึกษาวิศวกรรมศาสตร์ สุรนารี"
                     layout="fill"
                     objectFit="cover"
-                    className="opacity-60" // 💡 ลดความสว่างภาพเพื่อให้ข้อความเด่น
+                    className="opacity-60"
                 />
-                {/* ข้อความบน Hero (ตามใน Figma) */}
                 <div className="absolute inset-0 flex items-end justify-end p-8 md:p-16">
                     <h1 className="text-white text-3xl md:text-5xl font-bold text-right shadow-lg">
                         ระดมทุนและบริจาค
                     </h1>
                 </div>
             </div>
+            <CentralFundDonationPage />
+
+            <div className="flex ml-8 mb-4">
+                <h1 className="text-[#F26522] text-3xl md:text-5xl font-bold text-right shadow-lg">
+                    การระดมทุน
+                </h1>
+            </div>
 
             {/* 3. ส่วน Content (การ์ด) */}
-            <div className="container mx-auto max-w-[1440px] p-4 md:p-8 z-10 relative">
+            <div className="container mx-auto max-w-8xl p-4 md:p-8 z-10 relative mb-8">
 
                 <Card className="bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl md:flex mb-8">
 
                     {/* รูปภาพ (ซ้าย) */}
                     <div className="md:w-1/3 bg-white-100 flex items-center justify-center p-4">
                         <Image
-                            src="/donation_poster/class350.png"
+                            src="/donation_poster/donation_poster01.png"
                             alt="ของที่ระลึก"
                             className="rounded-lg object-contain h-48 w-48 md:h-full md:w-full"
                             width={300}
@@ -83,7 +90,7 @@ export default function DonationPage() {
                     {/* รูปภาพ (ซ้าย) */}
                     <div className="md:w-1/3 bg-white-100 flex items-center justify-center p-4">
                         <Image
-                            src="/donation_poster/poster02.png"
+                            src="/donation_poster/donation_poster02.png"
                             alt="project_poster"
                             className="rounded-lg object-contain h-48 w-48 md:h-full md:w-full"
                             width={300}
@@ -120,7 +127,7 @@ export default function DonationPage() {
                     {/* รูปภาพ (ซ้าย) */}
                     <div className="md:w-1/3 bg-white-100 flex items-center justify-center p-4">
                         <Image
-                            src="/donation_poster/class350.png"
+                            src="/donation_poster/donation_poster01.png"
                             alt="ของที่ระลึก"
                             className="rounded-lg object-contain h-48 w-48 md:h-full md:w-full"
                             width={300}
@@ -154,6 +161,6 @@ export default function DonationPage() {
 
 
             </div>
-        </div>
+        </div >
     );
 }

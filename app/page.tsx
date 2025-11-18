@@ -6,6 +6,7 @@ import { SouvenirSection } from './user/souvenir/SouvenirSection';
 // นี่คือเนื้อหาหลักของหน้าแรก (Home Page)
 export default function HomePage() {
   return (
+
     <div className="min-h-screen">
       {/* ส่วนข่าวสารและกิจกรรม */}
       <News />
