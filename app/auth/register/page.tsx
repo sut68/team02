@@ -114,25 +114,28 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
     setLoading(true);
 
     try {
+      // Build multipart form data to support file upload
+      const fd = new FormData();
+      fd.append('email', formData.email);
+      fd.append('password', formData.password);
+      fd.append('fullName', formData.name);
+      fd.append('phone', formData.phone);
+      fd.append('address', formData.addressLine);
+      fd.append('subdistrict', formData.subdistrict);
+      fd.append('district', formData.district);
+      fd.append('province', formData.province);
+      fd.append('postalCode', formData.postalCode);
+      fd.append('studentCode', formData.studentCode);
+      fd.append('major', formData.major);
+      fd.append('gradYear', formData.gradYear);
+      fd.append('userType', userType || 'student');
+      if (formData.transcript) {
+        fd.append('transcript', formData.transcript);
+      }
+
       const response = await fetch('/api/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          fullName: formData.name,
-          phone: formData.phone,
-          address: formData.addressLine,
-          subdistrict: formData.subdistrict,
-          district: formData.district,
-          province: formData.province,
-          postalCode: formData.postalCode,
-          studentCode: formData.studentCode || undefined,
-          major: formData.major || undefined,
-          gradYear: formData.gradYear || undefined,
-          userType: userType || 'student',
-          transcriptUrl: formData.transcript?.name || undefined, // TODO: implement file upload
-        }),
+        body: fd,
       });
 
       const data = await response.json();

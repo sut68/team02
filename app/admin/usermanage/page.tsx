@@ -36,7 +36,8 @@ export default async function AdminUserManagementPage() {
       studentCode: user.educationRecords[0].studentCode,
       major: user.educationRecords[0].major,
       gradYear: user.educationRecords[0].gradYear,
-      status: user.educationRecords[0].status
+      status: user.educationRecords[0].status,
+      transcript: user.educationRecords[0].transcript || null
     } : null,
     verification: user.verification ? {
       id: user.verification.id,
