@@ -8,6 +8,7 @@ import {
   Ban,
   CheckCircle,
   Plus,
+  CirclePlus,
 } from "lucide-react";
 import Link from "next/link";
 import ProjectCard from "@/app/components/ui/ProjectCard";
@@ -143,7 +144,7 @@ export default function ProjectManagementPage() {
             href="/admin/budget_approval/create"
             className="bg-orange-500 text-white px-6 py-3 rounded-full hover:bg-orange-600 transition flex items-center gap-2 shadow-md hover:shadow-lg"
           >
-            <Plus className="w-5 h-5" />
+            <CirclePlus className="w-6 h-6" />
             เพิ่มโครงการ
           </Link>
         </div>
@@ -167,7 +168,7 @@ export default function ProjectManagementPage() {
                 href="/admin/budget_approval/create"
                 className="inline-flex items-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600 transition shadow-md hover:shadow-lg"
               >
-                <Plus className="w-5 h-5" />
+                <CirclePlus className="w-6 h-6" />
                 เพิ่มโครงการใหม่
               </Link>
             )}
