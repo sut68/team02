@@ -10,8 +10,10 @@ export default function HomePage() {
       {/* ส่วนข่าวสารและกิจกรรม */}
       <News />
       
-      {/* ส่วนของที่ระลึก */}
-      <SouvenirSection />
+      {/* ส่วนของที่ระลึก (มี anchor สำหรับเลื่อนจากเมนู) */}
+      <div id="souvenir" className="scroll-mt-28">
+        <SouvenirSection />
+      </div>
     </div>
   );
 } 
