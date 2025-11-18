@@ -11,36 +11,36 @@ import { PrimaryButton } from '../../components/ui/Button';
 export const mockData = {
   featured: {
     id: 1,
-    title: 'Alumni Talk: "จากห้องเรียนสู่อุตสาหกรรมเทคโนโลยี"',
-    desc: 'พี่ๆ ศิษย์เก่าจากหลากหลายวงการมาร่วมแบ่งปันประสบการณ์ทำงานสาย Dev, AI และ Data ให้กับรุ่นน้อง',
+    title: 'SUT Global Entrepreneurship Camp 2026"',
+    desc: 'โอกาศของคุณมาถึงแล้ว!! พบเพื่อนใหม่นศ.ต่างชาติมากกว่า 6 ประเทศ อย่าลืมคว้าโอกาศนี้ สัมผัสประสบการณ์ใหม่ๆ ที่คุณจะไม่มีวันลืม',
     slug: 'alumni-talk-2025',
-    imageSrc: '/25.jpg',
+    imageSrc: '/Content/Event6.jpg',
   },
   secondary: {
     id: 2,
-    title: 'DSA MASCOT CONTEST',
-    desc: 'เชิญชวนนักศึกษาและศิษย์เก่าเข้าร่วมประกวดออกแบบมาสคอตประจำภาควิชา',
+    title: 'ENGi Research to Market (ENGi R2M)',
+    desc: ' ขอเชิญน้อง ๆ นักศึกษาสำนักวิชาวิศวกรรมศาสตร์ ทุกระดับ ทุกชั้นปี เข้าร่วมการแข่งขัน ENGi Research to Market (ENGi R2M) ประจำปี พ.ศ. 2568!',
     slug: 'dsa-mascot-main',
-    imageSrc: '/25.jpg',
+    imageSrc: '/Content/Event5.jpg',
   },
   archives: [
     {
       id: 3,
-      title: '32 เลี้ยงรุ่นศิษย์เก่าวิศวกรรมขนส่ง',
+      title: ' งานคืนสู่เหย้า 30 ปี วิศวกรรมโลหการ (ในวันที่ 29 พฤศจิกายนนี้)',
       slug: 'piles-32',
-      imageSrc: '/25.jpg',
+      imageSrc: '/Content/Event9.jpg',
     },
     {
       id: 4,
-      title: '33 เลี้ยงรุ่นศิษย์เก่าวิศวกรรมขนส่ง',
+      title: 'การแต่งตั้งให้ดำรงตำแหน่ง รักษาการแทนอธิการบดีมหาวิทยาลัยเทคโนโลยีสุรนารี',
       slug: 'piles-33',
-      imageSrc: '/25.jpg',
+      imageSrc: '/Content/Event10.jpg',
     },
   ],
   upcoming: [
-    { id: 5, title: 'เปิดตัวโครงการ ENGI Hackathon 2025', slug: 'hackathon', imageSrc: '/25.jpg', linkText: 'ลงทะเบียนเลย' },
-    { id: 6, title: 'DSA MASCOT CONTEST', slug: 'dsa-mascot', imageSrc: '/25.jpg', linkText: 'ลงทะเบียนเลย' },
-    { id: 7, title: 'ENGI Open House 2025 – วิศวะเปิดบ้านต้อนรับ', slug: 'openhouse', imageSrc: '/25.jpg', linkText: 'ลงทะเบียนเลย' },
+    { id: 5, title: 'HACKATHON C2C TECH X BY SUPALAI 2025', slug: 'hackathon', imageSrc: '/Content/Event1.jpg', linkText: 'ลงทะเบียนเลย' },
+    { id: 6, title: 'DSA MASCOT CONTEST', slug: 'dsa-mascot', imageSrc: '/Content/Event3.png', linkText: 'ลงทะเบียนเลย' },
+    { id: 7, title: 'SMEs โคราช ห้ามพลาด!  ', slug: 'openhouse', imageSrc: '/Content/Event7.jpg', linkText: 'ลงทะเบียนเลย' },
   ],
 };
 
@@ -48,7 +48,17 @@ export function News() {
   const { featured, secondary, archives, upcoming } = mockData;
 
   return (
-    <section className="w-full py-10">
+    <section className="container mx-auto px-4 py-16 ">
+      {/* 🔶 Full-width Banner */}
+            <div className="relative w-screen h-[420px] left-[50%] right-[50%] mb-25 -ml-[50vw] -mr-[50vw] overflow-hidden">
+              <Image
+                src="/25.jpg"
+                alt="Home"
+                fill
+                className="object-cover object-center"
+                priority
+              />
+            </div>
       
       {/* บรรทัดหัวข้อ + ปุ่มคำขอยื่นเรื่อง */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">

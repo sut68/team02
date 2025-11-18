@@ -124,7 +124,7 @@ export default function ProjectManagementPage() {
             โครงการส่งพิจารณา ({filteredProjects.length})
           </h2>
           <Link
-            href="/admin/budget_appoval/create" // *เช็ค path ให้ตรงกับชื่อโฟลเดอร์จริง (approval)*
+            href="/admin/budget_approval/create" // *เช็ค path ให้ตรงกับชื่อโฟลเดอร์จริง (approval)*
             className="bg-orange-500 text-white px-6 py-3 rounded-full hover:bg-orange-600 transition flex items-center gap-2 shadow-md hover:shadow-lg"
           >
             <Plus className="w-5 h-5" />
