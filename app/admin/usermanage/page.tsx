@@ -35,16 +35,16 @@ export default async function AdminUserManagementPage() {
       id: user.educationRecords[0].id,
       studentCode: user.educationRecords[0].studentCode,
       major: user.educationRecords[0].major,
-      gradYear: user.educationRecords[0].gradYear,
+      gradYear: user.educationRecords[0].gradYear ?? null,
       status: user.educationRecords[0].status,
-      transcript: user.educationRecords[0].transcript || null
+      transcript: user.educationRecords[0].transcript ?? null
     } : null,
     verification: user.verification ? {
       id: user.verification.id,
       status: user.verification.status,
-      reviewedBy: user.verification.reviewedBy,
-      reviewedAt: user.verification.reviewedAt?.toISOString() || null,
-      remark: user.verification.remark
+      reviewedBy: user.verification.reviewedBy ?? null,
+      reviewedAt: user.verification.reviewedAt?.toISOString() ?? null,
+      remark: user.verification.remark ?? null
     } : null,
     createdAt: user.createdAt.toISOString(),
     updatedAt: user.updatedAt.toISOString()
