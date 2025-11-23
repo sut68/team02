@@ -60,7 +60,7 @@ export default function Navbar() {
     };
   }, [pathname]);
 
-  const isAdmin = useMemo(() => user?.isAuthenticated && user?.role === 'admin', [user]);
+  const isAdmin = useMemo(() => user?.isAuthenticated && user?.role === 'ADMIN', [user]);
   const isLoggedIn = useMemo(() => user?.isAuthenticated, [user]);
 
   const handleLogout = useCallback(async () => {
@@ -101,7 +101,7 @@ export default function Navbar() {
   const DesktopMenu = useMemo(() => {
     if (loading) {
       return (
-        <div className="hidden md:flex space-x-10 text-gray-700 font-medium item-center min-h-10">
+        <div className="hidden md:flex space-x-10 text-gray-700 font-medium item-center min-h-6">
           {/* Placeholder to prevent layout shift */}
         </div>
       );
@@ -132,7 +132,7 @@ export default function Navbar() {
             </span>
             <div className="absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50">
               <Link href="/user/donation" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">ระดมทุน</Link>
-              <Link href="/fund" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">การบริจาค</Link>
+              <Link href="/user/donation/#donation" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">การบริจาค</Link>
             </div>
           </div>
 
