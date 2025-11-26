@@ -43,7 +43,7 @@ export default function DonationDetailPage() {
           {/* Column 1: รูปภาพ Poster */}
           <div className="w-full">
             <Image
-              src="/donation_poster/poster01.png" // 👈 (ใช้รูปจาก Card 1)
+              src="/donation_poster/donation_poster03.png" // 👈 (ใช้รูปจาก Card 1)
               alt="โปสเตอร์โครงการ"
               width={700}
               height={900} // (ปรับสัดส่วนตามจริง)
@@ -110,9 +110,9 @@ export default function DonationDetailPage() {
             </div>
 
             {/* 2.4 ปุ่มบริจาค */}
-            <div className="mt-8">
-              <Link href="/user/donation/donate-form">
-                <PrimaryButton className="w-full py-3 text-lg">
+            <div className="mt-8 flex justify-end">
+              <Link href="/user/donation/form">
+                <PrimaryButton className="py-3 text-lg">
                   บริจาค
                 </PrimaryButton>
               </Link>

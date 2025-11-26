@@ -36,7 +36,7 @@ export default function Navbar() {
           const userData = await response.json();
           setUser({
             isAuthenticated: true,
-            role: userData.userType,
+            role: userData.role,
             name: userData.fullName,
           });
         } else if (isMounted) {
@@ -60,7 +60,7 @@ export default function Navbar() {
     };
   }, [pathname]);
 
-  const isAdmin = useMemo(() => user?.isAuthenticated && user?.role === 'admin', [user]);
+  const isAdmin = useMemo(() => user?.isAuthenticated && user?.role?.toUpperCase() === 'ADMIN', [user]);
   const isLoggedIn = useMemo(() => user?.isAuthenticated, [user]);
 
   const handleLogout = useCallback(async () => {
@@ -114,13 +114,13 @@ export default function Navbar() {
         {!isAdmin && (
         <>
           <div className="relative group">
-            <Link href="/apply" className="flex items-center hover:text-[#F26522] transition-colors duration-200">
+            <Link href="/" className="flex items-center hover:text-[#F26522] transition-colors duration-200">
               <span className="material-icons ml-1 text-base">กิจกรรม</span>
             </Link>
             <div className="absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50">
-              <Link href="/apply" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">จองเข้าร่วมกิจกรรม</Link>
+              <Link href="/user/booking" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">จองเข้าร่วมกิจกรรม</Link>
               <Link href="/fund" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">ขอโพสกิจกรรม</Link>
-              <Link href="/fund" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">ของที่ระลึก</Link>
+              <Link href="/#souvenir" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">ของที่ระลึก</Link>
             </div>
           </div>
 
@@ -156,16 +156,16 @@ export default function Navbar() {
           </div>
 
           <div className="relative group">
-            <Link href="/apply" className="flex items-center hover:text-[#F26522] transition-colors duration-200">
+            <Link href="/admin/souvenir" className="flex items-center hover:text-[#F26522] transition-colors duration-200">
               <span className="material-icons ml-1 text-base">ของที่ระลึก</span>
             </Link>
             <div className="absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50">
-              <Link href="/apply" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">กิจกรรม</Link>
-              <Link href="/fund" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">บริจาค</Link>
+              <Link href="/admin/souvenir" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">กิจกรรม</Link>
+              <Link href="/admin/souvenir" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">บริจาค</Link>
             </div>
           </div>
 
-          <Link href="/forum" className="hover:text-gray-900">รับสมัครงาน</Link>
+          <Link href="/user/job" className="hover:text-gray-900">รับสมัครงาน</Link>
           {/* 💡 1. L0: ตั้งชื่อ group เป็น group/l0 */}
           <div className="relative group/l0">
             {/* L0: ปุ่มหลัก "การระดมทุนและงบ" */}
@@ -192,12 +192,12 @@ export default function Navbar() {
               </div>
 
               {/* L1 Item 2: "บริจาค" */}
-              <Link href="/fund" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">
+              <Link href="/admin/fund" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">
                 บริจาค
               </Link>
 
               {/* L1 Item 3: "การเงิน" */}
-              <Link href="/fund" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">
+              <Link href="/admin/payment" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">
                 การเงิน
               </Link>
 
@@ -206,6 +206,7 @@ export default function Navbar() {
 
           {/* <Link href="/budget" className="hover:text-gray-900">รายงานงบประมาณ</Link> */}
           <Link href="/admin/talk" className="hover:text-gray-900">กระดานสนทนา</Link>
+          <Link href="/admin/usermanage" className="hover:text-gray-900">จัดการสมาชิก</Link>
         </>
       )}
 
@@ -218,21 +219,21 @@ export default function Navbar() {
                 <span className="text-gray-500 cursor-pointer hover:text-[#F26522] transition-colors duration-200">
                   สวัสดี, {user.name}
                 </span>
-                <div className="absolute left-0 mt-2 w-48 bg-white shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <div className="absolute left-0 mt-2 w-52 bg-white shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                   <Link href="/user/editprofile" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">
                     แก้ไขโปรไฟล์
                   </Link>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="w-full flex items-center space-x-2 px-4 py-2 text-[#F26522] hover:bg-gray-100 hover:text-orange-700 transition-colors duration-200"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>ออกจากระบบ</span>
+                  </button>
                 </div>
               </div>
             )}
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-2 text-red-600 hover:text-red-700 transition-colors duration-200"
-              title="ออกจากระบบ"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>ออกจากระบบ</span>
-            </button>
           </div>
         ) : (
           <Link href="/auth/login" className="bg-[#F26522] text-white py-2 px-4 rounded hover:bg-orange-700">
@@ -263,6 +264,7 @@ export default function Navbar() {
               alt="ENGi logo"
               width={isScrolled ? 150 : 200}
               height={isScrolled ? 30 : 40}
+              style={{ width: 'auto', height: 'auto' }}
               priority
               loading="eager"
             />
