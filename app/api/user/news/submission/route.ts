@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
   const safeName = file.name.replace(/\s+/g, "_");
   const fileNameOnDisk = `${Date.now()}_${safeName}`;
   const filePathOnDisk = path.join(uploadDir, fileNameOnDisk);
-  const publicPath = `/submissions/${fileNameOnDisk}`;
+  const publicPath = `/uploads/submissions/${fileNameOnDisk}`;
 
   await fs.writeFile(filePathOnDisk, buffer);
 
