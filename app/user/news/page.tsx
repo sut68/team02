@@ -58,13 +58,18 @@ function useAuth() {
       try {
         // เรียก API เพื่อตรวจสอบสถานะ
         const response = await fetch('/api/auth/me');
-        
+
         if (response.ok) {
           const data = await response.json();
+
+          // ดึง role มาจากทั้ง data.role หรือ data.userType แล้วแปลงเป็นตัวเล็ก
+          const rawRole = (data.role || data.userType || '').toString();
+          const normalizedRole = rawRole.toLowerCase(); // <-- ตรงนี้สำคัญ
+
           setUser({
             isAuthenticated: true,
-            role: data.role || data.userType, 
-            name: data.name|| data.fullName,
+            role: normalizedRole,
+            name: data.name || data.fullName,
           });
         } else {
           // ไม่ได้ล็อกอิน
@@ -83,7 +88,7 @@ function useAuth() {
 
   return {
     isLoggedIn: user?.isAuthenticated || false,
-    isAdmin: user?.role === 'admin',
+    isAdmin: user?.role === 'admin',   // ตอนนี้จะแมตช์ "ADMIN", "Admin", "admin" ได้หมด
     isUser: user?.role === 'user',
     loading,
   };

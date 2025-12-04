@@ -135,30 +135,21 @@ export  function AdminSubmissionPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-10 space-y-12">
+    <div className="space-y-6">
 
   {/* ==================== ตารางคำยื่นร้องขอ ==================== */}
   <Card className="shadow-sm rounded-xl">
     <CardHeader className="flex items-center justify-between">
       <h2 className="text-2xl font-medium text-gray-800">คำยื่นร้องขอ</h2>
 
-      <PrimaryButton type="button" onClick={handleSubmit}>
-        ยื่นเรื่อง
-      </PrimaryButton>
+      
     </CardHeader>
 
     <CardContent className="space-y-4">
 
-      {/* ลิงก์ PDF */}
-      <Link
-        href="#"
-        className="text-sm text-orange-500 underline underline-offset-2"
-      >
-        รายละเอียดการยื่นคำร้องขอ.pdf
-      </Link>
+      
 
-      {/* กรอบน้ำเงินเหมือนภาพ */}
-      <div className="border-2 border-blue-400 rounded-xl overflow-hidden">
+      
 
         <Table>
           <TableHeader>
@@ -247,10 +238,10 @@ export  function AdminSubmissionPage() {
         </Table>
 
         {/* แถบลูกศรล่าง */}
-        <div className="flex justify-end border-t border-blue-400 px-4 py-1 text-xs text-gray-400">
+        <div className="flex justify-end  px-4 py-1 text-xs text-gray-400">
           &raquo;
         </div>
-      </div>
+      
     </CardContent>
   </Card>
 

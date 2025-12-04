@@ -107,7 +107,7 @@ export  function SubmissionPage() {
       formData.append("title", title);
       formData.append("file", file);
 
-      const res = await fetch("/api/news/submissions", {
+      const res = await fetch("/api/user/news/submission", {
         method: "POST",
         body: formData,
       });
@@ -157,8 +157,7 @@ export  function SubmissionPage() {
         รายละเอียดการยื่นคำร้องขอ.pdf
       </Link>
 
-      {/* กรอบน้ำเงินเหมือนภาพ */}
-      <div className="border-2 border-blue-400 rounded-xl overflow-hidden">
+      
 
         <Table>
           <TableHeader>
@@ -247,10 +246,10 @@ export  function SubmissionPage() {
         </Table>
 
         {/* แถบลูกศรล่าง */}
-        <div className="flex justify-end border-t border-blue-400 px-4 py-1 text-xs text-gray-400">
+        <div className="flex justify-end  px-4 py-1 text-xs text-gray-400">
           &raquo;
         </div>
-      </div>
+    
     </CardContent>
   </Card>
 
