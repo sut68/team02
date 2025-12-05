@@ -1,0 +1,80 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/app/lib/prisma';
+
+// PUT - อัพเดทสถานะการจัดส่ง
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: paramId } = await params;
+    const id = parseInt(paramId);
+    const body = await request.json();
+    const { status, trackingNo } = body;
+
+    // Validate status
+    const validStatuses = ['PENDING', 'IN_TRANSIT', 'DELIVERED', 'FAILED'];
+    if (status && !validStatuses.includes(status)) {
+      return NextResponse.json(
+        { error: 'Invalid status' },
+        { status: 400 }
+      );
+    }
+
+    const shipment = await prisma.shipment.update({
+      where: { id },
+      data: {
+        ...(status && { status }),
+        ...(trackingNo !== undefined && { trackingNo }),
+      },
+      include: {
+        user: true,
+        item: true,
+        donation: true,
+      },
+    });
+
+    return NextResponse.json(shipment);
+  } catch (error) {
+    console.error('Error updating shipment:', error);
+    return NextResponse.json(
+      { error: 'Failed to update shipment' },
+      { status: 500 }
+    );
+  }
+}
+
+// GET - ดึงข้อมูล shipment ตาม ID
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: paramId } = await params;
+    const id = parseInt(paramId);
+
+    const shipment = await prisma.shipment.findUnique({
+      where: { id },
+      include: {
+        user: true,
+        item: true,
+        donation: true,
+      },
+    });
+
+    if (!shipment) {
+      return NextResponse.json(
+        { error: 'Shipment not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(shipment);
+  } catch (error) {
+    console.error('Error fetching shipment:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch shipment' },
+      { status: 500 }
+    );
+  }
+}

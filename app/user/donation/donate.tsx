@@ -6,33 +6,47 @@ import React from 'react';
 import { PrimaryButton } from './../../components/ui/Button';
 import { Card } from './../../components/ui/Card';
 
-// 💡 Component สำหรับแสดง Tag (เช่น "กิจกรรม", "ของที่ระลึก")
 const Tag = ({ text }: { text: string }) => (
     <span className="bg-orange-100 text-[#F26522] text-xs font-semibold px-2.5 py-0.5 rounded-full">
         {text}
     </span>
 );
 
-export default function CentralFundDonationPage() {
+export default function DonationPage() {
     return (
-        <div className="bg-gray-100 ">
+        // 1. Container หลักของหน้า (ใช้สีพื้นหลังอ่อนๆ เหมือนในดีไซน์)
+        <div className="min-h-screen mb-8">
 
-
-            <div className="flex ml-8 mb-4">
-                <h1 className="text-[#F26522] text-3xl md:text-5xl font-bold text-right shadow-lg">
-                    การบริจาค
-                </h1>
+            {/* 2. ส่วน Hero Image (ภาพนักศึกษา) */}
+            {/* <div className="relative w-full h-[300px] md:h-[500px] bg-gray-800 mb-4">
+                <Image,
+                    src="/donation_poster/00.png"
+                    alt="นักศึกษาวิศวกรรมศาสตร์ สุรนารี"
+                    layout="fill"
+                    objectFit="cover"
+                    className="opacity-60"
+                />
+                <div className="absolute inset-0 flex items-end justify-end p-8 md:p-16">
+                    <h1 className="text-white text-3xl md:text-5xl font-bold text-right shadow-lg">
+                        ระดมทุนและบริจาค
+                    </h1>
+                </div>
             </div>
-            {/* 3. ส่วน Content (การ์ดเดียวสำหรับกองทุนกลาง) */}
-            <div className="container mx-auto max-w-8xl p-4 md:p-8 z-10 relative">
+            <CentralFundDonationPage /> */}
 
-                <Card className="bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl md:flex">
+            {/* 3. ส่วน Content (การ์ด) */}
+            <div className="container mx-auto max-w-8xl p-4 md:p-8 z-10 relative mb-8">
+                <h2 className="text-3xl md:text-4xl font-semibold text-gray-800 mb-6">
+                    การบริจาค
+                </h2>
+
+                <Card className="bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl md:flex mb-8">
 
                     {/* รูปภาพ (ซ้าย) */}
                     <div className="md:w-1/3 bg-white-100 flex items-center justify-center p-4">
                         <Image
-                            src="/donation_poster/donation_poster00.png" // 👈 ใช้รูปภาพโปสเตอร์กองทุนกลางที่สร้างใหม่
-                            alt="โปสเตอร์กองทุนกลางพัฒนาวิศิษฏ์"
+                            src="/donation_poster/donation_poster01.png"
+                            alt="ของที่ระลึก"
                             className="rounded-lg object-contain h-48 w-48 md:h-full md:w-full"
                             width={300}
                             height={300}
@@ -43,25 +57,19 @@ export default function CentralFundDonationPage() {
                     <div className="md:w-2/3 p-6 flex flex-col justify-between">
                         <div>
                             <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                                กองทุนกลางสมาคมศิษย์เก่าวิศวกรรมศาสตร์
+                                ใหม่! ของที่ระลึกร่วมสมทบทุนศูนย์การแพทย์
                             </h2>
                             <p className="text-gray-600 mb-4 text-sm">
-                                กองทุนนี้มีวัตถุประสงค์เพื่อสนับสนุนการดำเนินงานต่างๆ ของสมาคมศิษย์เก่า
-                                และคณะวิศวกรรมศาสตร์ มหาวิทยาลัยเทคโนโลยีสุรนารี
-                                เช่น กิจกรรมนักศึกษา, การพัฒนาโครงการ, และการบำรุงรักษาพื้นที่ส่วนกลาง...
+                                ร่วมบริจาคและรับของที่ระลึก "แก้ว Tumbler วิศวะ มทส."
+                                เพื่อสมทบทุนจัดซื้อเครื่องมือทางการแพทย์...
                             </p>
-                            <div className="flex items-baseline mb-2">
-                                {/* <span className="text-lg font-semibold text-gray-700">ยอดบริจาค:</span> */}
-                                {/* <span className="text-3xl font-bold text-[#F26522] ml-2">฿15,245,670</span> */}
-                            </div>
-                            {/* <span className="text-gray-500 text-sm">เป้าหมาย: ฿50,000,000</span> */}
                         </div>
 
                         <div className="flex justify-between items-center text-sm text-gray-500 mt-4">
-                            <span>ปรับปรุงล่าสุด: {new Intl.DateTimeFormat('th-TH', { dateStyle: 'long' }).format(new Date())}</span>
-                            <Link href={'/user/donation/donate-form-ui'}> {/* 💡 ลิงก์ไปยังฟอร์มบริจาค */}
+                            <span>30 ตุลาคม 2568</span>
+                            <Link href={'/user/donation/detail'}>
                                 <PrimaryButton >
-                                    ร่วมบริจาค
+                                    รายละเอียด
                                 </PrimaryButton>
                             </Link>
                         </div>
@@ -69,7 +77,81 @@ export default function CentralFundDonationPage() {
 
                 </Card>
 
+                {/* 💡 2. (FIX) เปลี่ยนจาก <div> เป็น <Card> */}
+                <Card className="bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl md:flex mb-8">
+
+                    {/* รูปภาพ (ซ้าย) */}
+                    <div className="md:w-1/3 bg-white-100 flex items-center justify-center p-4">
+                        <Image
+                            src="/donation_poster/donation_poster02.png"
+                            alt="project_poster"
+                            className="rounded-lg object-contain h-48 w-48 md:h-full md:w-full"
+                            width={300}
+                            height={300}
+                        />
+                    </div>
+
+                    {/* เนื้อหา (ขวา) */}
+                    <div className="md:w-2/3 p-6 flex flex-col justify-between">
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                                โครงการรับสมัครงาน มทส. (Job Fair)
+                            </h2>
+                            <p className="text-gray-600 mb-4 text-sm">
+                                คณะวิศวกรรมศาสตร์ เปิดรับสมัครบริษัทชั้นนำเข้าร่วม
+                                กิจกรรม Job Fair ประจำปี 2569 เพื่อเปิดโอกาสให้นักศึกษา...
+                            </p>
+                        </div>
+
+                        <div className="flex justify-between items-center text-sm text-gray-500 mt-4">
+                            <span>30 ตุลาคม 2568</span>
+                            <Link href={'/user/donation/detail'}>
+                                <PrimaryButton >
+                                    รายละเอียด
+                                </PrimaryButton>
+                            </Link>
+                        </div>
+                    </div>
+
+                </Card>
+
+                <Card className="bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-2xl md:flex mb-8">
+
+                    {/* รูปภาพ (ซ้าย) */}
+                    <div className="md:w-1/3 bg-white-100 flex items-center justify-center p-4">
+                        <Image
+                            src="/donation_poster/donation_poster01.png"
+                            alt="ของที่ระลึก"
+                            className="rounded-lg object-contain h-48 w-48 md:h-full md:w-full"
+                            width={300}
+                            height={300}
+                        />
+                    </div>
+
+                    {/* เนื้อหา (ขวา) */}
+                    <div className="md:w-2/3 p-6 flex flex-col justify-between">
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                                ใหม่! ของที่ระลึกร่วมสมทบทุนศูนย์การแพทย์
+                            </h2>
+                            <p className="text-gray-600 mb-4 text-sm">
+                                ร่วมบริจาคและรับของที่ระลึก "แก้ว Tumbler วิศวะ มทส."
+                                เพื่อสมทบทุนจัดซื้อเครื่องมือทางการแพทย์...
+                            </p>
+                        </div>
+
+                        <div className="flex justify-between items-center text-sm text-gray-500 mt-4">
+                            <span>30 ตุลาคม 2568</span>
+                            <Link href={'/user/donation/detail'}>
+                                <PrimaryButton >
+                                    รายละเอียด
+                                </PrimaryButton>
+                            </Link>
+                        </div>
+                    </div>
+
+                </Card>
             </div>
-        </div>
+        </div >
     );
 }
