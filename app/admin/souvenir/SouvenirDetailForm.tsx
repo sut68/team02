@@ -63,11 +63,11 @@ export function SouvenirDetailForm() {
                   </label>
                   <input
                     type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    value={formData.code}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                     disabled={!isEditing}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none disabled:cursor-not-allowed"
-                    placeholder="เช่น เข็มกลัด SUT"
+                    placeholder="เช่น SV001"
                   />
                 </div>
 
@@ -82,7 +82,7 @@ export function SouvenirDetailForm() {
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     disabled={!isEditing}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none disabled:cursor-not-allowed"
-                    placeholder="เช่น หมวก ENGi รุ่น Baseball"
+                    placeholder="เช่น เข็มกลัด SUT"
                   />
                 </div>
 
