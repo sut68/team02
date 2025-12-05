@@ -11,9 +11,10 @@ export const souvenirMockData = {
       id: 1,
       title: 'ลงทะเบียนเข้าร่วมกิจกรรม ENGi Day',
       description:
-        "รับ ‘เข็มกลัด We are SUT’ เป็นของที่ระลึกสุดพิเศษ สำหรับผู้เข้าร่วมงานเท่านั้น",
+        "รับ 'เข็มกลัด We are SUT' เป็นของที่ระลึกสุดพิเศษ สำหรับผู้เข้าร่วมงานเท่านั้น",
       imageSrc: '/souvenir/EngiButton.png',
-      href: '/auth/register',
+      href: '/auth/login',
+      requireAuth: false,
     },
     {
       id: 2,
@@ -21,6 +22,7 @@ export const souvenirMockData = {
       description: 'รับหมวก ENGi Cap แทนคำขอบคุณ',
       imageSrc: '/souvenir/EngiCap.png',
       href: '/user/donation',
+      requireAuth: true,
     },
     {
       id: 3,
@@ -28,11 +30,12 @@ export const souvenirMockData = {
       description: 'สะท้อนความเรียบ เท่ และยั่งยืน สำหรับผู้สนับสนุนโครงการ',
       imageSrc: '/souvenir/EngiBrooch.png',
       href: '/user/souvenir',
+      requireAuth: true,
     },
   ],
 };
 
-export function SouvenirSection() {
+export function SouvenirSection({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
   const { featured } = souvenirMockData;
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const [isPaused, setIsPaused] = React.useState(false);
@@ -134,7 +137,11 @@ export function SouvenirSection() {
         >
           <div ref={trackRef} className="flex gap-12 will-change-transform">
             {loopItems.map((item, idx) => (
-              <Link key={`${item.id}-${idx}`} href={item.href} className="group block basis-full md:basis-1/3 shrink-0">
+              <Link 
+                key={`${item.id}-${idx}`} 
+                href={item.requireAuth && !isAuthenticated ? '/auth/login' : item.href} 
+                className="group block basis-full md:basis-1/3 shrink-0"
+              >
                 <div className="flex flex-col items-center text-center">
                   {/* รูปหลัก */}
                   <div className="relative w-full h-96 md:h-[420px] bg-white rounded-3xl overflow-hidden transition-all duration-300 shadow-sm group-hover:shadow-2xl group-hover:-translate-y-0.5 group-hover:ring-1 group-hover:ring-gray-200">

@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Activity, HandHeart } from "lucide-react";
 import { AdminSouvenirCarousel } from "./AdminSouvenirCarousel";
 import { SouvenirDetailForm } from "./SouvenirDetailForm";
+
 export default function SouvenirMenuPage() {
   const [showCarousel, setShowCarousel] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
@@ -15,7 +16,12 @@ export default function SouvenirMenuPage() {
   useEffect(() => {
     if (showDetail && detailRef.current) {
       setTimeout(() => {
-        detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const yOffset = -120;
+        const element = detailRef.current;
+        if (element) {
+          const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
       }, 100);
     }
   }, [showDetail]);
@@ -64,7 +70,8 @@ export default function SouvenirMenuPage() {
       </div>
       {/* Carousel Section - Full Width like user page */}
       <div className={`transition-all duration-300 ${showCarousel ? 'opacity-100 scale-100' : 'opacity-0 scale-95 h-0 overflow-hidden'}`}>
-        {showCarousel && <AdminSouvenirCarousel onCardClick={handleCardClick} />}
+        {showCarousel === "activity" && <AdminSouvenirCarousel onCardClick={handleCardClick} />}
+        {showCarousel === "donation" && <AdminSouvenirCarousel onCardClick={handleCardClick} />}
       </div>
       {/* Detail Form Section */}
       <div ref={detailRef} className={`transition-all duration-300 ${showDetail ? 'opacity-100 scale-100' : 'opacity-0 scale-95 h-0 overflow-hidden'}`}>
