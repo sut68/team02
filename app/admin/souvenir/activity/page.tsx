@@ -1,83 +1,104 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, MapPin, Calendar, RefreshCw, Layers, CheckCircle } from "lucide-react";
 
-// Mock Data
-const souvenirItems = [
-  {
-    id: 1,
-    name: 'เข็มกลัด "We are SUT"',
-    activity: "ลงทะเบียนเข้าร่วมกิจกรรม ENGi Day",
-    description: "เป็นของที่ระลึกสุดพิเศษ สำหรับผู้เข้าร่วมงานเท่านั้น",
-    image: "/souvenir/EngiButton.png",
-    remaining: 50,
-  },
-  {
-    id: 2,
-    name: "หมวก ENGi Cap",
-    activity: "บริจาคเพื่อสนับสนุน ENGi",
-    description: "รับหมวก ENGi Cap แทนคำขอบคุณ",
-    image: "/souvenir/EngiCap.png",
-    remaining: 35,
-  },
-  {
-    id: 3,
-    name: "ของที่ระลึกประจำปี",
-    activity: "ของที่ระลึกประจำปี SUT",
-    description: "สะท้อนความเรียบ เท่ และยั่งยืน สำหรับผู้สนับสนุนโครงการ",
-    image: "/souvenir/EngiBrooch.png",
-    remaining: 24,
-  },
-];
+interface SouvenirItem {
+  id: number;
+  sku: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  imageUrl: string | null;
+  currentStock: number;
+  unit?: string;
+}
 
-const activities = [
-  {
-    id: 1,
-    name: "งานสานสัมพันธ์ศิษย์เก่า 2568",
-    date: "15 ธ.ค. 2568",
-    souvenir: "เข็มกลัด SUT",
-    stats: {
-      remaining: 20,
-      registered: 100,
-      claimed: 80,
-    },
-  },
-  {
-    id: 2,
-    name: "Homecoming Day 2024",
-    date: "20 ม.ค. 2568",
-    souvenir: "หมวก ENGi",
-    stats: {
-      remaining: 35,
-      registered: 85,
-      claimed: 50,
-    },
-  },
-  {
-    id: 3,
-    name: "Engineering Open House",
-    date: "10 ก.พ. 2568",
-    souvenir: "ขวดน้ำ ENGi",
-    stats: {
-      remaining: 15,
-      registered: 60,
-      claimed: 45,
-    },
-  },
-];
+interface Activity {
+  id: number;
+  name: string;
+  startDate: string;
+  location: string | null;
+  souvenir?: string;
+}
+
+interface EventRegistration {
+  id: number;
+  userId: number;
+  registeredAt: string;
+  attendanceStatus: string | null;
+  user: {
+    fullName: string;
+    email: string;
+  };
+}
 
 export default function SouvenirActivityPage() {
-  const [selectedActivity, setSelectedActivity] = useState<typeof activities[0] | null>(null);
+  const [souvenirItems, setSouvenirItems] = useState<SouvenirItem[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [registrations, setRegistrations] = useState<EventRegistration[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'remaining' | 'registered' | 'claimed'>('all');
+  
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const trackRef = React.useRef<HTMLDivElement>(null);
   const offsetRef = React.useRef(0);
   const loopWidthRef = React.useRef(0);
   const cardWidthRef = React.useRef(0);
-  const speedRef = React.useRef(50); // px per second - increased for smoother continuous scroll
+  const speedRef = React.useRef(50);
+
+  // Fetch data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch souvenir items
+        const itemsRes = await fetch('/api/admin/souvenir/items');
+        if (itemsRes.ok) {
+          const itemsData = await itemsRes.json();
+          if (Array.isArray(itemsData)) {
+            setSouvenirItems(itemsData.filter((item: SouvenirItem) => item.category === 'กิจกรรม'));
+          }
+        }
+
+        // Fetch events
+        const eventsRes = await fetch('/api/admin/events');
+        if (eventsRes.ok) {
+          const eventsData = await eventsRes.json();
+          if (Array.isArray(eventsData)) {
+            setActivities(eventsData);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Fetch registrations when activity is selected
+  useEffect(() => {
+    const fetchRegistrations = async () => {
+      if (!selectedActivity) return;
+      
+      try {
+        const res = await fetch(`/api/admin/events/${selectedActivity.id}/registrations`);
+        if (res.ok) {
+          const data = await res.json();
+          setRegistrations(data);
+        }
+      } catch (error) {
+        console.error('Error fetching registrations:', error);
+      }
+    };
+
+    fetchRegistrations();
+  }, [selectedActivity]);
 
   const stepBy = (px: number) => {
     const loopW = loopWidthRef.current || 0;
@@ -102,7 +123,7 @@ export default function SouvenirActivityPage() {
     // Create more duplicates for truly seamless infinite loop
     const items = [...souvenirItems, ...souvenirItems, ...souvenirItems, ...souvenirItems];
     return items;
-  }, []);
+  }, [souvenirItems]);
 
   // Measure widths for seamless loop
   React.useEffect(() => {
@@ -140,8 +161,14 @@ export default function SouvenirActivityPage() {
 
   return (
     <main className="min-h-screen bg-white pt-10">
+      {loading ? (
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="text-gray-500">กำลังโหลด...</div>
+        </div>
+      ) : (
+        <>
       {/* Section 1: รายการของที่ระลึกแต่ละกิจกรรม */}
-      <section className=" py-8">
+      <section className="py-8">
         <div className="max-w-7xl mx-auto px-4 mb-8">
           <h1 className="text-3xl font-medium text-gray-700 mb-8">
             รายการของที่ระลึกแต่ละกิจกรรม
@@ -177,11 +204,11 @@ export default function SouvenirActivityPage() {
               {loopItems.map((item, index) => (
                 <div
                   key={`${item.id}-${index}`}
-                  className="flex-shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)] bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
+                  className="shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)] bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
                 >
                   <div className="relative h-72 md:h-80 bg-white">
                     <Image
-                      src={item.image}
+                      src={item.imageUrl || '/souvenir/EngiButton.png'}
                       alt={item.name}
                       fill
                       className="object-contain p-6"
@@ -192,15 +219,15 @@ export default function SouvenirActivityPage() {
                       {item.name}
                     </h3>
                     <p className="text-orange-500 font-semibold mb-3 text-sm">
-                      {item.activity}
+                      {item.category || 'กิจกรรม'}
                     </p>
                     <p className="text-gray-600 text-sm leading-relaxed mb-3">
-                      {item.description}
+                      {item.description || 'ของที่ระลึกสำหรับผู้เข้าร่วมกิจกรรม'}
                     </p>
                     <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
                       <span className="text-gray-500 text-sm">คงเหลือ:</span>
-                      <span className="text-lg font-bold text-gray-800">{item.remaining}</span>
-                      <span className="text-gray-500 text-sm">ชิ้น</span>
+                      <span className="text-lg font-bold text-gray-800">{item.currentStock}</span>
+                      <span className="text-gray-500 text-sm">{item.unit || 'ชิ้น'}</span>
                     </div>
                   </div>
                 </div>
@@ -261,7 +288,7 @@ export default function SouvenirActivityPage() {
                       </h3>
                       <div className="flex items-center justify-center gap-2 text-gray-600">
                         <MapPin className="w-5 h-5" />
-                        <span className="text-base">{activity.date}</span>
+                        <span className="text-base">{activity.location || 'TBA'}</span>
                       </div>
                     </div>
                   </div>
@@ -305,7 +332,7 @@ export default function SouvenirActivityPage() {
                 <div className={`text-5xl font-bold mb-2 ${
                   selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-800'
                 }`}>
-                  {selectedActivity.stats.remaining}
+                  {registrations.filter(r => !r.attendanceStatus || r.attendanceStatus === 'PENDING').length}
                 </div>
                 <div className={`font-medium ${
                   selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-600'
@@ -329,7 +356,7 @@ export default function SouvenirActivityPage() {
                 <div className={`text-5xl font-bold mb-2 ${
                   selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-800'
                 }`}>
-                  {selectedActivity.stats.registered}
+                  {registrations.length}
                 </div>
                 <div className={`font-medium ${
                   selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-600'
@@ -353,7 +380,7 @@ export default function SouvenirActivityPage() {
                 <div className={`text-5xl font-bold mb-2 ${
                   selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-800'
                 }`}>
-                  {selectedActivity.stats.claimed}
+                  {registrations.filter(r => r.attendanceStatus === 'ATTENDED').length}
                 </div>
                 <div className={`font-medium ${
                   selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-600'
@@ -379,35 +406,48 @@ export default function SouvenirActivityPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {/* Mock Data - filtered by selected status */}
-                  {[
-                    { id: 1, name: "นาย สมชาย ใจดี", email: "somchai@example.com", date: "15 ธ.ค. 2567", status: "รับแล้ว", statusType: "claimed" },
-                    { id: 2, name: "นางสาว สมหญิง รักดี", email: "somying@example.com", date: "15 ธ.ค. 2567", status: "รอรับ", statusType: "registered" },
-                    { id: 3, name: "นาย ประยุทธ์ มั่นคง", email: "prayut@example.com", date: "15 ธ.ค. 2567", status: "รับแล้ว", statusType: "claimed" },
-                    { id: 4, name: "นางสาว วิภา สุขใจ", email: "wipa@example.com", date: "15 ธ.ค. 2567", status: "รอรับ", statusType: "registered" },
-                    { id: 5, name: "นาย อนุชา ดีงาม", email: "anucha@example.com", date: "15 ธ.ค. 2567", status: "รับแล้ว", statusType: "claimed" },
-                    { id: 6, name: "นางสาว มาลี ใจงาม", email: "malee@example.com", date: "15 ธ.ค. 2567", status: "คงเหลือ", statusType: "remaining" },
-                    { id: 7, name: "นาย สุรชัย วงศ์ดี", email: "surachai@example.com", date: "15 ธ.ค. 2567", status: "คงเหลือ", statusType: "remaining" },
-                  ]
-                  .filter(item => selectedStatus === 'all' || item.statusType === selectedStatus)
-                  .map((item, index) => (
-                    <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 text-sm text-gray-800">{index + 1}</td>
-                      <td className="px-6 py-4 text-sm text-gray-800 font-medium">{item.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{item.email}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{item.date}</td>
-                      <td className="px-6 py-4 text-sm text-orange-600">{selectedActivity.souvenir}</td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
-                          item.status === "รับแล้ว" 
-                            ? "bg-orange-100 text-orange-700" 
-                            : "bg-gray-100 text-gray-700"
-                        }`}>
-                          {item.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {registrations
+                    .filter(reg => {
+                      if (selectedStatus === 'all') return true;
+                      if (selectedStatus === 'claimed') return reg.attendanceStatus === 'ATTENDED';
+                      if (selectedStatus === 'registered') return true;
+                      if (selectedStatus === 'remaining') return !reg.attendanceStatus || reg.attendanceStatus === 'PENDING';
+                      return true;
+                    })
+                    .map((reg, index) => {
+                      const registeredDate = new Date(reg.registeredAt);
+                      const thaiDate = registeredDate.toLocaleDateString('th-TH', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric'
+                      });
+                      
+                      let statusText = 'รอรับ';
+                      let statusColor = 'bg-gray-100 text-gray-700';
+                      
+                      if (reg.attendanceStatus === 'ATTENDED') {
+                        statusText = 'รับแล้ว';
+                        statusColor = 'bg-orange-100 text-orange-700';
+                      } else if (!reg.attendanceStatus || reg.attendanceStatus === 'PENDING') {
+                        statusText = 'คงเหลือ';
+                        statusColor = 'bg-gray-100 text-gray-700';
+                      }
+                      
+                      return (
+                        <tr key={reg.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 text-sm text-gray-800">{index + 1}</td>
+                          <td className="px-6 py-4 text-sm text-gray-800 font-medium">{reg.user.fullName}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{reg.user.email}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{thaiDate}</td>
+                          <td className="px-6 py-4 text-sm text-orange-600">{selectedActivity.souvenir || 'ของที่ระลึกกิจกรรม'}</td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}>
+                              {statusText}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>
@@ -416,6 +456,8 @@ export default function SouvenirActivityPage() {
           </>
         )}
       </div>
+        </>
+      )}
     </main>
   );
 }
