@@ -4,7 +4,7 @@ import { PenLine, Trash2, ChevronDown, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import { BudgetReport, ReportStatus } from "@/app/types/budget_report";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardFooter } from "./Card"; // Import sub-components
+import { Card, CardContent, CardFooter } from "./Card"; // ตรวจสอบ path นี้ให้ตรงกับโปรเจคจริงนะครับ
 import { useState } from "react";
 
 interface Props {
@@ -12,7 +12,7 @@ interface Props {
   onDelete?: (id: number) => void;
 }
 
-// กำหนดตัวเลือกสถานะ (ใช้ Label เป็น Key หลักเพราะ Type เป็น String)
+// กำหนดตัวเลือกสถานะ
 const STATUS_OPTIONS: { label: ReportStatus; color: string; textColor: string }[] = [
   { label: "ฉบับร่าง", color: "bg-gray-400", textColor: "text-gray-600" },
   { label: "รอตรวจสอบ", color: "bg-orange-500", textColor: "text-orange-600" },
@@ -23,7 +23,7 @@ const STATUS_OPTIONS: { label: ReportStatus; color: string; textColor: string }[
 export default function BudgetReportCard({ report, onDelete }: Props) {
   const router = useRouter();
   
-  // --- State Management (เหมือน ProjectCard) ---
+  // --- State Management ---
   const [currentStatus, setCurrentStatus] = useState<ReportStatus>(report.status);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -61,23 +61,28 @@ export default function BudgetReportCard({ report, onDelete }: Props) {
     <>
       <Card className="rounded-4xl p-5 hover:shadow-lg border border-gray-50 flex flex-col h-full relative group transition-all duration-300">
         
-        {/* 1. ส่วนรูปภาพ - วางไว้ใน Card body หลัก (หรือจะใส่ CardHeader ก็ได้ แต่ดีไซน์นี้รูปเด่นกว่า) */}
-        <div className="relative w-full aspect-16/10 rounded-2xl overflow-hidden mb-4 bg-gray-50 border border-gray-100 z-10">
-          {report.imageSrc ? (
-            <Image
-              src={report.imageSrc}
-              alt={report.projectName}
-              fill
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-gray-300 bg-gray-50/50">
-              <span className="text-sm font-medium">ไม่มีรูปภาพ</span>
-            </div>
-          )}
+        {/* --- 1. ส่วนรูปภาพ (แก้ไขโครงสร้าง) --- */}
+        {/* Wrapper หลัก: กำหนดสัดส่วน (aspect-ratio) แต่ *ไม่ใส่* overflow-hidden ตรงนี้ */}
+        <div className="relative w-full aspect-16/10 mb-4 z-10">
           
-          {/* --- Dropdown Selector (มุมขวาล่างของรูป) --- */}
-          <div className="absolute bottom-3 right-3">
+          {/* Layer รูปภาพ: ใส่ overflow-hidden ตรงนี้แทน เพื่อให้รูปโค้งมนตาม rounded-2xl */}
+          <div className="absolute inset-0 rounded-2xl overflow-hidden bg-gray-50 border border-gray-100">
+            {report.imageSrc ? (
+              <Image
+                src={report.imageSrc}
+                alt={report.projectName}
+                fill
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-gray-300 bg-gray-50/50">
+                <span className="text-sm font-medium">ไม่มีรูปภาพ</span>
+              </div>
+            )}
+          </div>
+          
+          {/* Layer Dropdown: อยู่นอกตัว overflow-hidden ทำให้เมนูเด้งทะลุกรอบได้ */}
+          <div className="absolute bottom-3 right-3 z-20">
             
             {/* Menu List */}
             {isMenuOpen && (
@@ -129,15 +134,14 @@ export default function BudgetReportCard({ report, onDelete }: Props) {
           </div>
         </div>
 
-        {/* 2. เนื้อหา (ชื่อโครงการ) - ใช้ CardContent */}
+        {/* --- 2. เนื้อหา (ชื่อโครงการ) --- */}
         <CardContent className="p-0 grow flex flex-col items-center text-center mb-6">
           <h3 className="text-gray-900 font-medium text-lg leading-snug line-clamp-2">
             {report.projectName}
           </h3>
         </CardContent>
 
-        {/* 3. ปุ่ม Action - ใช้ CardFooter */}
-        {/* Override default styles of CardFooter to center items */}
+        {/* --- 3. ปุ่ม Action --- */}
         <CardFooter className="p-0 mt-auto w-full flex justify-center gap-3 space-x-0">
           {/* ปุ่มแก้ไข */}
           <button
@@ -158,7 +162,7 @@ export default function BudgetReportCard({ report, onDelete }: Props) {
         </CardFooter>
       </Card>
 
-      {/* --- Confirmation Modal (เหมือน ProjectCard เป๊ะๆ) --- */}
+      {/* --- Confirmation Modal --- */}
       {isConfirmOpen && (
         <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl transform transition-all scale-100">
