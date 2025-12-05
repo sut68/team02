@@ -189,9 +189,9 @@ export async function POST(request: NextRequest) {
           userId: user.id,
           studentCode: sanitizedStudentCode,
           major: sanitizeInput(major),
-          gradYear: gradYear ? parseInt(gradYear) : null,
+          gradYear: gradYear ? parseInt(gradYear) : undefined,
           status: studyStatus,
-          transcript: storedTranscriptPath,
+          transcript: storedTranscriptPath || undefined,
         },
       });
 
