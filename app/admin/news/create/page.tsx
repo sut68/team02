@@ -4,34 +4,15 @@
 
 import { useState } from 'react';
 import Link from "next/link"; // นำเข้า Link จาก Next.js
+import Image from 'next/image';
 import { 
-  Table, TableHeader, TableBody, TableRow, TableHead, TableCell // นำเข้า Table components
-} from '../../../components/tables/Table'; 
-import { 
-  Card, CardHeader, CardContent // นำเข้า Card components
-} from '../../../components/ui/Card'; 
-import { 
-  PrimaryButton, CancelButton // นำเข้า Button components
-} from '../../../components/ui/Button'; 
-import { 
-  Calendar, Tag, User, Save, Upload, Image as ImageIcon, Link as LinkIcon, Text 
-} from 'lucide-react'; // นำเข้าไอคอน
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../../components/tables/Table'; 
+import { Card, CardHeader, CardContent } from '../../../components/ui/Card'; 
+import { PrimaryButton, CancelButton } from '../../../components/ui/Button'; 
+import { Calendar, Tag, User, Save, Upload, Image as ImageIcon, Link as LinkIcon, Text } from 'lucide-react';
 
 export default function EditPostPage() {
-  const [postData, setPostData] = useState({
-    title: "DSA MASCOT CONTEST",
-    date: "2025-12-05",
-    author: "งานกิจกรรมนักศึกษา",
-    status: "ร่าง",
-    imageUrl: "/images/image_4b977b.png",
-    body: "ขอเชิญชวนนักศึกษา ผู้เรียน และศิษย์เก่า มทส. มาร่วมสร้างสรรค์มาสคอต... \n\n[พิมพ์รายละเอียดและกติกาต่างๆ ที่นี่]",
-    ctaLink: "https://forms.gle/...",
-    ctaText: "ส่งผลงานทันที!",
-  });
   
-  const handleDataChange = (field: string, value: any) => {
-    setPostData(prev => ({ ...prev, [field]: value }));
-  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -68,7 +49,7 @@ export default function EditPostPage() {
               <CardHeader className="text-lg font-semibold text-gray-700">ลงทะเบียนเข้างาน:</CardHeader>
                     <Link href="/admin/booking" passHref >
                         <CancelButton className="w-full mb-2">
-                            กรอกรายละเอียด
+                            กลับไปหน้าจองที่นั่ง
                         </CancelButton>
                     </Link>
             </Card>
