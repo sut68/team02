@@ -65,9 +65,10 @@ const activities = [
 ];
 
 export default function SouvenirActivityPage() {
-  const [selectedActivity, setSelectedActivity] = useState(activities[0]);
+  const [selectedActivity, setSelectedActivity] = useState<typeof activities[0] | null>(null);
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'remaining' | 'registered' | 'claimed'>('all');
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const trackRef = React.useRef<HTMLDivElement>(null);
   const offsetRef = React.useRef(0);
@@ -136,34 +137,35 @@ export default function SouvenirActivityPage() {
 
   return (
     <main className="min-h-screen bg-white pt-10">
-      {/* Section 1: รายการของที่ระลึกแต่ละกิจกรรม - Full Width */}
-      <section className="mb-12 py-8">
+      {/* Section 1: รายการของที่ระลึกแต่ละกิจกรรม */}
+      <section className=" py-8">
         <div className="max-w-7xl mx-auto px-4 mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
+          <h1 className="text-3xl font-medium text-gray-700 mb-8">
             รายการของที่ระลึกแต่ละกิจกรรม
           </h1>
         </div>
         
-        {/* Carousel Container - Full Width */}
-        <div className="relative px-4 md:px-12">
-          {/* Left Arrow */}
-          <button
-            onClick={handlePrevActivity}
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
-            aria-label="Previous"
-          >
-            <ChevronLeft className="w-6 h-6 text-gray-700" />
-          </button>
+        {/* Carousel Container */}
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="relative">
+            {/* Left Arrow */}
+            <button
+              onClick={handlePrevActivity}
+              onMouseEnter={() => setIsPaused(true)}
+              onMouseLeave={() => setIsPaused(false)}
+              className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
+              aria-label="Previous"
+            >
+              <ChevronLeft className="w-6 h-6 text-gray-700" />
+            </button>
 
-          {/* Scrollable Container */}
-          <div
-            ref={scrollContainerRef}
-            className="overflow-hidden py-4"
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
-          >
+            {/* Scrollable Container */}
+            <div
+              ref={scrollContainerRef}
+              className="overflow-hidden py-4"
+              onMouseEnter={() => setIsPaused(true)}
+              onMouseLeave={() => setIsPaused(false)}
+            >
             <div
               ref={trackRef}
               className="flex gap-6 will-change-transform"
@@ -174,7 +176,7 @@ export default function SouvenirActivityPage() {
                   key={`${item.id}-${index}`}
                   className="flex-shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)] bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
                 >
-                  <div className="relative h-72 md:h-80 bg-gray-100">
+                  <div className="relative h-72 md:h-80 bg-white">
                     <Image
                       src={item.image}
                       alt={item.name}
@@ -203,16 +205,17 @@ export default function SouvenirActivityPage() {
             </div>
           </div>
 
-          {/* Right Arrow */}
-          <button
-            onClick={handleNextActivity}
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
-            aria-label="Next"
-          >
-            <ChevronRight className="w-6 h-6 text-gray-700" />
-          </button>
+            {/* Right Arrow */}
+            <button
+              onClick={handleNextActivity}
+              onMouseEnter={() => setIsPaused(true)}
+              onMouseLeave={() => setIsPaused(false)}
+              className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
+              aria-label="Next"
+            >
+              <ChevronRight className="w-6 h-6 text-gray-700" />
+            </button>
+          </div>
         </div>
       </section>
 
@@ -220,21 +223,21 @@ export default function SouvenirActivityPage() {
 
         {/* Section 2: กิจกรรม (Activity Selector) */}
         <section className="mb-12">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">
+          <h2 className="text-3xl font-medium text-gray-700 mb-8">
             กิจกรรม
           </h2>
           <div className="relative">
             {/* Arrow Left */}
             <button
               onClick={handlePrevActivity}
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-3 shadow-lg hover:bg-gray-100 transition-all"
+              className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-3 shadow-lg hover:bg-gray-100 transition-all"
               aria-label="Previous activity"
             >
               <ChevronLeft className="w-6 h-6 text-gray-700" />
             </button>
 
             {/* Activity Cards */}
-            <div className="overflow-hidden px-12">
+            <div className="overflow-visible px-2">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {activities.map((activity, index) => (
                   <div
@@ -243,27 +246,20 @@ export default function SouvenirActivityPage() {
                       setSelectedActivity(activity);
                       setCurrentActivityIndex(index);
                     }}
-                    className={`bg-white rounded-xl shadow-md p-6 cursor-pointer transition-all duration-300 ${
-                      selectedActivity.id === activity.id
-                        ? "ring-4 ring-orange-500 shadow-xl"
-                        : "hover:shadow-lg"
+                    className={`bg-white rounded-xl transition-all duration-300 cursor-pointer min-h-[300px] flex items-center ${
+                      selectedActivity?.id === activity.id
+                        ? "shadow-xl"
+                        : "shadow-md hover:shadow-lg"
                     }`}
                   >
-                    <div className="flex items-start gap-3 mb-3">
-                      <MapPin className="w-5 h-5 text-orange-500 flex-shrink-0 mt-1" />
-                      <h3
-                        className={`text-lg font-bold ${
-                          selectedActivity.id === activity.id
-                            ? "text-orange-500"
-                            : "text-gray-800"
-                        }`}
-                      >
+                    <div className="p-10 text-center w-full">
+                      <h3 className="text-lg font-medium mb-3 text-orange-500">
                         {activity.name}
                       </h3>
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <Calendar className="w-4 h-4" />
-                      <span className="text-sm">{activity.date}</span>
+                      <div className="flex items-center justify-center gap-2 text-gray-600">
+                        <MapPin className="w-5 h-5" />
+                        <span className="text-base">{activity.date}</span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -273,7 +269,7 @@ export default function SouvenirActivityPage() {
             {/* Arrow Right */}
             <button
               onClick={handleNextActivity}
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-3 shadow-lg hover:bg-gray-100 transition-all"
+              className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-3 shadow-lg hover:bg-gray-100 transition-all"
               aria-label="Next activity"
             >
               <ChevronRight className="w-6 h-6 text-gray-700" />
@@ -281,46 +277,143 @@ export default function SouvenirActivityPage() {
           </div>
         </section>
 
-        {/* Section 3: สถิติของกิจกรรมที่เลือก */}
-        <section>
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">
-            {selectedActivity.name}
-          </h2>
+        {/* Section 3 & 4: Only show when activity is selected */}
+        {selectedActivity && (
+          <>
+            {/* Section 3: สถิติของกิจกรรมที่เลือก */}
+            <section>
+              <h2 className="text-3xl font-medium text-gray-700 mb-8">
+                {selectedActivity.name}
+              </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Card 1: คงเหลือ */}
-            <div className="bg-white rounded-xl shadow-md p-8 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <RefreshCw className="w-8 h-8 text-blue-500" />
+            <div 
+              onClick={() => setSelectedStatus('remaining')}
+              className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
+                selectedStatus === 'remaining' 
+                  ? 'border-orange-300 shadow-xl' 
+                  : 'border-orange-100 hover:shadow-lg'
+              }`}
+            >
+              <div className="p-10 text-center w-full">
+                <div className="flex items-center justify-center mb-4">
+                  <RefreshCw className="w-8 h-8 text-orange-500" />
+                </div>
+                <div className={`text-5xl font-bold mb-2 ${
+                  selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-800'
+                }`}>
+                  {selectedActivity.stats.remaining}
+                </div>
+                <div className={`font-medium ${
+                  selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-600'
+                }`}>คงเหลือ</div>
               </div>
-              <div className="text-5xl font-bold text-gray-800 mb-2">
-                {selectedActivity.stats.remaining}
-              </div>
-              <div className="text-gray-600 font-medium">คงเหลือ</div>
             </div>
 
             {/* Card 2: ลงทะเบียน */}
-            <div className="bg-white rounded-xl shadow-md p-8 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <Layers className="w-8 h-8 text-orange-500" />
+            <div 
+              onClick={() => setSelectedStatus('registered')}
+              className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
+                selectedStatus === 'registered' 
+                  ? 'border-orange-300 shadow-xl' 
+                  : 'border-orange-100 hover:shadow-lg'
+              }`}
+            >
+              <div className="p-10 text-center w-full">
+                <div className="flex items-center justify-center mb-4">
+                  <Layers className="w-8 h-8 text-orange-500" />
+                </div>
+                <div className={`text-5xl font-bold mb-2 ${
+                  selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-800'
+                }`}>
+                  {selectedActivity.stats.registered}
+                </div>
+                <div className={`font-medium ${
+                  selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-600'
+                }`}>ลงทะเบียน</div>
               </div>
-              <div className="text-5xl font-bold text-gray-800 mb-2">
-                {selectedActivity.stats.registered}
-              </div>
-              <div className="text-gray-600 font-medium">ลงทะเบียน</div>
             </div>
 
             {/* Card 3: รับของแล้ว */}
-            <div className="bg-white rounded-xl shadow-md p-8 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <CheckCircle className="w-8 h-8 text-green-500" />
+            <div 
+              onClick={() => setSelectedStatus('claimed')}
+              className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
+                selectedStatus === 'claimed' 
+                  ? 'border-orange-300 shadow-xl' 
+                  : 'border-orange-100 hover:shadow-lg'
+              }`}
+            >
+              <div className="p-10 text-center w-full">
+                <div className="flex items-center justify-center mb-4">
+                  <CheckCircle className="w-8 h-8 text-orange-500" />
+                </div>
+                <div className={`text-5xl font-bold mb-2 ${
+                  selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-800'
+                }`}>
+                  {selectedActivity.stats.claimed}
+                </div>
+                <div className={`font-medium ${
+                  selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-600'
+                }`}>รับของแล้ว</div>
               </div>
-              <div className="text-5xl font-bold text-gray-800 mb-2">
-                {selectedActivity.stats.claimed}
-              </div>
-              <div className="text-gray-600 font-medium">รับของแล้ว</div>
             </div>
           </div>
         </section>
+
+        {/* Section 4: Table without header */}
+        <section className="mt-12">
+          <div className="bg-white rounded-xl shadow-md overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-100 border-b border-gray-200">
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">ลำดับ</th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">ชื่อ-สกุล</th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">อีเมล</th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">วันที่ลงทะเบียน</th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">ของที่ระลึก</th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">สถานะ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Mock Data - filtered by selected status */}
+                  {[
+                    { id: 1, name: "นาย สมชาย ใจดี", email: "somchai@example.com", date: "15 ธ.ค. 2567", souvenir: "เข็มกลัด SUT", status: "รับแล้ว", statusType: "claimed" },
+                    { id: 2, name: "นางสาว สมหญิง รักดี", email: "somying@example.com", date: "15 ธ.ค. 2567", souvenir: "หมวก ENGi", status: "รอรับ", statusType: "registered" },
+                    { id: 3, name: "นาย ประยุทธ์ มั่นคง", email: "prayut@example.com", date: "15 ธ.ค. 2567", souvenir: "ขวดน้ำ ENGi", status: "รับแล้ว", statusType: "claimed" },
+                    { id: 4, name: "นางสาว วิภา สุขใจ", email: "wipa@example.com", date: "15 ธ.ค. 2567", souvenir: "เข็มกลัด SUT", status: "รอรับ", statusType: "registered" },
+                    { id: 5, name: "นาย อนุชา ดีงาม", email: "anucha@example.com", date: "15 ธ.ค. 2567", souvenir: "หมวก ENGi", status: "รับแล้ว", statusType: "claimed" },
+                    { id: 6, name: "นางสาว มาลี ใจงาม", email: "malee@example.com", date: "15 ธ.ค. 2567", souvenir: "เข็มกลัด SUT", status: "คงเหลือ", statusType: "remaining" },
+                    { id: 7, name: "นาย สุรชัย วงศ์ดี", email: "surachai@example.com", date: "15 ธ.ค. 2567", souvenir: "หมวก ENGi", status: "คงเหลือ", statusType: "remaining" },
+                  ]
+                  .filter(item => selectedStatus === 'all' || item.statusType === selectedStatus)
+                  .map((item, index) => (
+                    <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 text-sm text-gray-800">{index + 1}</td>
+                      <td className="px-6 py-4 text-sm text-gray-800 font-medium">{item.name}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{item.email}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{item.date}</td>
+                      <td className="px-6 py-4 text-sm text-gray-800">{item.souvenir}</td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
+                          item.status === "รับแล้ว" 
+                            ? "bg-green-100 text-green-700" 
+                            : item.status === "รอรับ"
+                            ? "bg-orange-100 text-orange-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}>
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+          </>
+        )}
       </div>
     </main>
   );
