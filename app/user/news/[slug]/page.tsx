@@ -114,7 +114,7 @@ export  function NewsDetailPage({ params }: { params: { slug: string } }) {
       </header>
 
       {/* Featured Image (โปสเตอร์) */}
-      <div className="relative w-full aspect-[4/3] sm:aspect-[3/2] md:aspect-[5/3] lg:aspect-[2/1] mb-8 overflow-hidden rounded-lg shadow-xl">
+      <div className="relative w-full aspect-4/3 sm:aspect-3/2 md:aspect-5/3 lg:aspect-2/1 mb-8 overflow-hidden rounded-lg shadow-xl">
         <Image
           src={data.imageUrl}
           alt={data.title}
@@ -165,7 +165,7 @@ export  function NewsDetailPage({ params }: { params: { slug: string } }) {
       <footer className="mt-6 flex ">
         <div className="flex items-center gap-4">
           {/* Avatar */}
-          <div className="w-12 h-12 rounded-full bg-gray-300 flex-shrink-0" />
+          <div className="w-12 h-12 rounded-full bg-gray-300 shrink-0" />
 
           {/* Author name */}
           <span className="text-base font-semibold text-[#F26522]">
