@@ -1,9 +1,10 @@
 
 // app/news/News.tsx
 'use client';
-import React from 'react';
+import React, { use } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useEffect, useState } from "react";
 import { Card, CardHeader, CardContent } from '../../components/ui/Card';
 import { PrimaryButton } from '../../components/ui/Button';
 
@@ -44,9 +45,59 @@ export const mockData = {
   ],
 };
 
+function useAuth() {
+  const [user, setUser] = useState<{
+    isAuthenticated: boolean;
+    role: string;
+    name?: string;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        // เรียก API เพื่อตรวจสอบสถานะ
+        const response = await fetch('/api/auth/me');
+
+        if (response.ok) {
+          const data = await response.json();
+
+          // ดึง role มาจากทั้ง data.role หรือ data.userType แล้วแปลงเป็นตัวเล็ก
+          const rawRole = (data.role || data.userType || '').toString();
+          const normalizedRole = rawRole.toLowerCase(); // <-- ตรงนี้สำคัญ
+
+          setUser({
+            isAuthenticated: true,
+            role: normalizedRole,
+            name: data.name || data.fullName,
+          });
+        } else {
+          // ไม่ได้ล็อกอิน
+          setUser({ isAuthenticated: false, role: '' });
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+        setUser({ isAuthenticated: false, role: '' });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  return {
+    isLoggedIn: user?.isAuthenticated || false,
+    isAdmin: user?.role === 'admin',   // ตอนนี้จะแมตช์ "ADMIN", "Admin", "admin" ได้หมด
+    isUser: user?.role === 'user',
+    loading,
+  };
+}
+
+
 export function News() {
   const { featured, secondary, archives, upcoming } = mockData;
-
+  const { isLoggedIn, isAdmin, isUser, loading } = useAuth();
   return (
     <section className="container mx-auto mb-16 px-4 py-0 ">
       {/* 🔶 Full-width Banner */}
@@ -78,13 +129,23 @@ export function News() {
           ข่าวสารและกิจกรรม
         </h2>
 
-        <Link
-          href="/submission">
+        {isLoggedIn && !isAdmin &&(
+          <Link
+          href="/user/news/submission">
             <PrimaryButton>
                 คำขอยื่นเรื่อง
             </PrimaryButton>
           
         </Link>
+        )}
+
+        {isLoggedIn && isAdmin &&  (
+          <Link href="/admin/news">
+            <PrimaryButton>
+              รายละเอียด
+            </PrimaryButton>
+          </Link>
+        )}
       </div>
 
 
