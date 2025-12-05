@@ -30,7 +30,7 @@ export const souvenirMockData = {
       id: 3,
       title: 'ENGi Bottle',
       stock: 24,
-      imageSrc: '/souvenir/EngiBrooch.png',
+      imageSrc: '/souvenir/EngiBottle.png',
     },
   ] as SouvenirItem[],
 };

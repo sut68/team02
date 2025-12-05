@@ -15,7 +15,12 @@ export default function SouvenirMenuPage() {
   useEffect(() => {
     if (showDetail && detailRef.current) {
       setTimeout(() => {
-        detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const yOffset = -120; // Increased offset to show the title/heading
+        const element = detailRef.current;
+        if (element) {
+          const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
       }, 100);
     }
   }, [showDetail]);
