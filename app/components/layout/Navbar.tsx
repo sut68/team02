@@ -161,7 +161,7 @@ export default function Navbar() {
             </Link>
             <div className="absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50">
               <Link href="/admin/souvenir/activity" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">กิจกรรม</Link>
-              <Link href="/admin/souvenir" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">บริจาค</Link>
+              <Link href="/admin/souvenir/donation" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">บริจาค</Link>
             </div>
           </div>
 
