@@ -176,7 +176,6 @@ export default function BudgetReportPage() {
                             fill
                             className="object-cover group-hover:scale-105 transition-transform duration-500"
                         />
-                        {/* Overlay เล็กน้อยให้รูปดูสวยขึ้น */}
                         <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
                     </div>
                     
