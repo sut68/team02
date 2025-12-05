@@ -191,7 +191,7 @@ export default function SouvenirActivityPage() {
               {loopItems.map((item, index) => (
                 <div
                   key={`${item.id}-${index}`}
-                  className="flex-shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)] bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
+                  className="shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)] bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
                 >
                   <div className="relative h-72 md:h-80 bg-white">
                     <Image
