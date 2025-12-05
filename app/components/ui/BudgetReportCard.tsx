@@ -59,10 +59,10 @@ export default function BudgetReportCard({ report, onDelete }: Props) {
 
   return (
     <>
-      <Card className="rounded-[32px] p-5 hover:shadow-lg border border-gray-50 flex flex-col h-full relative group transition-all duration-300">
+      <Card className="rounded-4xl p-5 hover:shadow-lg border border-gray-50 flex flex-col h-full relative group transition-all duration-300">
         
         {/* 1. ส่วนรูปภาพ - วางไว้ใน Card body หลัก (หรือจะใส่ CardHeader ก็ได้ แต่ดีไซน์นี้รูปเด่นกว่า) */}
-        <div className="relative w-full aspect-[16/10] rounded-2xl overflow-hidden mb-4 bg-gray-50 border border-gray-100 z-10">
+        <div className="relative w-full aspect-16/10 rounded-2xl overflow-hidden mb-4 bg-gray-50 border border-gray-100 z-10">
           {report.imageSrc ? (
             <Image
               src={report.imageSrc}
@@ -94,7 +94,7 @@ export default function BudgetReportCard({ report, onDelete }: Props) {
                       ${currentStatus === option.label ? "bg-gray-50 text-gray-900" : "hover:bg-gray-50 text-gray-600"}
                     `}
                   >
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${option.color}`} />
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${option.color}`} />
                     <span className="truncate">{option.label}</span>
                   </button>
                 ))}
@@ -109,8 +109,8 @@ export default function BudgetReportCard({ report, onDelete }: Props) {
               }}
               className="flex items-center gap-2 px-3 py-1.5 bg-white/95 backdrop-blur-md shadow-sm rounded-full hover:bg-white transition-all ring-1 ring-black/5"
             >
-              <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${activeStatusObj.color}`} />
-              <span className="text-xs font-semibold text-gray-700 truncate max-w-[80px]">
+              <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${activeStatusObj.color}`} />
+              <span className="text-xs font-semibold text-gray-700 truncate max-w-20">
                 {activeStatusObj.label}
               </span>
               <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform duration-200 ${isMenuOpen ? "rotate-180" : ""}`} />
@@ -130,7 +130,7 @@ export default function BudgetReportCard({ report, onDelete }: Props) {
         </div>
 
         {/* 2. เนื้อหา (ชื่อโครงการ) - ใช้ CardContent */}
-        <CardContent className="p-0 flex-grow flex flex-col items-center text-center mb-6">
+        <CardContent className="p-0 grow flex flex-col items-center text-center mb-6">
           <h3 className="text-gray-900 font-medium text-lg leading-snug line-clamp-2">
             {report.projectName}
           </h3>
