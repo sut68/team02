@@ -6,9 +6,6 @@ import React from 'react';
 import { PrimaryButton } from './../../components/ui/Button';
 import { Card, CardContent, CardHeader } from './../../components/ui/Card';
 
-// สมมติว่าคุณมี Hook สำหรับตรวจสอบสถานะ Admin (ต้องทำการ import จริงในไฟล์)
-// import { useAdminCheck } from '...'; 
-
 const Tag = ({ text }: { text: string }) => (
     <span className="text-[#F26522] text-xs font-semibold px-2.5 py-0.5 rounded-full">
         {text}
@@ -16,36 +13,17 @@ const Tag = ({ text }: { text: string }) => (
 );
 
 export default function CentralFundDonationPage() {
+    // กำหนด URL ปลายทางไว้ที่นี่เพื่อให้โค้ดอ่านง่าย
     const DONATION_URL = '/user/donation/form'; 
-    
-    // 💡 สมมติ: ดึงสถานะ Admin มาจาก Context/Hook (เปลี่ยนตามการใช้งานจริงของคุณ)
-    // const { isAdmin, loading } = useAdminCheck();
-    const isAdmin = true; // <-- เปลี่ยนเป็น false หรือใช้ hook จริง เมื่อใช้งาน
-    
-    const ADD_PROJECT_URL = '/admin/donation/create'; // URL สำหรับหน้าสร้างโครงการ
 
     return (
         <div className="mb-8">
 
             {/* 3. ส่วน Content (การ์ดเดียวสำหรับกองทุนกลาง) */}
             <div className="container mx-auto max-w-8xl p-4 md:p-8 z-10 relative">
-                
-                {/* 💡 แก้ไข: ใช้ Flexbox จัดวางหัวข้อและปุ่ม */}
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-3xl md:text-4xl font-semibold text-gray-800">
-                        การระดมทุน
-                    </h2>
-                    
-                    {/* 💡 ปุ่ม "เพิ่มโครงการ" (แสดงเฉพาะ Admin) */}
-                    {isAdmin && (
-                        <Link href={ADD_PROJECT_URL}>
-                            <PrimaryButton className="text-sm md:text-base px-3 py-1.5">
-                                + เพิ่มโครงการ
-                            </PrimaryButton>
-                        </Link>
-                    )}
-                </div>
-                {/* ------------------------------------------- */}
+                <h2 className="text-3xl md:text-4xl font-semibold text-gray-800 mb-6">
+                    การระดมทุน
+                </h2>
 
                 {/* 💡 ห่อทั้ง Card ด้วย Link */}
                 <Link href={DONATION_URL} className="relative block group mx-auto max-w-5xl">
