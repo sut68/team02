@@ -40,10 +40,10 @@ export function SubmissionPage() {
   const [error, setError] = useState("");
   const [submitLoading, setSubmitLoading] = useState(false);
 
-  // 👇 state ใหม่: ควบคุมให้ฟอร์มด้านล่างโผล่/ไม่โผล่
+  // ควบคุมให้ฟอร์มด้านล่างโผล่/ไม่โผล่
   const [showForm, setShowForm] = useState(false);
 
-  // ✅ ดึงข้อมูลจากดาต้าเบส ผ่าน GET /api/submissions
+  // ดึงข้อมูลจากดาต้าเบส ผ่าน GET /api/user/news/submission
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
@@ -64,10 +64,33 @@ export function SubmissionPage() {
     }
   };
 
-  // 🎯 โหลดข้อมูลจาก DB ตอนเปิดหน้า
+  // โหลดข้อมูลจาก DB ตอนเปิดหน้า
   useEffect(() => {
     fetchSubmissions();
   }, []);
+
+  // 🏷 ชื่อสถานะที่อยากให้แสดงฝั่ง user
+  const statusLabel = (status: VerifyStatus) => {
+    switch (status) {
+      case "APPROVED":
+        return "อนุมัติแล้ว";
+      case "REJECTED":
+        return "ไม่อนุมัติ";
+      default:
+        return "รอดำเนินการ";
+    }
+  };
+
+  const statusColor = (status: VerifyStatus) => {
+    switch (status) {
+      case "APPROVED":
+        return "bg-orange-100 text-orange-700 border border-orange-300";
+      case "REJECTED":
+        return "bg-red-100 text-red-700 border border-red-300";
+      default: // PENDING
+        return "bg-gray-100 text-gray-700 border border-gray-300";
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -75,29 +98,7 @@ export function SubmissionPage() {
     setFileName(f?.name || null);
   };
 
-  const statusLabel = (status: VerifyStatus) => {
-    switch (status) {
-      case "APPROVED":
-        return "ผ่าน";
-      case "REJECTED":
-        return "ไม่ผ่าน";
-      default:
-        return "รอตรวจสอบ";
-    }
-  };
-
-  const statusColor = (status: VerifyStatus) => {
-    switch (status) {
-      case "APPROVED":
-        return "bg-orange-500";
-      case "REJECTED":
-        return "bg-gray-500";
-      default:
-        return "bg-yellow-400";
-    }
-  };
-
-  // ฟังก์ชันเดิม: ใช้ส่งฟอร์ม (ปุ่มด้านล่างยังใช้ตัวนี้)
+  // ส่งฟอร์ม
   const handleSubmit = async () => {
     if (!title.trim()) {
       setError("กรุณากรอกชื่อหัวเรื่อง");
@@ -127,13 +128,14 @@ export function SubmissionPage() {
         return;
       }
 
-      // 🆕 วิธี 1: ดึงข้อมูลจากดาต้าเบสใหม่ทั้งก้อน (ชัวร์สุด)
+      // ดึงข้อมูลใหม่ทั้งก้อนให้ตรงกับ DB
       await fetchSubmissions();
 
       // reset form
       setTitle("");
       setFile(null);
       setFileName(null);
+      setShowForm(false);
     } catch (e) {
       console.error(e);
       setError("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
@@ -147,12 +149,12 @@ export function SubmissionPage() {
     setFile(null);
     setFileName(null);
     setError("");
+    setShowForm(false);
   };
 
-  // 👇 ฟังก์ชันใหม่: กดปุ่มด้านบนให้ฟอร์มโผล่
+  // กดปุ่มด้านบนให้ฟอร์มโผล่
   const handleOpenForm = () => {
     setShowForm(true);
-    // เลื่อนลงไปหา form ให้อัตโนมัติ
     setTimeout(() => {
       const el = document.getElementById("submission-form");
       el?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -166,7 +168,6 @@ export function SubmissionPage() {
         <CardHeader className="flex items-center justify-between">
           <h2 className="text-2xl font-medium text-gray-800">คำยื่นร้องขอ</h2>
 
-          {/* 🔴 แก้แค่ตรงนี้: จาก handleSubmit -> handleOpenForm */}
           <PrimaryButton
             type="button"
             onClick={handleOpenForm}
@@ -246,10 +247,10 @@ export function SubmissionPage() {
                         )}
                       </TableCell>
 
-                      {/* สถานะ */}
+                      {/* สถานะ = เม็ดสีแบบเดียวกับแอดมิน */}
                       <TableCell>
                         <span
-                          className={`px-3 py-1 text-white rounded-full text-xs inline-block ${statusColor(
+                          className={`px-3 py-1 rounded-full text-xs inline-flex items-center justify-center ${statusColor(
                             item.status
                           )}`}
                         >
@@ -261,7 +262,7 @@ export function SubmissionPage() {
                       <TableCell className="text-gray-600 text-sm">
                         {item.remark ||
                           (item.status === "REJECTED"
-                            ? "ไม่มีสถานที่จัดงานและไฟล์รูปภาพประกอบ"
+                            ? "ยังไม่ผ่านการอนุมัติจากผู้ดูแลระบบ"
                             : "")}
                       </TableCell>
                     </TableRow>
@@ -279,7 +280,7 @@ export function SubmissionPage() {
       </Card>
 
       {/* ==================== ฟอร์มยื่นเรื่อง ==================== */}
-      {showForm && (   // 👈 ให้ฟอร์มโผล่เฉพาะตอนกดปุ่ม
+      {showForm && (
         <div
           id="submission-form"
           className="border rounded-lg p-8 shadow-sm bg-white space-y-6"
@@ -296,7 +297,7 @@ export function SubmissionPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="px-4 py-3 border border-gray-300 rounded-md text-sm w-full placeholder-gray-400
-            focus:outline-none focus:border-orange-400"
+              focus:outline-none focus:border-orange-400"
               placeholder="กรอกชื่อหัวเรื่อง"
             />
           </div>
@@ -309,7 +310,7 @@ export function SubmissionPage() {
 
             <div
               className="border border-gray-300 rounded-md p-6 flex flex-col items-center justify-center
-            text-center cursor-pointer hover:border-orange-400"
+              text-center cursor-pointer hover:border-orange-400"
             >
               <label className="cursor-pointer">
                 <input
