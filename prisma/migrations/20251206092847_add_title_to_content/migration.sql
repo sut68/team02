@@ -5,5 +5,5 @@
 
 */
 -- AlterTable
-ALTER TABLE "Content" DROP COLUMN "Title",
+ALTER TABLE "Content"
 ADD COLUMN     "TitleName" TEXT;
