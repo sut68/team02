@@ -1,83 +1,73 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Layers,
   RefreshCw,
   ThumbsUp,
   Ban,
   CheckCircle,
-  Plus,
   CirclePlus,
 } from "lucide-react";
 import Link from "next/link";
 import ProjectCard from "@/app/components/ui/ProjectCard";
-import { ProjectStatus } from "@/app/types/budget_approval";
-import { ProjectManager, ProjectWithManager } from '@/app/types/budget_approval';
-
-// --- Mock Data ---
-const mockProjectManagers: ProjectManager[] = [
-  {
-    pmid: 1,
-    firstName: 'สมชาย',
-    lastName: 'ใจดี',
-    department: 'สำนักวิชาวิศวกรรมศาสตร์',
-    position: 'หัวหน้าโครงการ',
-    phoneNumber: '081-234-5678',
-    email: 'somchai@sut.ac.th'
-  }
-];
-
-const mockProjects: ProjectWithManager[] = [
-  {
-    ppid: 1,
-    projectName: 'โครงการอบรมทักษะวิชาชีพ',
-    objective: 'พัฒนาทักษะนักศึกษาวิศวกรรมศาสตร์',
-    description: 'จัดกิจกรรมอบรมเชิงปฏิบัติการเพื่อพัฒนาทักษะด้านวิทยาศาสตร์และเทคโนโลยี',
-    requestedAmount: 150000,
-    projectStartDate: '2025-01-15',
-    projectEndDate: '2025-03-30',
-    responsibilityUnit: 'สำนักวิชาวิศวกรรมศาสตร์',
-    coverFilePath: '',
-    scoreTotal: 5474,
-    statusId: 1,
-    pmid: 1,
-    bgrid: 1,
-    staffId: 1,
-    createdAt: '2025-01-01',
-    manager: mockProjectManagers[0]
-  }
-];
+import { ProjectStatus, ProjectWithManager } from "@/app/types/budget_approval";
 
 // --- Configuration ---
 const statusFilters: {
   label: ProjectStatus;
   icon: any;
-  id?: number;
+  id?: number; // หมายเหตุ: statusId ใน DB อาจต้อง map ให้ตรงกับที่นี่
+  key?: string; // เพิ่ม key สำหรับ map กับ enum status (DRAFT, PENDING, etc.)
 }[] = [
   { label: "ทั้งหมด", icon: Layers },
-  { label: "รอดำเนินการ", icon: RefreshCw, id: 1 },
-  { label: "เปิดรับโหวต", icon: ThumbsUp, id: 2 },
-  { label: "ปิดรับโหวต", icon: Ban, id: 3 },
-  { label: "อนุมัติแล้ว", icon: CheckCircle, id: 4 },
+  { label: "รอดำเนินการ", icon: RefreshCw, key: 'DRAFT' },
+  { label: "เปิดรับโหวต", icon: ThumbsUp, key: 'PENDING' },
+  { label: "ปิดรับโหวต", icon: Ban, key: 'CLOSED' }, // สมมติ
+  { label: "อนุมัติแล้ว", icon: CheckCircle, key: 'APPROVED' },
 ];
 
 export default function ProjectManagementPage() {
   const [activeFilter, setActiveFilter] = useState<ProjectStatus>("ทั้งหมด");
+  const [projects, setProjects] = useState<ProjectWithManager[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // ✅ ดึงข้อมูลจริงจาก API
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const res = await fetch('/api/project-proposal');
+        if (res.ok) {
+          const data = await res.json();
+          setProjects(data.proposals);
+        }
+      } catch (error) {
+        console.error("Failed to fetch projects", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProjects();
+  }, []);
 
   // Filter Logic
-  const filteredProjects = mockProjects.filter((project) => {
+  const filteredProjects = projects.filter((project) => {
     if (activeFilter === "ทั้งหมด") return true;
-    const selectedStatus = statusFilters.find((f) => f.label === activeFilter);
-    return project.statusId === selectedStatus?.id;
+    
+    // Logic การกรอง: ต้องดูว่า API ส่ง status มาเป็น String (Enum) หรือ Int
+    // สมมติว่าส่งมาเป็น String (DRAFT, PENDING, APPROVED) ตาม Schema
+    const filterConfig = statusFilters.find(f => f.label === activeFilter);
+    if (!filterConfig?.key) return false;
+    
+    // เช็ค property 'status' จาก API response
+    return (project as any).status === filterConfig.key;
   });
 
   // Helper: นับจำนวนโครงการตามสถานะ
-  const getStatusCount = (statusLabel: ProjectStatus, statusId?: number) => {
-    if (statusLabel === "ทั้งหมด") {
-      return mockProjects.length;
-    }
-    return mockProjects.filter((p) => p.statusId === statusId).length;
+  const getStatusCount = (statusLabel: ProjectStatus, filterKey?: string) => {
+    if (statusLabel === "ทั้งหมด") return projects.length;
+    if (!filterKey) return 0;
+    return projects.filter((p) => (p as any).status === filterKey).length;
   };
 
   return (
@@ -89,7 +79,7 @@ export default function ProjectManagementPage() {
           {statusFilters.map((filter) => {
             const Icon = filter.icon;
             const isActive = activeFilter === filter.label;
-            const count = getStatusCount(filter.label, filter.id);
+            const count = getStatusCount(filter.label, filter.key);
 
             return (
               <div
@@ -127,7 +117,7 @@ export default function ProjectManagementPage() {
                   <p className={`text-2xl font-medium mt-2 ${
                       isActive ? "text-orange-600" : "text-gray-400"
                   }`}>
-                    {count}
+                    {loading ? "..." : count}
                   </p>
                 </div>
               </div>
@@ -142,36 +132,29 @@ export default function ProjectManagementPage() {
           </h2>
           <Link
             href="/admin/budget_approval/create"
-            className="bg-orange-500 text-white px-6 py-3 rounded-full hover:bg-orange-600 transition flex items-center gap-2 shadow-md hover:shadow-lg"
+            className=" h-10 bg-orange-500 text-white px-6 py-3 rounded-full hover:bg-orange-600 transition flex items-center gap-2 shadow-md hover:shadow-lg"
           >
-            <CirclePlus className="w-6 h-6" />
+            <CirclePlus className="w-5 h-5" />
             <span className="font-semibold">เพิ่มโครงการ</span>
           </Link>
         </div>
 
         {/* Projects Grid */}
-        {filteredProjects.length > 0 ? (
+        {loading ? (
+          <div className="text-center py-16 text-gray-500">กำลังโหลดข้อมูล...</div>
+        ) : filteredProjects.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {filteredProjects.map((project) => (
-              <ProjectCard key={project.ppid} project={project} />
+              // @ts-ignore
+              <ProjectCard key={project.id || project.ppid} project={project} />
             ))}
           </div>
         ) : (
-          <div className="text-center py-16 border-2 border-dashed border-gray-100 rounded-xl">
+          <div className="text-center py-35 rounded-xl">
             <div className="text-gray-300 mb-4">
-              <Layers className="w-16 h-16 mx-auto" strokeWidth={1.0} />
+              <Layers className="w-16 h-16 mx-auto" strokeWidth={1.5} />
             </div>
-            <p className="text-gray-500 text-lg mb-4">ไม่พบโครงการในสถานะนี้</p>
-            {/* ปุ่มเพิ่มโครงการกรณีไม่มีข้อมูล */}
-            {mockProjects.length === 0 && (
-              <Link
-                href="/admin/budget_approval/create"
-                className="inline-flex items-center gap-2 bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600 transition shadow-md hover:shadow-lg"
-              >
-                <CirclePlus className="w-6 h-6" />
-                เพิ่มโครงการใหม่
-              </Link>
-            )}
+            <p className="text-gray-500 text-lg font-medium mb-4">ไม่พบโครงการ</p>
           </div>
         )}
       </div>
