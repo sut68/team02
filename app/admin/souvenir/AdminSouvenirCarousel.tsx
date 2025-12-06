@@ -102,19 +102,32 @@ export function AdminSouvenirCarousel({ onCardClick, category }: AdminSouvenirCa
 
   // Continuous auto-scroll using requestAnimationFrame
   React.useEffect(() => {
+    if (souvenirItems.length === 0) return;
+    
     let rafId = 0;
     let last = performance.now();
+    
     const tick = (now: number) => {
       const dt = (now - last) / 1000;
       last = now;
+      
       if (!isPaused) {
-        stepBy(speedRef.current * dt);
+        const loopW = loopWidthRef.current || 0;
+        if (loopW > 0 && trackRef.current) {
+          const distance = speedRef.current * dt;
+          offsetRef.current += distance;
+          while (offsetRef.current >= loopW) offsetRef.current -= loopW;
+          while (offsetRef.current < 0) offsetRef.current += loopW;
+          trackRef.current.style.transform = `translateX(${-offsetRef.current}px)`;
+        }
       }
+      
       rafId = requestAnimationFrame(tick);
     };
+    
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [isPaused]);
+  }, [isPaused, souvenirItems.length]);
 
   if (loading) {
     return (
@@ -188,7 +201,7 @@ export function AdminSouvenirCarousel({ onCardClick, category }: AdminSouvenirCa
                     </div>
 
                     {/* ชื่อสินค้า */}
-                    <h3 className="mt-4 text-lg md:text-xl font-bold text-orange-500">
+                    <h3 className="mt-4 text-lg md:text-xl font-bold text-orange-500 truncate">
                       {item.name}
                     </h3>
                     {/* จำนวนคงเหลือ */}

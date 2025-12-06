@@ -19,7 +19,12 @@ interface Activity {
   name: string;
   startDate: string;
   location: string | null;
-  souvenir?: string;
+  souvenirItem?: {
+    id: number;
+    name: string;
+    imageUrl: string | null;
+    sku: string;
+  } | null;
 }
 
 interface EventRegistration {
@@ -217,20 +222,20 @@ export default function SouvenirActivityPage() {
                 >
                   <div className="relative h-72 md:h-80 bg-white">
                     <Image
-                      src={item.imageUrl || '/souvenir/EngiButton.png'}
+                      src={item.imageUrl || '/souvenir/placeholder.png'}
                       alt={item.name}
                       fill
                       className="object-contain p-6"
                     />
                   </div>
                   <div className="p-6">
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">
+                    <h3 className="text-xl font-bold text-gray-800 mb-2 truncate">
                       {item.name}
                     </h3>
                     <p className="text-orange-500 font-semibold mb-3 text-sm">
                       {item.category || 'กิจกรรม'}
                     </p>
-                    <p className="text-gray-600 text-sm leading-relaxed mb-3">
+                    <p className="text-gray-600 text-sm leading-relaxed mb-3 truncate">
                       {item.description || 'ของที่ระลึกสำหรับผู้เข้าร่วมกิจกรรม'}
                     </p>
                     <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
@@ -445,7 +450,7 @@ export default function SouvenirActivityPage() {
                       });
                       
                       const hasRedemption = reg.entitlements?.some(e => e.redemptions.length > 0);
-                      const souvenirName = reg.entitlements?.[0]?.item.name || selectedActivity.souvenir || 'ของที่ระลึกกิจกรรม';
+                      const souvenirName = reg.entitlements?.[0]?.item.name || selectedActivity.souvenirItem?.name || 'ของที่ระลึกกิจกรรม';
                       
                       let statusText = 'รอรับ';
                       let statusColor = 'bg-gray-100 text-gray-700';

@@ -158,7 +158,7 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
             unit: 'ชิ้น',
             initialStock: 0,
             active: true,
-            imageUrl: '/souvenir/EngiButton.png',
+            imageUrl: '',
           });
         } else {
           setIsEditing(false);
@@ -428,9 +428,13 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     disabled={!isEditing}
                     rows={4}
+                    maxLength={200}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-50"
-                    placeholder="เพิ่มรายละเอียดเกี่ยวกับของที่ระลึก..."
+                    placeholder="เพิ่มรายละเอียดเกี่ยวกับของที่ระลึก... (สูงสุด 200 ตัวอักษร)"
                   />
+                  <p className="text-xs text-gray-500 mt-1 text-right">
+                    {formData.description.length}/200 ตัวอักษร
+                  </p>
                 </div>
 
                 {isCreating && (

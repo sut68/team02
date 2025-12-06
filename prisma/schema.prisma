@@ -194,9 +194,11 @@ model Event {
   location      String?
   maxAttendees  Int?
   isActive      Boolean  @default(true)
+  souvenirItemId Int?    // เชื่อมกับของที่ระลึก
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  souvenirItem  SouvenirItem? @relation(fields: [souvenirItemId], references: [id])
   registrations EventRegistration[]
   entitlements  Entitlement[]
 }
@@ -226,8 +228,10 @@ model Donation {
   donatedAt   DateTime @default(now())
   purpose     String?
   status      String   @default("completed") // "pending" | "completed" | "failed"
+  souvenirItemId Int?  // บริจาคได้ของชิ้นไหน
   
   user        User     @relation(fields: [userId], references: [id])
+  souvenirItem SouvenirItem? @relation(fields: [souvenirItemId], references: [id])
   entitlements Entitlement[]
   shipments   Shipment[]
   
@@ -256,6 +260,8 @@ model SouvenirItem {
   entitlements Entitlement[]
   redemptions  Redemption[]
   shipments    Shipment[]
+  events       Event[]         // กิจกรรมที่แจกของชิ้นนี้
+  donations    Donation[]      // การบริจาคที่ได้ของชิ้นนี้
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
