@@ -1,5 +1,6 @@
 // app/components/Footer.tsx
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Footer() {
   return (
@@ -71,11 +72,26 @@ export default function Footer() {
             </h3>
             <div className="h-0.5 w-full bg-[#E85D1F] mb-6" />
             <ul className="space-y-4 text-sm text-zinc-300">
-              <li className="hover:text-white cursor-pointer">แนะนำ AlumniConnect</li>
-              <li className="hover:text-white cursor-pointer">ข่าวสารและกิจกรรม</li>
-              <li className="hover:text-white cursor-pointer">โครงการระดมทุนและการบริจาค</li>
-              <li className="hover:text-white cursor-pointer">การติดตามงบประมาณและรายงานการใช้จ่าย</li>
-              <li className="hover:text-white cursor-pointer">ของที่ระลึกศิษย์เก่า</li>
+              <li>
+                <Link href="/user/news" className="hover:text-white">
+                  ข่าวสารและกิจกรรม
+                </Link>
+              </li>
+              <li>
+                <Link href="/user/donation" className="hover:text-white">
+                  โครงการระดมทุนและการบริจาค
+                </Link>
+              </li>
+              <li>
+                <Link href="/user/budget" className="hover:text-white">
+                  การติดตามงบประมาณและรายงานการใช้จ่าย
+                </Link>
+              </li>
+              <li>
+                <Link href="/user/souvenir" className="hover:text-white">
+                  ของที่ระลึกศิษย์เก่า
+                </Link>
+              </li>
             </ul>
           </div>
 
