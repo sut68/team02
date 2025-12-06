@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Edit2, Save, X, Upload } from 'lucide-react';
+import { Edit2, Save, X, Upload, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 
 interface SouvenirFormData {
@@ -14,6 +14,23 @@ interface SouvenirFormData {
   initialStock: number;
   active: boolean;
   imageUrl: string;
+  linkedType: 'none' | 'event' | 'donation';
+  linkedEventId?: number;
+  linkedDonationProjectId?: number;
+}
+
+interface EventOption {
+  id: number;
+  name: string;
+  startDate: Date;
+  souvenirItemId: number | null;
+}
+
+interface DonationProjectOption {
+  id: number;
+  title: string;
+  goalAmount: number;
+  currentAmount: number;
 }
 
 interface SouvenirDetailFormProps {
@@ -33,20 +50,41 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
       sku: '',
       name: '',
       description: '',
-      category: 'กิจกรรษ',
+      category: 'กิจกรรม',
       unit: 'ชิ้น',
       initialStock: 0,
       active: true,
       imageUrl: '',
+      linkedType: 'none',
     } : null
   );
   const [currentStock, setCurrentStock] = useState(0);
+  const [events, setEvents] = useState<EventOption[]>([]);
+  const [donationProjects, setDonationProjects] = useState<DonationProjectOption[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState(false);
 
   useEffect(() => {
     if (!isCreating && itemId) {
       fetchItemData();
     }
+    fetchLinkOptions();
   }, [itemId, isCreating]);
+
+  const fetchLinkOptions = async () => {
+    setLoadingOptions(true);
+    try {
+      const res = await fetch('/api/admin/souvenir/link-options');
+      if (res.ok) {
+        const data = await res.json();
+        setEvents(data.events || []);
+        setDonationProjects(data.donationProjects || []);
+      }
+    } catch (error) {
+      console.error('Error fetching link options:', error);
+    } finally {
+      setLoadingOptions(false);
+    }
+  };
 
   const fetchItemData = async () => {
     if (!itemId) return;
@@ -56,6 +94,36 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
       const res = await fetch(`/api/admin/souvenir/items/${itemId}`);
       if (res.ok) {
         const data = await res.json();
+        
+        // ตรวจสอบว่าของชิ้นนี้ผูกกับ Event ไหนอยู่
+        let linkedType: 'none' | 'event' | 'donation' = 'none';
+        let linkedEventId: number | undefined;
+        let linkedDonationProjectId: number | undefined;
+        
+        // ดึงข้อมูล Events ที่ผูกกับของชิ้นนี้
+        const eventsRes = await fetch('/api/admin/events');
+        if (eventsRes.ok) {
+          const events = await eventsRes.json();
+          const linkedEvent = events.find((e: any) => e.souvenirItemId === itemId);
+          if (linkedEvent) {
+            linkedType = 'event';
+            linkedEventId = linkedEvent.id;
+          }
+        }
+        
+        // ถ้ายังไม่เจอ ลองเช็ค Donations (ถ้ามี projectId ในอนาคต)
+        if (linkedType === 'none') {
+          const donationsRes = await fetch('/api/admin/donations');
+          if (donationsRes.ok) {
+            const donations = await donationsRes.json();
+            const linkedDonation = donations.find((d: any) => d.souvenirItemId === itemId);
+            if (linkedDonation) {
+              linkedType = 'donation';
+              // Note: ปัจจุบัน Donation ไม่มี projectId จึงไม่สามารถระบุได้
+            }
+          }
+        }
+        
         setFormData({
           id: data.id,
           sku: data.sku,
@@ -66,6 +134,9 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
           initialStock: data.initialStock,
           active: data.active,
           imageUrl: data.imageUrl || '',
+          linkedType,
+          linkedEventId,
+          linkedDonationProjectId,
         });
         setCurrentStock(data.currentStock);
       }
@@ -142,10 +213,14 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
           initialStock: isCreating ? formData.initialStock : undefined,
           active: formData.active,
           imageUrl: formData.imageUrl,
+          linkedType: formData.linkedType,
+          linkedEventId: formData.linkedEventId,
+          linkedDonationProjectId: formData.linkedDonationProjectId,
         }),
       });
 
       if (res.ok) {
+        const result = await res.json();
         alert(isCreating ? 'เพิ่มของที่ระลึกสำเร็จ' : 'บันทึกข้อมูลสำเร็จ');
         if (isCreating) {
           // Reset form for creating mode
@@ -159,12 +234,14 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
             initialStock: 0,
             active: true,
             imageUrl: '',
+            linkedType: 'none',
           });
         } else {
           setIsEditing(false);
           fetchItemData();
         }
         onSuccess?.();
+        fetchLinkOptions(); // Refresh options
       } else {
         const error = await res.json();
         alert('เกิดข้อผิดพลาด: ' + (error.error || 'ไม่สามารถบันทึกข้อมูลได้'));
@@ -172,6 +249,33 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
     } catch (error) {
       console.error('Error saving souvenir:', error);
       alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!itemId || isCreating) return;
+    
+    const confirmed = window.confirm(
+      `คุณต้องการลบของที่ระลึก "${formData?.name}" หรือไม่?\n\nการลบจะทำให้สินค้าหายไปจากระบบ (ตั้งค่า active = false)`
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      const res = await fetch(`/api/admin/souvenir/items/${itemId}`, {
+        method: 'DELETE',
+      });
+      
+      if (res.ok) {
+        alert('ลบของที่ระลึกสำเร็จ');
+        onSuccess?.();
+      } else {
+        const error = await res.json();
+        alert('เกิดข้อผิดพลาด: ' + (error.error || 'ไม่สามารถลบได้'));
+      }
+    } catch (error) {
+      console.error('Error deleting souvenir:', error);
+      alert('เกิดข้อผิดพลาดในการลบข้อมูล');
     }
   };
 
@@ -203,75 +307,88 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
   }
 
   return (
-    <section className="bg-white py-8 pb-12">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="mb-6 flex justify-between items-center">
-          <h1 className="text-3xl font-medium text-gray-700">
-            {isCreating ? 'เพิ่มของที่ระลึก' : 'รายละเอียดของที่ระลึก'}
-          </h1>
-          {!isCreating && (
-            <div className="flex gap-2">
-              {isEditing ? (
-                <>
-                  <button 
-                    onClick={() => {
-                      setIsEditing(false);
-                      fetchItemData();
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 border-2 border-red-500 text-red-500 rounded-lg hover:bg-red-50 transition font-semibold"
-                  >
-                    <X className="w-5 h-5" />
-                    ยกเลิก
-                  </button>
-                  <button 
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleSubmit(e as any);
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition font-semibold"
-                  >
-                    <Save className="w-5 h-5" />
-                    บันทึก
-                  </button>
-                </>
-              ) : (
+    <section className="bg-white min-h-screen">
+      <div className="container mx-auto max-w-7xl p-4 md:p-8 mt-4">
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+          {isCreating ? 'เพิ่มของที่ระลึก' : 'ของที่ระลึก'}
+        </h1>
+
+        {/* ปุ่มลบและแก้ไข */}
+        {!isCreating && (
+          <div className="flex justify-end gap-2 mb-6">
+            {isEditing ? (
+              <>
+                <button 
+                  onClick={() => {
+                    setIsEditing(false);
+                    fetchItemData();
+                  }}
+                  className="border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 px-6 py-3 rounded-lg transition"
+                >
+                  <X className="w-5 h-5 inline mr-2" />
+                  ยกเลิก
+                </button>
+                <button 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleSubmit(e as any);
+                  }}
+                  className="bg-[#F26522] text-white text-sm font-medium hover:bg-orange-600 px-6 py-3 rounded-lg transition"
+                >
+                  <Save className="w-5 h-5 inline mr-2" />
+                  บันทึก
+                </button>
+              </>
+            ) : (
+              <>
+                <button 
+                  onClick={handleDelete}
+                  className="bg-gray-500 text-white text-sm font-medium hover:bg-gray-600 px-6 py-3 rounded-lg transition"
+                >
+                  <Trash2 className="w-5 h-5 inline mr-2" />
+                  ลบ
+                </button>
                 <button 
                   onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition font-semibold"
+                  className="bg-[#F26522] text-white text-sm font-medium hover:bg-orange-600 px-6 py-3 rounded-lg transition"
                 >
-                  <Edit2 className="w-5 h-5" />
+                  <Edit2 className="w-5 h-5 inline mr-2" />
                   แก้ไข
                 </button>
-              )}
-            </div>
-          )}
-        </div>
+              </>
+            )}
+          </div>
+        )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div>
-            <div className="bg-white rounded-2xl shadow-sm p-6 flex flex-col items-center border border-gray-200 h-full">
-              <div className="relative w-full aspect-square bg-white rounded-2xl overflow-hidden mb-4 border-2 border-dashed border-gray-300 flex items-center justify-center">
-                {uploading ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-2"></div>
-                      <p className="text-sm text-gray-600">กำลังอัพโหลด...</p>
-                    </div>
+        {/* Grid หลัก 2 คอลัมน์ */}
+        <div className="grid grid-cols-1 md:grid-cols-10 gap-10">
+          
+          {/* คอลัมน์ซ้าย: รูปภาพ */}
+          <div className="md:col-span-4">
+            <div className="w-full">
+              {uploading ? (
+                <div className="w-full aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-2"></div>
+                    <p className="text-sm text-gray-600">กำลังอัพโหลด...</p>
                   </div>
-                ) : formData.imageUrl ? (
-                  <Image
-                    src={formData.imageUrl}
-                    alt={formData.name || 'ของที่ระลึก'}
-                    fill
-                    className="object-contain p-8"
-                  />
-                ) : (
+                </div>
+              ) : formData.imageUrl ? (
+                <Image
+                  src={formData.imageUrl}
+                  alt={formData.name || 'ของที่ระลึก'}
+                  width={700}
+                  height={700}
+                  className="rounded-lg shadow-lg object-cover w-full"
+                />
+              ) : (
+                <div className="w-full aspect-square bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
                   <div className="text-center">
                     <Upload className="w-16 h-16 text-gray-300 mx-auto mb-2" />
                     <p className="text-sm text-gray-400">ยังไม่มีรูปภาพ</p>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -283,173 +400,286 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
                 type="button"
                 disabled={!isEditing || uploading}
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 px-4 py-2 border-2 border-orange-500 text-orange-500 rounded-lg hover:bg-orange-50 transition font-semibold mt-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full mt-4 border-2 border-orange-500 text-orange-500 text-sm font-medium hover:bg-orange-50 px-4 py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Upload className="w-5 h-5" />
+                <Upload className="w-5 h-5 inline mr-2" />
                 {uploading ? 'กำลังอัพโหลด...' : (formData.imageUrl ? 'เปลี่ยนรูปภาพ' : 'เพิ่มรูปภาพ')}
               </button>
             </div>
+
+            {/* ข้อมูลสรุป */}
+            {!isCreating && (
+              <div className="mt-6 space-y-3 text-gray-700 text-sm">
+                <p className="font-medium text-base">รายละเอียดสรุป</p>
+                <div className="border-t border-gray-200 pt-4 space-y-3">
+                  <p><span className="text-gray-500">SKU:</span> {formData.sku}</p>
+                  <p><span className="text-gray-500">หมวดหมู่:</span> {formData.category}</p>
+                  <p><span className="text-gray-500">จำนวนคงเหลือ:</span> <span className="text-[#F26522] font-semibold">{currentStock} {formData.unit}</span></p>
+                  <p><span className="text-gray-500">สถานะ:</span> {formData.active ? 'ใช้งาน' : 'ไม่ใช้งาน'}</p>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-sm p-8 border border-gray-200">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      SKU <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.sku}
-                      onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                      disabled={!isEditing || !isCreating}
-                      required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-50"
-                      placeholder="เช่น ENG-001"
-                    />
-                    {!isCreating && (
-                      <p className="text-xs text-gray-500 mt-1">SKU ไม่สามารถแก้ไขได้</p>
-                    )}
-                  </div>
+          {/* คอลัมน์ขวา: ฟอร์ม */}
+          <div className="md:col-span-6">
+            <h2 className="text-2xl font-medium text-gray-800 mb-6">
+              ของที่ระลึก
+            </h2>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      ชื่อของที่ระลึก <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      disabled={!isEditing}
-                      required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-50"
-                      placeholder="เช่น เข็มกลัดคณะวิศวกรรมศาสตร์"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      หมวดหมู่ <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      disabled={!isEditing}
-                      required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-50"
-                    >
-                      <option value="กิจกรรม">กิจกรรม</option>
-                      <option value="บริจาค">บริจาค</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      หน่วย <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.unit}
-                      onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                      disabled={!isEditing}
-                      required
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-50"
-                      placeholder="เช่น ชิ้น, ตัว, อัน"
-                    />
-                  </div>
-
-                  {isCreating && (
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        จำนวนเริ่มต้น <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.initialStock}
-                        onChange={(e) => setFormData({ ...formData, initialStock: parseInt(e.target.value) || 0 })}
-                        disabled={!isEditing}
-                        required
-                        min="0"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-50"
-                      />
-                    </div>
-                  )}
-
+            <form onSubmit={handleSubmit} className="space-y-6">
+              
+              {/* ข้อมูลพื้นฐาน */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-500 mb-2">
+                    SKU <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.sku}
+                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                    disabled={!isEditing || !isCreating}
+                    required
+                    placeholder="เช่น ENG-001"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:border-orange-400 focus:outline-none disabled:bg-gray-50"
+                  />
                   {!isCreating && (
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        จำนวนคงเหลือปัจจุบัน
-                      </label>
-                      <input
-                        type="number"
-                        value={currentStock}
-                        disabled
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50"
-                      />
-                    </div>
+                    <p className="text-xs text-gray-400 mt-1">SKU ไม่สามารถแก้ไขได้</p>
                   )}
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      สถานะ
-                    </label>
-                    <div className="flex items-center gap-3 mt-3">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          checked={formData.active}
-                          onChange={() => setFormData({ ...formData, active: true })}
-                          disabled={!isEditing}
-                          className="w-4 h-4 text-orange-500 focus:ring-orange-500"
-                        />
-                        <span className="text-sm text-gray-700">ใช้งาน</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          checked={!formData.active}
-                          onChange={() => setFormData({ ...formData, active: false })}
-                          disabled={!isEditing}
-                          className="w-4 h-4 text-orange-500 focus:ring-orange-500"
-                        />
-                        <span className="text-sm text-gray-700">ไม่ใช้งาน</span>
-                      </label>
-                    </div>
-                  </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    รายละเอียด
+                  <label className="block text-sm text-gray-500 mb-2">
+                    ชื่อของที่ระลึก <span className="text-red-500">*</span>
                   </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     disabled={!isEditing}
-                    rows={4}
-                    maxLength={200}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-50"
-                    placeholder="เพิ่มรายละเอียดเกี่ยวกับของที่ระลึก... (สูงสุด 200 ตัวอักษร)"
+                    required
+                    placeholder="เช่น เข็มกลัดคณะวิศวกรรมศาสตร์"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:border-orange-400 focus:outline-none disabled:bg-gray-50"
                   />
-                  <p className="text-xs text-gray-500 mt-1 text-right">
-                    {formData.description.length}/200 ตัวอักษร
-                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-500 mb-2">
+                    หมวดหมู่ <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    disabled={!isEditing}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:border-orange-400 focus:outline-none disabled:bg-gray-50"
+                  >
+                    <option value="กิจกรรม">กิจกรรม</option>
+                    <option value="บริจาค">บริจาค</option>
+                  </select>
                 </div>
 
-                {isCreating && (
-                  <div className="flex justify-end gap-2">
-                    <button
-                      type="submit"
-                      className="flex items-center gap-2 px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition font-semibold"
-                    >
-                      <Save className="w-5 h-5" />
-                      เพิ่มของที่ระลึก
-                    </button>
+                <div>
+                  <label className="block text-sm text-gray-500 mb-2">
+                    หน่วย <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.unit}
+                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                    disabled={!isEditing}
+                    required
+                    placeholder="เช่น ชิ้น, ตัว, อัน"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:border-orange-400 focus:outline-none disabled:bg-gray-50"
+                  />
+                </div>
+              </div>
+
+              {isCreating && (
+                <div>
+                  <label className="block text-sm text-gray-500 mb-2">
+                    จำนวนเริ่มต้น <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.initialStock}
+                    onChange={(e) => setFormData({ ...formData, initialStock: parseInt(e.target.value) || 0 })}
+                    disabled={!isEditing}
+                    required
+                    min="0"
+                    placeholder="0"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:border-orange-400 focus:outline-none disabled:bg-gray-50"
+                  />
+                </div>
+              )}
+
+              {!isCreating && (
+                <div>
+                  <label className="block text-sm text-gray-500 mb-2">
+                    จำนวนคงเหลือปัจจุบัน
+                  </label>
+                  <input
+                    type="number"
+                    value={currentStock}
+                    disabled
+                    className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm bg-gray-50"
+                  />
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-gray-200">
+                <label className="block text-sm text-gray-500 mb-2">
+                  สถานะ
+                </label>
+                <div className="flex items-center space-x-6">
+                  <label className="flex items-center text-gray-500 cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={formData.active}
+                      onChange={() => setFormData({ ...formData, active: true })}
+                      disabled={!isEditing}
+                      className="w-4 h-4 mr-2 border-gray-300 focus:ring-orange-500"
+                    />
+                    ใช้งาน
+                  </label>
+                  <label className="flex items-center text-gray-500 cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={!formData.active}
+                      onChange={() => setFormData({ ...formData, active: false })}
+                      disabled={!isEditing}
+                      className="w-4 h-4 mr-2 border-gray-300 focus:ring-orange-500"
+                    />
+                    ไม่ใช้งาน
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-500 mb-2">
+                  รายละเอียด
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  disabled={!isEditing}
+                  rows={3}
+                  maxLength={200}
+                  placeholder="เพิ่มรายละเอียดเกี่ยวกับของที่ระลึก... (สูงสุด 200 ตัวอักษร)"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:border-orange-400 focus:outline-none disabled:bg-gray-50"
+                />
+                <p className="text-xs text-gray-400 mt-1 text-right">
+                  {formData.description.length}/200 ตัวอักษร
+                </p>
+              </div>
+
+              {/* ส่วนเชื่อมโยงกับกิจกรรม */}
+              <div className="border-t border-gray-200 pt-6">
+                <h2 className="text-2xl font-medium text-gray-800 mb-6">
+                  เชื่อมโยงกับ
+                </h2>
+                
+                <div>
+                  <label className="block text-sm text-gray-500 mb-2">
+                    ประเภท
+                  </label>
+                  <select
+                    value={formData.linkedType}
+                    onChange={(e) => {
+                      const value = e.target.value as 'none' | 'event' | 'donation';
+                      setFormData({ 
+                        ...formData, 
+                        linkedType: value,
+                        linkedEventId: undefined,
+                        linkedDonationProjectId: undefined,
+                      });
+                    }}
+                    disabled={!isEditing || loadingOptions}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:border-orange-400 focus:outline-none disabled:bg-gray-50"
+                  >
+                    <option value="none">ไม่เชื่อมโยง</option>
+                    <option value="event">กิจกรรม</option>
+                    <option value="donation">โครงการบริจาค (ยังไม่รองรับ)</option>
+                  </select>
+                </div>
+
+                {formData.linkedType === 'event' && (
+                  <div className="mt-4">
+                    <label className="block text-sm text-gray-500 mb-2">
+                      เลือกกิจกรรม <span className="text-red-500">*</span>
+                    </label>
+                    {loadingOptions ? (
+                      <div className="text-sm text-gray-500 px-4 py-2">กำลังโหลด...</div>
+                    ) : (
+                      <select
+                        value={formData.linkedEventId || ''}
+                        onChange={(e) => setFormData({ 
+                          ...formData, 
+                          linkedEventId: e.target.value ? parseInt(e.target.value) : undefined 
+                        })}
+                        disabled={!isEditing}
+                        required={formData.linkedType === 'event'}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:border-orange-400 focus:outline-none disabled:bg-gray-50"
+                      >
+                        <option value="">-- เลือกกิจกรรม --</option>
+                        {events.map((event) => (
+                          <option 
+                            key={event.id} 
+                            value={event.id}
+                            disabled={event.souvenirItemId !== null && event.souvenirItemId !== itemId}
+                          >
+                            {event.name} ({new Date(event.startDate).toLocaleDateString('th-TH')})
+                            {event.souvenirItemId !== null && event.souvenirItemId !== itemId && ' - ผูกแล้ว'}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <p className="text-xs text-gray-400 mt-1">
+                      {events.filter(e => e.souvenirItemId === null || e.souvenirItemId === itemId).length} กิจกรรมที่พร้อมใช้งาน
+                    </p>
                   </div>
                 )}
-              </form>
-            </div>
+
+                {formData.linkedType === 'donation' && (
+                  <div className="mt-4">
+                    <label className="block text-sm text-gray-500 mb-2">
+                      เลือกโครงการบริจาค
+                    </label>
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <p className="text-sm text-yellow-800">
+                        ⚠️ ฟีเจอร์นี้ยังไม่สามารถใช้งานได้ เนื่องจาก Donation model ไม่ได้เชื่อมกับ DonationProject โดยตรง
+                      </p>
+                      <p className="text-xs text-yellow-700 mt-2">
+                        ต้องเพิ่ม projectId field ใน Donation model และทำ migration ก่อน
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ปุ่ม Submit สำหรับโหมดสร้างใหม่ */}
+              {isCreating && (
+                <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => onSuccess?.()}
+                    className="border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 px-8 py-3 rounded-lg transition"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-[#F26522] text-white text-sm font-medium hover:bg-orange-600 px-8 py-3 rounded-lg transition"
+                  >
+                    <Save className="w-5 h-5 inline mr-2" />
+                    เพิ่มของที่ระลึก
+                  </button>
+                </div>
+              )}
+            </form>
           </div>
         </div>
       </div>

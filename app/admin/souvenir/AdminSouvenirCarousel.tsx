@@ -81,28 +81,51 @@ export function AdminSouvenirCarousel({ onCardClick, category }: AdminSouvenirCa
 
   const loopItems = React.useMemo(() => {
     if (souvenirItems.length === 0) return [];
-    return [...souvenirItems, ...souvenirItems];
+    // Create 4 copies for smooth infinite loop
+    return [...souvenirItems, ...souvenirItems, ...souvenirItems, ...souvenirItems];
   }, [souvenirItems]);
 
   // Measure widths for seamless loop and step sizing
   React.useEffect(() => {
+    if (souvenirItems.length === 0) return;
+    
     const measure = () => {
       const track = trackRef.current;
       const container = scrollContainerRef.current;
       if (!track || !container) return;
+      
+      // Force a reflow to ensure scrollWidth is calculated
+      track.offsetHeight;
+      
       const fullWidth = track.scrollWidth;
-      loopWidthRef.current = fullWidth / 2;
+      // Divided by 4 since we have 4x duplicates
+      loopWidthRef.current = fullWidth / 4;
       const cols = window.innerWidth >= 768 ? 3 : 1;
       cardWidthRef.current = container.clientWidth / cols;
+      
+      console.log('Carousel measured:', { 
+        fullWidth, 
+        loopWidth: loopWidthRef.current, 
+        cardWidth: cardWidthRef.current,
+        itemsCount: souvenirItems.length 
+      });
     };
+    
+    // Measure immediately and after a short delay to ensure DOM is ready
     measure();
+    const timer = setTimeout(measure, 100);
+    
     window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, [souvenirItems]);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', measure);
+    };
+  }, [souvenirItems.length]);
 
   // Continuous auto-scroll using requestAnimationFrame
   React.useEffect(() => {
     if (souvenirItems.length === 0) return;
+    if (isPaused) return;
     
     let rafId = 0;
     let last = performance.now();
@@ -111,15 +134,13 @@ export function AdminSouvenirCarousel({ onCardClick, category }: AdminSouvenirCa
       const dt = (now - last) / 1000;
       last = now;
       
-      if (!isPaused) {
-        const loopW = loopWidthRef.current || 0;
-        if (loopW > 0 && trackRef.current) {
-          const distance = speedRef.current * dt;
-          offsetRef.current += distance;
-          while (offsetRef.current >= loopW) offsetRef.current -= loopW;
-          while (offsetRef.current < 0) offsetRef.current += loopW;
-          trackRef.current.style.transform = `translateX(${-offsetRef.current}px)`;
-        }
+      const loopW = loopWidthRef.current;
+      if (loopW > 0 && trackRef.current) {
+        const distance = speedRef.current * dt;
+        offsetRef.current += distance;
+        while (offsetRef.current >= loopW) offsetRef.current -= loopW;
+        while (offsetRef.current < 0) offsetRef.current += loopW;
+        trackRef.current.style.transform = `translateX(${-offsetRef.current}px)`;
       }
       
       rafId = requestAnimationFrame(tick);
@@ -150,7 +171,7 @@ export function AdminSouvenirCarousel({ onCardClick, category }: AdminSouvenirCa
       <div className="container mx-auto relative">
         {/* หัวข้อ */}
         <div className="flex items-center justify-between mb-10">
-          <h2 className="text-3xl font-medium text-gray-700">ของที่ระลึก</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900">ของที่ระลึก</h2>
         </div>
 
         {/* Navigation Buttons */}

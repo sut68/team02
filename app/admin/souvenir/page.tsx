@@ -44,7 +44,7 @@ export default function SouvenirMenuPage() {
         <div className="container mx-auto">
           {/* Header with Add Button */}
           <div className="flex items-center justify-between mb-14">
-            <h1 className="text-3xl font-medium text-gray-700">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
               จัดการของที่ระลึก
             </h1>
             <button
@@ -105,7 +105,18 @@ export default function SouvenirMenuPage() {
               }
             }} />
           ) : selectedItemId ? (
-            <SouvenirDetailForm itemId={selectedItemId} isCreating={false} />
+            <SouvenirDetailForm 
+              itemId={selectedItemId} 
+              isCreating={false}
+              onSuccess={() => {
+                setShowDetail(false);
+                setSelectedItemId(null);
+                // Refresh carousel to show updated list
+                if (showCarousel) {
+                  window.location.reload();
+                }
+              }}
+            />
           ) : null
         )}
       </div>

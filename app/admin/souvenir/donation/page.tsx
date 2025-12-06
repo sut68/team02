@@ -139,37 +139,66 @@ export default function SouvenirDonationPage() {
 
   // Measure widths for seamless loop
   React.useEffect(() => {
+    if (souvenirItems.length === 0) return;
+    
     const measure = () => {
       const track = trackRef.current;
       const container = scrollContainerRef.current;
       if (!track || !container) return;
+      
+      // Force reflow
+      track.offsetHeight;
+      
       const fullWidth = track.scrollWidth;
       loopWidthRef.current = fullWidth / 4;
       const cols = window.innerWidth >= 768 ? 3 : 1;
       cardWidthRef.current = container.clientWidth / cols;
+      
+      console.log('Donation carousel measured:', { 
+        fullWidth, 
+        loopWidth: loopWidthRef.current, 
+        cardWidth: cardWidthRef.current,
+        itemsCount: souvenirItems.length 
+      });
     };
+    
     measure();
+    const timer = setTimeout(measure, 100);
+    
     window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, [souvenirItems]);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', measure);
+    };
+  }, [souvenirItems.length]);
 
   // Auto-scroll animation
   React.useEffect(() => {
+    if (souvenirItems.length === 0) return;
     if (isPaused) return;
+    
     let lastTime = performance.now();
     let rafId: number;
 
     const animate = (currentTime: number) => {
       const delta = currentTime - lastTime;
       lastTime = currentTime;
-      const distance = (speedRef.current * delta) / 1000;
-      stepBy(distance);
+      
+      const loopW = loopWidthRef.current;
+      if (loopW > 0 && trackRef.current) {
+        const distance = (speedRef.current * delta) / 1000;
+        offsetRef.current += distance;
+        while (offsetRef.current >= loopW) offsetRef.current -= loopW;
+        while (offsetRef.current < 0) offsetRef.current += loopW;
+        trackRef.current.style.transform = `translateX(${-offsetRef.current}px)`;
+      }
+      
       rafId = requestAnimationFrame(animate);
     };
 
     rafId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(rafId);
-  }, [isPaused, souvenirItems]);
+  }, [isPaused, souvenirItems.length]);
 
   return (
     <main className="min-h-screen bg-white pt-10">
