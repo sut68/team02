@@ -86,11 +86,11 @@ type PostRow = {
 export default function DashboardPage() {
   const [currentView, setCurrentView] = useState<ViewType>('all_registrations');
 
-  // ✅ state สำหรับโพสต์ที่ดึงจาก DB
+  //  state สำหรับโพสต์ที่ดึงจาก DB
   const [posts, setPosts] = useState<PostRow[]>([]);
   const [loadingPosts, setLoadingPosts] = useState<boolean>(false);
 
-  // ✅ ดึง Content จาก /api/content แค่ครั้งแรก
+  //  ดึง Content จาก /api/content แค่ครั้งแรก
   useEffect(() => {
     const fetchContents = async () => {
       try {
