@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 
-// GET - ดึงรายการข้อเสนอโครงการ
+// GET - ดึงรายการข้อเสนอโครงการ (รองรับการกรองด้วย ID)
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
     const budgetRoundId = searchParams.get('budgetRoundId');
     const status = searchParams.get('status');
 
     const proposals = await prisma.projectProposal.findMany({
       where: {
         deletedAt: null,
+        // ✅ เพิ่มเงื่อนไขกรองตาม ID ถ้ามีส่งมา
+        ...(id && { id: parseInt(id) }),
         ...(budgetRoundId && { budgetRoundId: parseInt(budgetRoundId) }),
         ...(status && { status: status as any }),
       },
@@ -46,7 +49,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // คำนวณคะแนนโหวต
+    // คำนวณคะแนนโหวตเพิ่มเข้าไปในผลลัพธ์
     const proposalsWithVoteCount = proposals.map(proposal => ({
       ...proposal,
       voteCount: proposal.votes.reduce((sum, v) => sum + v.voteWeight, 0),
@@ -66,7 +69,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - สร้างข้อเสนอโครงการใหม่
+// POST - สร้างข้อเสนอโครงการใหม่ (พร้อมสร้างผู้รับผิดชอบใน Transaction เดียว)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -80,7 +83,7 @@ export async function POST(request: NextRequest) {
       responsibilityUnit,
       coverFilePath,
       budgetRoundId,
-      managerId,
+      manager, // ✅ รับข้อมูล manager เป็น object
       staffId,
     } = body;
 
@@ -102,9 +105,21 @@ export async function POST(request: NextRequest) {
         responsibilityUnit,
         coverFilePath,
         budgetRoundId,
-        managerId,
         staffId,
-        status: 'DRAFT',
+        status: 'DRAFT', // สถานะเริ่มต้น
+        
+        // ✅ Logic สร้าง Manager (Nested Write)
+        // ถ้ามีข้อมูล manager ส่งมา ให้สร้างลงตาราง ProjectManager พร้อมกันเลย
+        manager: manager ? {
+          create: {
+            firstName: manager.firstName,
+            lastName: manager.lastName,
+            department: manager.department,
+            position: manager.position,
+            phoneNumber: manager.phoneNumber,
+            email: manager.email,
+          }
+        } : undefined
       },
       include: {
         budgetRound: true,
@@ -190,7 +205,7 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE - ลบข้อเสนอโครงการ (soft delete)
+// DELETE - ลบข้อเสนอโครงการ (Soft Delete)
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
