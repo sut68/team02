@@ -143,7 +143,7 @@ export default function ProjectManagementPage() {
         {loading ? (
           <div className="text-center py-16 text-gray-500">กำลังโหลดข้อมูล...</div>
         ) : filteredProjects.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
             {filteredProjects.map((project) => (
               // @ts-ignore
               <ProjectCard key={project.id || project.ppid} project={project} />

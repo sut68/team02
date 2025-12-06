@@ -94,10 +94,10 @@ export default function ProjectCard({ project }: ProjectCardProps) {
   return (
     <>
       {/* คง Class เดิมไว้ทั้งหมด: w-80 h-auto */}
-      <Card className="p-4 rounded-4xl border-none shadow-sm bg-white w-80 h-auto flex flex-col relative">
+      <Card className="p-4 rounded-4xl border-none shadow-sm bg-white w-full h-auto flex flex-col relative">
         
         <div className="relative w-full aspect-video mb-4 rounded-2xl group z-10">
-          <div className="w-full h-full overflow-hidden rounded-2xl">
+          <div className="w-full h-45 overflow-hidden rounded-2xl">
               {project.coverFilePath ? (
               <img 
                 src={project.coverFilePath} 
@@ -166,9 +166,9 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           {currentOption.value === 'PENDING' && (
             <button
               onClick={() => router.push(`/admin/budget_approval/edit/${project.id || project.ppid}`)}
-              className="bg-[#F36618] text-white h-12 rounded-full hover:bg-orange-700 transition flex items-center justify-center gap-2 text-base font-medium px-8"
+              className="bg-[#F36618] text-white h-10 rounded-full hover:bg-orange-700 transition flex items-center justify-center gap-2 text-base font-medium px-8"
             >
-              <PenLine className="w-5 h-5" />
+              <PenLine className="w-4 h-4" />
               แก้ไข
             </button>
           )}
@@ -176,9 +176,9 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           {/* ปุ่มลบ */}
           <button
             onClick={handleDelete}
-            className={`${currentOption.value === 'PENDING' ? 'w-14 ml-2' : 'w-full'} h-12 bg-gray-600 text-white rounded-full hover:bg-gray-700 transition flex items-center justify-center shrink-0`}
+            className={`${currentOption.value === 'PENDING' ? 'w-14 ml-2' : 'w-full'} h-10 bg-gray-600 text-white rounded-full hover:bg-gray-700 transition flex items-center justify-center shrink-0`}
           >
-            <Trash2 className="w-5 h-5" />
+            <Trash2 className="w-4 h-4" />
           </button>
         </CardFooter>
       </Card>

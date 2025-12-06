@@ -154,7 +154,35 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, status, scoreTotal, ...updateData } = body;
+    
+    // 1. แยกตัวแปร และกรองฟิลด์ที่ไม่ต้องการอัปเดตออก
+    const { 
+      id, 
+      status, 
+      scoreTotal, 
+      manager,
+      
+      // --- กรอง Relation Object ---
+      budgetRound, 
+      staff, 
+      summarySubmissions, 
+      votes, 
+      
+      // --- กรอง Computed Fields ---
+      voteCount, 
+      voterCount,
+      
+      // --- กรอง System Fields ---
+      createdAt,
+      updatedAt,
+      
+      // ✅ กรอง Foreign Keys ออก เพื่อป้องกัน Error "Unknown argument"
+      budgetRoundId, 
+      staffId,
+      managerId, // (เพราะเราอัปเดต manager ผ่าน Nested Relation ข้างล่างแล้ว)
+
+      ...updateData // เหลือเฉพาะข้อมูลที่จะอัปเดตจริงๆ เช่น projectName, description
+    } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -175,6 +203,18 @@ export async function PUT(request: NextRequest) {
         projectEndDate: updateData.projectEndDate
           ? new Date(updateData.projectEndDate)
           : undefined,
+        
+        // อัปเดต Manager
+        manager: manager ? {
+          update: {
+            firstName: manager.firstName,
+            lastName: manager.lastName,
+            department: manager.department,
+            position: manager.position,
+            phoneNumber: manager.phoneNumber,
+            email: manager.email,
+          }
+        } : undefined
       },
       include: {
         budgetRound: true,
@@ -218,19 +258,23 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // ทำ Soft Delete (อัปเดต deletedAt แทนการลบจริง เพื่อให้กู้คืนได้และรักษาประวัติ)
+    // ถ้าต้องการลบจริง ให้ใช้ .delete() แทน .update()
     await prisma.projectProposal.update({
       where: { id: parseInt(id) },
-      data: { deletedAt: new Date() },
+      data: { 
+        deletedAt: new Date(),
+      },
     });
 
     return NextResponse.json(
-      { message: 'ลบข้อเสนอโครงการสำเร็จ' },
+      { message: 'ลบโครงการสำเร็จ' },
       { status: 200 }
     );
   } catch (error) {
     console.error('Error deleting proposal:', error);
     return NextResponse.json(
-      { error: 'เกิดข้อผิดพลาดในการลบข้อเสนอโครงการ' },
+      { error: 'เกิดข้อผิดพลาดในการลบโครงการ' },
       { status: 500 }
     );
   }
