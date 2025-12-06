@@ -124,7 +124,7 @@ export default function Navbar() {
               </div>
             </div>
 
-            <Link href="/forum" className="hover:text-gray-900">รับสมัครงาน</Link>
+            <Link href="/user/job" className="hover:text-gray-900">รับสมัครงาน</Link>
 
             <div className="relative group">
               <span className="flex items-center hover:text-[#F26522] transition-colors duration-200 cursor-pointer">
