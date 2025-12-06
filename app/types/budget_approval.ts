@@ -1,6 +1,6 @@
 export interface ProjectProposal {
-  id?: number; // ✅ เพิ่ม id
-  ppid?: number; // (เก็บไว้กัน error โค้ดเก่า)
+  id?: number;      // ✅ เพิ่ม id ให้ตรง DB
+  ppid?: number;    // (เก็บไว้กัน error โค้ดเก่า)
   
   projectName: string;
   objective: string;
@@ -12,20 +12,21 @@ export interface ProjectProposal {
   coverFilePath?: string;
   scoreTotal?: number;
   
-  status?: string; // ✅ เพิ่ม status (ที่เป็น PENDING, APPROVED ฯลฯ)
-  statusId?: number; // (เก็บไว้กัน error โค้ดเก่า)
+  status?: string;    // ✅ เพิ่ม status เป็น String (PENDING, APPROVED)
+  statusId?: number;  // (เก็บไว้กัน error โค้ดเก่า)
   
-  managerId?: number; // แก้จาก pmid เป็น managerId ให้ตรง DB (หรือมีทั้งคู่)
+  managerId?: number;
   pmid?: number;
   
-  bgrid?: number;
+  budgetRoundId?: number;
   staffId?: number;
   createdAt?: string;
 }
 
 export interface ProjectManager {
-  id?: number;
+  id?: number;      // ✅ เพิ่ม id
   pmid?: number;
+  
   firstName: string;
   lastName: string;
   department: string;
