@@ -68,7 +68,6 @@ enum TransactionStatus {
   SUCCESS
   FAILED
 }
-
 enum PaymentMethodType {
   PROMPTPAY
   CREDIT_CARD
@@ -135,22 +134,6 @@ model User {
 
   // Donation Project Relations
   donationTransactions DonationTransaction[]
-
-  // Password Reset Relations
-  passwordResets PasswordReset[]
-}
-
-model PasswordReset {
-  id        Int      @id @default(autoincrement())
-  token     String   @unique // Random token for password reset
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime // Token expiration time
-  used      Boolean  @default(false) // Whether token has been used
-  createdAt DateTime @default(now())
-
-  @@index([token])
-  @@index([userId])
 }
 
 model EducationRecord {
@@ -260,19 +243,17 @@ model SubmissionFile {
 // ========================================
 
 model Event {
-  id            Int      @id @default(autoincrement())
-  name          String
-  description   String?
-  startDate     DateTime
-  endDate       DateTime?
-  location      String?
-  maxAttendees  Int?
-  isActive      Boolean  @default(true)
-  souvenirItemId Int?    // เชื่อมกับของที่ระลึก
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           Int       @id @default(autoincrement())
+  name         String
+  description  String?
+  startDate    DateTime
+  endDate      DateTime?
+  location     String?
+  maxAttendees Int?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  souvenirItem  SouvenirItem? @relation(fields: [souvenirItemId], references: [id])
   registrations EventRegistration[]
   entitlements  Entitlement[]
 }
@@ -296,16 +277,14 @@ model EventRegistration {
 // ========================================
 
 model Donation {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  amount      Float
-  donatedAt   DateTime @default(now())
-  purpose     String?
-  status      String   @default("completed") // "pending" | "completed" | "failed"
-  souvenirItemId Int?  // บริจาคได้ของชิ้นไหน
-  
-  user        User     @relation(fields: [userId], references: [id])
-  souvenirItem SouvenirItem? @relation(fields: [souvenirItemId], references: [id])
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  amount    Float
+  donatedAt DateTime @default(now())
+  purpose   String?
+  status    String   @default("completed") // "pending" | "completed" | "failed"
+
+  user         User          @relation(fields: [userId], references: [id])
   entitlements Entitlement[]
   shipments    Shipment[]
 
@@ -334,8 +313,6 @@ model SouvenirItem {
   entitlements Entitlement[]
   redemptions  Redemption[]
   shipments    Shipment[]
-  events       Event[]         // กิจกรรมที่แจกของชิ้นนี้
-  donations    Donation[]      // การบริจาคที่ได้ของชิ้นนี้
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -474,6 +451,12 @@ enum ContentCategoryType {
 enum Option {
   HAVE
   NOT
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
 }
 
 // ========================================

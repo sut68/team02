@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
 const LoginClient: React.FC = () => {
   const router = useRouter();
@@ -137,9 +136,9 @@ const LoginClient: React.FC = () => {
                   </button>
                 </div>
                 <div className="text-right mt-2">
-                  <Link href="/auth/forgot-password" className="text-sm text-orange-500 hover:underline">
+                  <a href="#" className="text-sm text-orange-500 hover:underline">
                     ลืมรหัสผ่าน?
-                  </Link>
+                  </a>
                 </div>
               </div>
 

@@ -1,19 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 
-// GET - ดึงรายการข้อเสนอโครงการ (รองรับการกรองด้วย ID)
+// GET - ดึงรายการข้อเสนอโครงการ
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
     const budgetRoundId = searchParams.get('budgetRoundId');
     const status = searchParams.get('status');
 
     const proposals = await prisma.projectProposal.findMany({
       where: {
         deletedAt: null,
-        // ✅ เพิ่มเงื่อนไขกรองตาม ID ถ้ามีส่งมา
-        ...(id && { id: parseInt(id) }),
         ...(budgetRoundId && { budgetRoundId: parseInt(budgetRoundId) }),
         ...(status && { status: status as any }),
       },
@@ -49,7 +46,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // คำนวณคะแนนโหวตเพิ่มเข้าไปในผลลัพธ์
+    // คำนวณคะแนนโหวต
     const proposalsWithVoteCount = proposals.map(proposal => ({
       ...proposal,
       voteCount: proposal.votes.reduce((sum, v) => sum + v.voteWeight, 0),
@@ -69,7 +66,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - สร้างข้อเสนอโครงการใหม่ (พร้อมสร้างผู้รับผิดชอบใน Transaction เดียว)
+// POST - สร้างข้อเสนอโครงการใหม่
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -182,35 +179,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    
-    // 1. แยกตัวแปร และกรองฟิลด์ที่ไม่ต้องการอัปเดตออก
-    const { 
-      id, 
-      status, 
-      scoreTotal, 
-      manager,
-      
-      // --- กรอง Relation Object ---
-      budgetRound, 
-      staff, 
-      summarySubmissions, 
-      votes, 
-      
-      // --- กรอง Computed Fields ---
-      voteCount, 
-      voterCount,
-      
-      // --- กรอง System Fields ---
-      createdAt,
-      updatedAt,
-      
-      // ✅ กรอง Foreign Keys ออก เพื่อป้องกัน Error "Unknown argument"
-      budgetRoundId, 
-      staffId,
-      managerId, // (เพราะเราอัปเดต manager ผ่าน Nested Relation ข้างล่างแล้ว)
-
-      ...updateData // เหลือเฉพาะข้อมูลที่จะอัปเดตจริงๆ เช่น projectName, description
-    } = body;
+    const { id, status, scoreTotal, ...updateData } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -231,18 +200,6 @@ export async function PUT(request: NextRequest) {
         projectEndDate: updateData.projectEndDate
           ? new Date(updateData.projectEndDate)
           : undefined,
-        
-        // อัปเดต Manager
-        manager: manager ? {
-          update: {
-            firstName: manager.firstName,
-            lastName: manager.lastName,
-            department: manager.department,
-            position: manager.position,
-            phoneNumber: manager.phoneNumber,
-            email: manager.email,
-          }
-        } : undefined
       },
       include: {
         budgetRound: true,
@@ -273,7 +230,7 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE - ลบข้อเสนอโครงการ (Soft Delete)
+// DELETE - ลบข้อเสนอโครงการ (soft delete)
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -286,23 +243,19 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // ทำ Soft Delete (อัปเดต deletedAt แทนการลบจริง เพื่อให้กู้คืนได้และรักษาประวัติ)
-    // ถ้าต้องการลบจริง ให้ใช้ .delete() แทน .update()
     await prisma.projectProposal.update({
       where: { id: parseInt(id) },
-      data: { 
-        deletedAt: new Date(),
-      },
+      data: { deletedAt: new Date() },
     });
 
     return NextResponse.json(
-      { message: 'ลบโครงการสำเร็จ' },
+      { message: 'ลบข้อเสนอโครงการสำเร็จ' },
       { status: 200 }
     );
   } catch (error) {
     console.error('Error deleting proposal:', error);
     return NextResponse.json(
-      { error: 'เกิดข้อผิดพลาดในการลบโครงการ' },
+      { error: 'เกิดข้อผิดพลาดในการลบข้อเสนอโครงการ' },
       { status: 500 }
     );
   }

@@ -1,18 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { PenLine, Trash2, ChevronDown, AlertCircle } from "lucide-react";
+import Image from "next/image";
 import { BudgetReport, ReportStatus } from "@/app/types/budget_report";
-import { Card, CardContent, CardFooter } from "./Card";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardFooter } from "./Card"; // ตรวจสอบ path นี้ให้ตรงกับโปรเจคจริงนะครับ
+import { useState } from "react";
 
 interface Props {
   report: BudgetReport;
   onDelete?: (id: number) => void;
 }
 
-// กำหนดตัวเลือกสถานะ (อิงตาม ReportStatus)
+// กำหนดตัวเลือกสถานะ
 const STATUS_OPTIONS: { label: ReportStatus; color: string; textColor: string }[] = [
   { label: "ฉบับร่าง", color: "bg-gray-400", textColor: "text-gray-600" },
   { label: "รอตรวจสอบ", color: "bg-orange-500", textColor: "text-orange-600" },
@@ -45,7 +45,7 @@ export default function BudgetReportCard({ report, onDelete }: Props) {
     if (pendingStatus) {
       setCurrentStatus(pendingStatus);
       // TODO: ใส่ Logic เรียก API อัปเดตสถานะตรงนี้
-      console.log(`Confirmed change status of ID ${report.id} to: ${pendingStatus}`);
+      console.log(`Updated status to: ${pendingStatus}`);
     }
     setIsConfirmOpen(false);
     setPendingStatus(null);
@@ -59,28 +59,30 @@ export default function BudgetReportCard({ report, onDelete }: Props) {
 
   return (
     <>
-      <Card className="p-4 rounded-4xl border-none shadow-sm bg-white w-full h-auto flex flex-col relative group transition-all duration-300 hover:shadow-md">
+      <Card className="rounded-4xl p-5 hover:shadow-lg border border-gray-50 flex flex-col h-full relative group transition-all duration-300">
         
-        {/* --- 1. ส่วนรูปภาพ (เหมือนตัวอย่าง ProjectCard) --- */}
-        <div className="relative w-full aspect-video mb-4 rounded-2xl group z-10">
-          <div className="w-full h-full overflow-hidden rounded-2xl bg-gray-50 border border-gray-100">
+        {/* --- 1. ส่วนรูปภาพ (แก้ไขโครงสร้าง) --- */}
+        {/* Wrapper หลัก: กำหนดสัดส่วน (aspect-ratio) แต่ *ไม่ใส่* overflow-hidden ตรงนี้ */}
+        <div className="relative w-full aspect-16/10 mb-4 z-10">
+          
+          {/* Layer รูปภาพ: ใส่ overflow-hidden ตรงนี้แทน เพื่อให้รูปโค้งมนตาม rounded-2xl */}
+          <div className="absolute inset-0 rounded-2xl overflow-hidden bg-gray-50 border border-gray-100">
             {report.imageSrc ? (
               <Image
                 src={report.imageSrc}
                 alt={report.projectName}
                 fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                className="rounded-2xl object-cover transition-transform duration-500 group-hover:scale-105"
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
               />
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-gray-300">
+              <div className="flex flex-col items-center justify-center h-full text-gray-300 bg-gray-50/50">
                 <span className="text-sm font-medium">ไม่มีรูปภาพ</span>
               </div>
             )}
           </div>
           
-          {/* Layer Dropdown Status (มุมขวาล่างของรูป) */}
-          <div className="absolute bottom-2 right-2">
+          {/* Layer Dropdown: อยู่นอกตัว overflow-hidden ทำให้เมนูเด้งทะลุกรอบได้ */}
+          <div className="absolute bottom-3 right-3 z-20">
             
             {/* Menu List */}
             {isMenuOpen && (
@@ -93,7 +95,7 @@ export default function BudgetReportCard({ report, onDelete }: Props) {
                       handleStatusClick(option.label);
                     }}
                     className={`
-                      flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium w-full transition-colors text-left
+                      flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium w-full transition-colors
                       ${currentStatus === option.label ? "bg-gray-50 text-gray-900" : "hover:bg-gray-50 text-gray-600"}
                     `}
                   >
@@ -104,7 +106,7 @@ export default function BudgetReportCard({ report, onDelete }: Props) {
               </div>
             )}
 
-            {/* ปุ่มกดเปิด Dropdown */}
+            {/* ปุ่มกดเปิด Dropdown (แสดงสถานะปัจจุบัน) */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -119,7 +121,7 @@ export default function BudgetReportCard({ report, onDelete }: Props) {
               <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform duration-200 ${isMenuOpen ? "rotate-180" : ""}`} />
             </button>
             
-            {/* Backdrop ปิด Menu */}
+            {/* Backdrop สำหรับปิด Menu เมื่อคลิกข้างนอก */}
             {isMenuOpen && (
               <div 
                 className="fixed inset-0 z-[-1]" 
@@ -132,26 +134,19 @@ export default function BudgetReportCard({ report, onDelete }: Props) {
           </div>
         </div>
 
-        {/* --- 2. เนื้อหา (ชื่อรายงาน + วันที่อัปเดต) --- */}
-        <CardContent className="p-0 mb-6 grow">
-          <h3 className="text-gray-900 font-bold text-lg leading-snug line-clamp-2 mb-1">
+        {/* --- 2. เนื้อหา (ชื่อโครงการ) --- */}
+        <CardContent className="p-0 grow flex flex-col items-center text-center mb-6">
+          <h3 className="text-gray-900 font-medium text-lg leading-snug line-clamp-2">
             {report.projectName}
           </h3>
-          <p className="text-gray-500 font-light text-sm">
-            อัปเดตเมื่อ : <span className="font-normal">{report.updatedAt}</span>
-          </p>
         </CardContent>
 
-        {/* --- 3. ปุ่ม Action (Footer) --- */}
-        <CardFooter className="p-0 flex justify-center gap-0 mt-auto">
-          
-          {/* ปุ่มแก้ไข (ใช้สไตล์เดียวกับ ProjectCard) */}
+        {/* --- 3. ปุ่ม Action --- */}
+        <CardFooter className="p-0 mt-auto w-full flex justify-center gap-3 space-x-0">
+          {/* ปุ่มแก้ไข */}
           <button
-            onClick={(e) => {
-                e.stopPropagation();
-                router.push(`/admin/budget_report/edit/${report.id}`);
-            }}
-            className="bg-[#F26522] hover:bg-[#d9531e] text-white h-10 rounded-full px-6 flex items-center justify-center gap-2 text-base font-medium transition-transform active:scale-95 flex-1 max-w-[140px]"
+            onClick={() => router.push(`/admin/budget_report/edit/${report.id}`)}
+            className="bg-[#F26522] hover:bg-[#d9531e] text-white h-10 rounded-full px-6 flex items-center justify-center gap-2 text-sm font-medium transition-transform active:scale-95 flex-1 max-w-[120px]"
           >
             <PenLine className="w-4 h-4" />
             <span>แก้ไข</span>
@@ -159,11 +154,8 @@ export default function BudgetReportCard({ report, onDelete }: Props) {
 
           {/* ปุ่มลบ */}
           <button
-            onClick={(e) => { 
-                e.stopPropagation(); 
-                onDelete && onDelete(report.id); 
-            }}
-            className="w-14 h-10 ml-2 bg-gray-600 text-white rounded-full hover:bg-gray-700 transition flex items-center justify-center shrink-0 active:scale-95 shadow-sm"
+            onClick={(e) => { e.stopPropagation(); onDelete && onDelete(report.id); }}
+            className="bg-[#5F6368] hover:bg-gray-700 text-white w-10 h-10 rounded-full flex items-center justify-center transition-transform active:scale-95 shadow-sm"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -176,6 +168,7 @@ export default function BudgetReportCard({ report, onDelete }: Props) {
           <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl transform transition-all scale-100">
             
             <div className="flex flex-col items-center text-center gap-4">
+              {/* Icon เตือน */}
               <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">
                 <AlertCircle className="w-6 h-6" />
               </div>
