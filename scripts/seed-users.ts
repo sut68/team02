@@ -45,7 +45,7 @@ async function seedUsers() {
             studentCode: 'B6610456',
             major: 'วิศวกรรมคอมพิวเตอร์',
             status: 'ACTIVE',
-            gradYear: null,
+            gradYear: undefined,
           },
         },
         verification: {
@@ -114,7 +114,7 @@ async function seedUsers() {
             studentCode: 'B6799999',
             major: 'วิศวกรรมอุตสาหการ',
             status: 'ACTIVE',
-            gradYear: null,
+            gradYear: undefined,
           },
         },
         verification: {
