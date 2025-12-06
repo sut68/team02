@@ -1,16 +1,27 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-import { Activity, HandHeart } from "lucide-react";
+import { Activity, HandHeart, Plus } from "lucide-react";
 import { AdminSouvenirCarousel } from "./AdminSouvenirCarousel";
 import { SouvenirDetailForm } from "./SouvenirDetailForm";
 
 export default function SouvenirMenuPage() {
   const [showCarousel, setShowCarousel] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const detailRef = useRef<HTMLDivElement>(null);
 
   const handleCardClick = (itemId: number) => {
+    setSelectedItemId(itemId);
+    setIsCreating(false);
     setShowDetail(true);
+  };
+
+  const handleCreateNew = () => {
+    setSelectedItemId(null);
+    setIsCreating(true);
+    setShowDetail(true);
+    setShowCarousel(null);
   };
 
   useEffect(() => {
@@ -29,11 +40,21 @@ export default function SouvenirMenuPage() {
   return (
     <main className="min-h-screen bg-white">
       {/* Header + Cards Section */}
-      <div className="px-4 py-12">
-        <div className="max-w-5xl w-full mx-auto">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-14 text-center tracking-tight">
-            รายการของที่ระลึก
-          </h1>
+      <div className="px-4 py-12 mt-8">
+        <div className="container mx-auto">
+          {/* Header with Add Button */}
+          <div className="flex items-center justify-between mb-14">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+              จัดการของที่ระลึก
+            </h1>
+            <button
+              onClick={handleCreateNew}
+              className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-all shadow-lg hover:shadow-xl font-semibold"
+            >
+              <Plus className="w-5 h-5" />
+              เพิ่มของที่ระลึก
+            </button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
             {/* Card 1: กิจกรรม */}
             <div
@@ -46,7 +67,6 @@ export default function SouvenirMenuPage() {
             >
               <div className="flex flex-col items-center mb-4">
                 <Activity className="w-28 h-28 text-orange-500 group-hover:drop-shadow-lg mb-2" strokeWidth={1.5} />
-                <span className="text-xs text-gray-400 mb-1">activity icon</span>
               </div>
               <div className="text-xl font-semibold text-gray-700">กิจกรรม</div>
             </div>
@@ -61,7 +81,6 @@ export default function SouvenirMenuPage() {
             >
               <div className="flex flex-col items-center mb-4">
                 <HandHeart className="w-28 h-28 text-orange-400 group-hover:text-orange-500 group-hover:drop-shadow-lg mb-2" strokeWidth={1.5} />
-                <span className="text-xs text-gray-400 mb-1">hand-heart icon</span>
               </div>
               <div className="text-xl font-semibold text-gray-700">บริจาค</div>
             </div>
@@ -70,12 +89,36 @@ export default function SouvenirMenuPage() {
       </div>
       {/* Carousel Section - Full Width like user page */}
       <div className={`transition-all duration-300 ${showCarousel ? 'opacity-100 scale-100' : 'opacity-0 scale-95 h-0 overflow-hidden'}`}>
-        {showCarousel === "activity" && <AdminSouvenirCarousel onCardClick={handleCardClick} />}
-        {showCarousel === "donation" && <AdminSouvenirCarousel onCardClick={handleCardClick} />}
+        {showCarousel === "activity" && <AdminSouvenirCarousel category="กิจกรรม" onCardClick={handleCardClick} />}
+        {showCarousel === "donation" && <AdminSouvenirCarousel category="บริจาค" onCardClick={handleCardClick} />}
       </div>
       {/* Detail Form Section */}
       <div ref={detailRef} className={`transition-all duration-300 ${showDetail ? 'opacity-100 scale-100' : 'opacity-0 scale-95 h-0 overflow-hidden'}`}>
-        {showDetail && <SouvenirDetailForm />}
+        {showDetail && (
+          isCreating ? (
+            <SouvenirDetailForm isCreating={true} onSuccess={() => {
+              setShowDetail(false);
+              setIsCreating(false);
+              // Refresh carousel if visible
+              if (showCarousel) {
+                window.location.reload();
+              }
+            }} />
+          ) : selectedItemId ? (
+            <SouvenirDetailForm 
+              itemId={selectedItemId} 
+              isCreating={false}
+              onSuccess={() => {
+                setShowDetail(false);
+                setSelectedItemId(null);
+                // Refresh carousel to show updated list
+                if (showCarousel) {
+                  window.location.reload();
+                }
+              }}
+            />
+          ) : null
+        )}
       </div>
     </main>
   );

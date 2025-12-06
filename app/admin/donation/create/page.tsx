@@ -143,7 +143,7 @@ export default function CreateProjectPage() {
   return (
     <div className="flex justify-center items-start min-h-screen bg-white p-4 pt-20">
       <Card className="w-full max-w-3xl p-8 shadow-lg rounded-xl bg-white">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8 text-center">
           สร้างโครงการใหม่
         </h1>
 

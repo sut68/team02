@@ -8,6 +8,16 @@ export async function GET(request: NextRequest) {
       where: { isActive: true },
       orderBy: { startDate: 'asc' },
       include: {
+        souvenirItem: {
+          select: {
+            id: true,
+            name: true,
+            imageUrl: true,
+            sku: true,
+            category: true,
+            description: true,
+          },
+        },
         _count: {
           select: {
             registrations: true,
