@@ -32,7 +32,7 @@ export default function CentralFundDonationPage() {
                 
                 {/* 💡 แก้ไข: ใช้ Flexbox จัดวางหัวข้อและปุ่ม */}
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-3xl md:text-4xl font-semibold text-gray-800">
+                    <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
                         การระดมทุน
                     </h2>
                     
