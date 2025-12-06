@@ -1,50 +1,62 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-// ** Mock Data สำหรับของที่ระลึก (Admin - ไม่มี href) **
 type SouvenirItem = {
   id: number;
-  title: string;
-  stock: number;
-  imageSrc: string;
+  sku: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  imageUrl: string | null;
+  currentStock: number;
+  unit?: string;
+  active: boolean;
 };
 
-export const souvenirMockData = {
-  featured: [
-    {
-      id: 1,
-      title: 'เข็มกลัด SUT',
-      stock: 50,
-      imageSrc: '/souvenir/EngiButton.png',
-    },
-    {
-      id: 2,
-      title: 'SUT Cap',
-      stock: 50,
-      imageSrc: '/souvenir/EngiCap.png',
-    },
-    {
-      id: 3,
-      title: 'ENGi Bottle',
-      stock: 24,
-      imageSrc: '/souvenir/EngiBottle.png',
-    },
-  ] as SouvenirItem[],
-};
+interface AdminSouvenirCarouselProps {
+  onCardClick?: (itemId: number) => void;
+  category?: string;
+}
 
-export function AdminSouvenirCarousel({ onCardClick }: { onCardClick?: (itemId: number) => void }) {
+export function AdminSouvenirCarousel({ onCardClick, category }: AdminSouvenirCarouselProps) {
   const router = useRouter();
-  const { featured } = souvenirMockData;
+  const [souvenirItems, setSouvenirItems] = useState<SouvenirItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const [isPaused, setIsPaused] = React.useState(false);
   const trackRef = React.useRef<HTMLDivElement>(null);
   const offsetRef = React.useRef(0);
   const loopWidthRef = React.useRef(0);
   const cardWidthRef = React.useRef(0);
-  const speedRef = React.useRef(36); // px per second (slightly faster continuous)
+  const speedRef = React.useRef(36);
+
+  // Fetch souvenir items from API
+  useEffect(() => {
+    const fetchSouvenirItems = async () => {
+      try {
+        const res = await fetch('/api/admin/souvenir/items');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            // Filter by category if provided
+            const filtered = category 
+              ? data.filter((item: SouvenirItem) => item.category === category)
+              : data;
+            setSouvenirItems(filtered);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching souvenir items:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSouvenirItems();
+  }, [category]);
 
   const stepBy = (px: number) => {
     const loopW = loopWidthRef.current || 0;
@@ -63,11 +75,14 @@ export function AdminSouvenirCarousel({ onCardClick }: { onCardClick?: (itemId: 
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const delta = Math.sign(e.deltaY) * 60; // smooth manual nudge
+    const delta = Math.sign(e.deltaY) * 60;
     stepBy(delta);
   };
 
-  const loopItems = React.useMemo(() => [...featured, ...featured], [featured]);
+  const loopItems = React.useMemo(() => {
+    if (souvenirItems.length === 0) return [];
+    return [...souvenirItems, ...souvenirItems];
+  }, [souvenirItems]);
 
   // Measure widths for seamless loop and step sizing
   React.useEffect(() => {
@@ -76,14 +91,14 @@ export function AdminSouvenirCarousel({ onCardClick }: { onCardClick?: (itemId: 
       const container = scrollContainerRef.current;
       if (!track || !container) return;
       const fullWidth = track.scrollWidth;
-      loopWidthRef.current = fullWidth / 2; // since items duplicated
+      loopWidthRef.current = fullWidth / 2;
       const cols = window.innerWidth >= 768 ? 3 : 1;
       cardWidthRef.current = container.clientWidth / cols;
     };
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
-  }, []);
+  }, [souvenirItems]);
 
   // Continuous auto-scroll using requestAnimationFrame
   React.useEffect(() => {
@@ -101,12 +116,28 @@ export function AdminSouvenirCarousel({ onCardClick }: { onCardClick?: (itemId: 
     return () => cancelAnimationFrame(rafId);
   }, [isPaused]);
 
+  if (loading) {
+    return (
+      <section className="w-full bg-white px-4 py-16 min-h-[calc(100vh-80px)] flex items-center justify-center">
+        <div className="text-gray-500">กำลังโหลด...</div>
+      </section>
+    );
+  }
+
+  if (souvenirItems.length === 0) {
+    return (
+      <section className="w-full bg-white px-4 py-16 min-h-[calc(100vh-80px)] flex items-center justify-center">
+        <div className="text-gray-500">ไม่พบข้อมูลของที่ระลึก</div>
+      </section>
+    );
+  }
+
   return (
     <section className="w-full bg-white px-4 py-16 min-h-[calc(100vh-80px)] md:min-h-[calc(100vh-88px)] flex items-center">
       <div className="container mx-auto relative">
         {/* หัวข้อ */}
         <div className="flex items-center justify-between mb-10">
-          <h2 className="text-3xl md:text-4xl font-semibold text-gray-800">ของที่ระลึก</h2>
+          <h2 className="text-3xl font-medium text-gray-700">ของที่ระลึก</h2>
         </div>
 
         {/* Navigation Buttons */}
@@ -136,7 +167,7 @@ export function AdminSouvenirCarousel({ onCardClick }: { onCardClick?: (itemId: 
         >
           <div ref={trackRef} className="flex gap-12 will-change-transform items-end pb-8">
             {loopItems.map((item, idx) => {
-              const isCenter = (idx % featured.length) === 1;
+              const isCenter = (idx % souvenirItems.length) === 1;
               return (
                 <div 
                   key={`${item.id}-${idx}`} 
@@ -147,8 +178,8 @@ export function AdminSouvenirCarousel({ onCardClick }: { onCardClick?: (itemId: 
                     {/* รูปหลัก */}
                     <div className="relative w-full h-64 md:h-80 bg-white rounded-3xl overflow-hidden transition-all duration-300 shadow-sm group-hover:shadow-2xl group-hover:-translate-y-0.5">
                       <Image
-                        src={item.imageSrc}
-                        alt={item.title}
+                        src={item.imageUrl || '/souvenir/EngiButton.png'}
+                        alt={item.name}
                         fill
                         priority={isCenter}
                         className={'object-contain p-4'}
@@ -158,12 +189,22 @@ export function AdminSouvenirCarousel({ onCardClick }: { onCardClick?: (itemId: 
 
                     {/* ชื่อสินค้า */}
                     <h3 className="mt-4 text-lg md:text-xl font-bold text-orange-500">
-                      {item.title}
+                      {item.name}
                     </h3>
                     {/* จำนวนคงเหลือ */}
                     <p className="mt-1 text-sm text-gray-500">
-                      จำนวนคงเหลือ: {item.stock} ชิ้น
+                      จำนวนคงเหลือ: {item.currentStock} {item.unit || 'ชิ้น'}
                     </p>
+                    {/* สถานะ */}
+                    <div className="mt-2">
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
+                        item.active 
+                          ? 'bg-orange-100 text-orange-700' 
+                          : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {item.active ? 'ใช้งาน' : 'ไม่ใช้งาน'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               );

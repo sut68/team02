@@ -31,6 +31,15 @@ interface EventRegistration {
     fullName: string;
     email: string;
   };
+  entitlements?: Array<{
+    item: {
+      name: string;
+    };
+    redemptions: Array<{
+      id: number;
+      redeemedAt: string;
+    }>;
+  }>;
 }
 
 export default function SouvenirActivityPage() {
@@ -171,7 +180,7 @@ export default function SouvenirActivityPage() {
       <section className="py-8">
         <div className="max-w-7xl mx-auto px-4 mb-8">
           <h1 className="text-3xl font-medium text-gray-700 mb-8">
-            รายการของที่ระลึกแต่ละกิจกรรม
+            จัดการของที่ระลึกสำหรับกิจกรรม
           </h1>
         </div>
         
@@ -287,8 +296,14 @@ export default function SouvenirActivityPage() {
                         {activity.name}
                       </h3>
                       <div className="flex items-center justify-center gap-2 text-gray-600">
-                        <MapPin className="w-5 h-5" />
-                        <span className="text-base">{activity.location || 'TBA'}</span>
+                        <Calendar className="w-5 h-5" />
+                        <span className="text-base">
+                          {new Date(activity.startDate).toLocaleDateString('th-TH', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          })}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -332,7 +347,10 @@ export default function SouvenirActivityPage() {
                 <div className={`text-5xl font-bold mb-2 ${
                   selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-800'
                 }`}>
-                  {registrations.filter(r => !r.attendanceStatus || r.attendanceStatus === 'PENDING').length}
+                  {registrations.filter(r => {
+                    // ยังไม่ได้รับของ = ไม่มี redemptions
+                    return !r.entitlements?.some(e => e.redemptions.length > 0);
+                  }).length}
                 </div>
                 <div className={`font-medium ${
                   selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-600'
@@ -380,7 +398,10 @@ export default function SouvenirActivityPage() {
                 <div className={`text-5xl font-bold mb-2 ${
                   selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-800'
                 }`}>
-                  {registrations.filter(r => r.attendanceStatus === 'ATTENDED').length}
+                  {registrations.filter(r => {
+                    // รับของแล้ว = มี redemptions
+                    return r.entitlements?.some(e => e.redemptions.length > 0);
+                  }).length}
                 </div>
                 <div className={`font-medium ${
                   selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-600'
@@ -409,9 +430,10 @@ export default function SouvenirActivityPage() {
                   {registrations
                     .filter(reg => {
                       if (selectedStatus === 'all') return true;
-                      if (selectedStatus === 'claimed') return reg.attendanceStatus === 'ATTENDED';
+                      const hasRedemption = reg.entitlements?.some(e => e.redemptions.length > 0);
+                      if (selectedStatus === 'claimed') return hasRedemption;
+                      if (selectedStatus === 'remaining') return !hasRedemption;
                       if (selectedStatus === 'registered') return true;
-                      if (selectedStatus === 'remaining') return !reg.attendanceStatus || reg.attendanceStatus === 'PENDING';
                       return true;
                     })
                     .map((reg, index) => {
@@ -422,15 +444,15 @@ export default function SouvenirActivityPage() {
                         year: 'numeric'
                       });
                       
+                      const hasRedemption = reg.entitlements?.some(e => e.redemptions.length > 0);
+                      const souvenirName = reg.entitlements?.[0]?.item.name || selectedActivity.souvenir || 'ของที่ระลึกกิจกรรม';
+                      
                       let statusText = 'รอรับ';
                       let statusColor = 'bg-gray-100 text-gray-700';
                       
-                      if (reg.attendanceStatus === 'ATTENDED') {
+                      if (hasRedemption) {
                         statusText = 'รับแล้ว';
                         statusColor = 'bg-orange-100 text-orange-700';
-                      } else if (!reg.attendanceStatus || reg.attendanceStatus === 'PENDING') {
-                        statusText = 'คงเหลือ';
-                        statusColor = 'bg-gray-100 text-gray-700';
                       }
                       
                       return (
@@ -439,7 +461,7 @@ export default function SouvenirActivityPage() {
                           <td className="px-6 py-4 text-sm text-gray-800 font-medium">{reg.user.fullName}</td>
                           <td className="px-6 py-4 text-sm text-gray-600">{reg.user.email}</td>
                           <td className="px-6 py-4 text-sm text-gray-600">{thaiDate}</td>
-                          <td className="px-6 py-4 text-sm text-orange-600">{selectedActivity.souvenir || 'ของที่ระลึกกิจกรรม'}</td>
+                          <td className="px-6 py-4 text-sm text-orange-600">{souvenirName}</td>
                           <td className="px-6 py-4">
                             <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}>
                               {statusText}

@@ -14,10 +14,26 @@ export async function GET(request: NextRequest) {
             entitlements: true,
           },
         },
+        entitlements: {
+          include: {
+            item: {
+              select: {
+                name: true,
+              },
+            },
+          },
+          take: 1, // เอาแค่ item แรกเพื่อแสดงชื่อของที่ระลึก
+        },
       },
     });
 
-    return NextResponse.json(events);
+    // Transform data to include souvenir name
+    const eventsWithSouvenir = events.map((event) => ({
+      ...event,
+      souvenir: event.entitlements[0]?.item.name || null,
+    }));
+
+    return NextResponse.json(eventsWithSouvenir);
   } catch (error) {
     console.error('Error fetching events:', error);
     return NextResponse.json(
