@@ -50,59 +50,60 @@ enum TransactionStatus {
 // ========================================
 
 model User {
-  id              Int                @id @default(autoincrement())
-  email           String             @unique
-  password        String             // hashed password
-  fullName        String
-  phone           String
-  address         String
-  subdistrict     String
-  district        String
-  province        String
-  postalCode      String
-  role            Role               @default(STUDENT)
-  
+  id          Int    @id @default(autoincrement())
+  email       String @unique
+  password    String // hashed password
+  fullName    String
+  phone       String
+  address     String
+  subdistrict String
+  district    String
+  province    String
+  postalCode  String
+  role        Role   @default(STUDENT)
+
   // Legacy fields (will be removed after migration)
-  studentCode     String?
-  major           String?
-  gradYear        String?
-  userType        String?            // 'student' or 'alumni'
-  status          String?            // 'pending', 'approved', 'rejected'
-  transcriptUrl   String?
-  
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  
+  studentCode   String?
+  major         String?
+  gradYear      String?
+  userType      String? // 'student' or 'alumni'
+  status        String? // 'pending', 'approved', 'rejected'
+  transcriptUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
   educationRecords EducationRecord[]
   verification     Verification?
   donations          DonationTransaction[]
+  submissions      Submission[]
 }
 
 model EducationRecord {
-  id              Int           @id @default(autoincrement())
-  studentCode     String        @unique
-  major           String
-  gradYear        Int?          // ปีที่จบ (null ถ้ายังเรียนอยู่)
-  status          StudyStatus   @default(ACTIVE)
-  transcript      String?       // path ของไฟล์ transcript
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
+  id          Int         @id @default(autoincrement())
+  studentCode String      @unique
+  major       String
+  gradYear    Int? // ปีที่จบ (null ถ้ายังเรียนอยู่)
+  status      StudyStatus @default(ACTIVE)
+  transcript  String? // path ของไฟล์ transcript
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
   // Foreign Key
-  userId          Int
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Verification {
-  id              Int           @id @default(autoincrement())
-  status          VerifyStatus  @default(PENDING)
-  reviewedBy      String?       // ชื่อ admin ที่ตรวจสอบ
-  reviewedAt      DateTime?     // วันเวลาที่ตรวจสอบ
-  remark          String?       // หมายเหตุ/เหตุผล
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
+  id         Int          @id @default(autoincrement())
+  status     VerifyStatus @default(PENDING)
+  reviewedBy String? // ชื่อ admin ที่ตรวจสอบ
+  reviewedAt DateTime? // วันเวลาที่ตรวจสอบ
+  remark     String? // หมายเหตุ/เหตุผล
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
   // Foreign Key (One-to-One)
   userId          Int           @unique
   user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -159,3 +160,30 @@ model DonationTransaction {
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 }
+
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+//kk
+model Submission {
+  id     Int          @id @default(autoincrement())
+  Name   String
+  Date   DateTime
+  status VerifyStatus @default(PENDING)
+  remark String?
+
+  fileId Int?            @unique // 1 submission มีไฟล์หลักได้แค่ 1 อัน
+  file   SubmissionFile? @relation(fields: [fileId], references: [id])
+  userId Int
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SubmissionFile {
+  id   Int    @id @default(autoincrement())
+  Path String
+
+  submission Submission? // back relation (optional)
+}
+
+//kk

@@ -29,7 +29,7 @@ interface Submission {
   remark?: string | null;
 }
 
-export  function AdminSubmissionPage() {
+export  function SubmissionPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -107,7 +107,7 @@ export  function AdminSubmissionPage() {
       formData.append("title", title);
       formData.append("file", file);
 
-      const res = await fetch("/api/news/submissions", {
+      const res = await fetch("/api/user/news/submission", {
         method: "POST",
         body: formData,
       });
@@ -135,19 +135,27 @@ export  function AdminSubmissionPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto px-4 py-10 space-y-12">
 
   {/* ==================== ตารางคำยื่นร้องขอ ==================== */}
   <Card className="shadow-sm rounded-xl">
     <CardHeader className="flex items-center justify-between">
       <h2 className="text-2xl font-medium text-gray-800">คำยื่นร้องขอ</h2>
 
-      
+      <PrimaryButton type="button" onClick={handleSubmit}>
+        ยื่นเรื่อง
+      </PrimaryButton>
     </CardHeader>
 
     <CardContent className="space-y-4">
 
-      
+      {/* ลิงก์ PDF */}
+      <Link
+        href="#"
+        className="text-sm text-orange-500 underline underline-offset-2"
+      >
+        รายละเอียดการยื่นคำร้องขอ.pdf
+      </Link>
 
       
 
@@ -241,11 +249,98 @@ export  function AdminSubmissionPage() {
         <div className="flex justify-end  px-4 py-1 text-xs text-gray-400">
           &raquo;
         </div>
-      
+    
     </CardContent>
   </Card>
 
+      {/* ==================== ส่วนล่าง: ฟอร์มยื่นเรื่อง ==================== */}
+      <div
+        id="submission-form"
+        className="border rounded-lg p-8 shadow-sm bg-white space-y-6"
+      >
+        <h2 className="text-2xl font-medium text-gray-800">คำยื่นร้องขอ</h2>
+
+        {/* ชื่อหัวเรื่อง */}
+        <div className="space-y-2">
+          <label className="block text-sm text-gray-500">
+            ชื่อหัวเรื่อง <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="px-4 py-3 border border-gray-300 rounded-md text-sm w-full placeholder-gray-400
+            focus:outline-none focus:border-orange-400"
+            placeholder="กรอกชื่อหัวเรื่อง"
+          />
+        </div>
+
+        {/* กล่องอัปโหลดไฟล์ */}
+        <div className="space-y-2">
+          <label className="block text-sm text-gray-500">
+            รายละเอียด <span className="text-red-500">*</span>
+          </label>
+
+          <div
+            className="border border-gray-300 rounded-md p-6 flex flex-col items-center justify-center
+            text-center cursor-pointer hover:border-orange-400"
+          >
+            <label className="cursor-pointer">
+              <input
+                type="file"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+
+              <div className="flex flex-col items-center">
+                <svg
+                  className="w-10 h-10 text-gray-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeWidth="2"
+                    d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2m-4-4l-4-4m0 0l-4 4m4-4v12"
+                  />
+                </svg>
+
+                <p className="text-sm text-gray-400 mt-2">อัปโหลดไฟล์</p>
+                <p className="text-xs text-gray-400">
+                  รองรับไฟล์เอกสาร / PDF / รูปภาพ
+                </p>
+
+                {fileName && (
+                  <p className="text-xs text-gray-600 mt-1">{fileName}</p>
+                )}
+              </div>
+            </label>
+          </div>
+        </div>
+
+        {/* error รวม */}
+        {error && <div className="text-red-500 text-sm">{error}</div>}
+
+        {/* ปุ่ม */}
+        <div className="flex justify-end gap-3 pt-4">
+          <CancelButton
+            type="button"
+            
+          >
+            ยกเลิก
+          </CancelButton>
+
+          <PrimaryButton
+            type="button"
+            onClick={handleSubmit}
+            disabled={submitLoading}
+            
+          >
+            {submitLoading ? "กำลังยื่นเรื่อง..." : "ยื่นเรื่อง"}
+          </PrimaryButton>
+        </div>
+      </div>
     </div>
   );
 }
-export default AdminSubmissionPage;
+export default SubmissionPage;

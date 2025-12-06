@@ -112,16 +112,15 @@ export default function Navbar() {
 
         {/* --- เมนูสำหรับผู้ใช้ทั่วไป --- */}
         {!isAdmin && (
-          <>
-            <div className="relative group">
-              <Link href="/" className="flex items-center hover:text-[#F26522] transition-colors duration-200">
-                <span className="material-icons ml-1 text-base">กิจกรรม</span>
-              </Link>
-              <div className="absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50">
-                <Link href="/user/booking" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">จองเข้าร่วมกิจกรรม</Link>
-                <Link href="/fund" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">ขอโพสกิจกรรม</Link>
-                <Link href="/#souvenir" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">ของที่ระลึก</Link>
-              </div>
+        <>
+          <div className="relative group">
+            <Link href="/user/news" className="flex items-center hover:text-[#F26522] transition-colors duration-200">
+              <span className="material-icons ml-1 text-base">กิจกรรม</span>
+            </Link>
+            <div className="absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50">
+              <Link href="/user/booking" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">จองเข้าร่วมกิจกรรม</Link>
+              <Link href="/user/news/submission" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">ขอโพสกิจกรรม</Link>
+              <Link href="/#souvenir" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">ของที่ระลึก</Link>
             </div>
 
             <Link href="/forum" className="hover:text-gray-900">รับสมัครงาน</Link>
@@ -141,18 +140,17 @@ export default function Navbar() {
           </>
         )}
 
-        {/* --- 💡 เมนูสำหรับแอดมิน (จะแสดงเมื่อ isAdmin = true) --- */}
-        {isAdmin && (
-          <>
-            <div className="relative group">
-              <Link href="/apply" className="flex items-center hover:text-[#F26522] transition-colors duration-200">
-                <span className="material-icons ml-1 text-base">กิจกรรม</span>
-              </Link>
-              <div className="absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50">
-                <Link href="/apply" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">สร้างโพส</Link>
-                <Link href="/fund" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">อนุมัติโพส</Link>
-                <Link href="/fund" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">รายละเอียดการจอง</Link>
-              </div>
+      {/* --- 💡 เมนูสำหรับแอดมิน (จะแสดงเมื่อ isAdmin = true) --- */}
+      {isAdmin && (
+        <>
+          <div className="relative group">
+            <Link href="/user/news" className="flex items-center hover:text-[#F26522] transition-colors duration-200">
+              <span className="material-icons ml-1 text-base">กิจกรรม</span>
+            </Link>
+            <div className="absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50">
+              <Link href="/admin/news/create" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">สร้างโพส</Link>
+              <Link href="/admin/news" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">อนุมัติโพส</Link>
+              <Link href="/admin/news" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">รายละเอียดการจอง</Link>
             </div>
 
             <div className="relative group">
