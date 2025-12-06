@@ -275,13 +275,13 @@ async function main() {
   // สร้างของที่ระลึกหลากหลาย category
   const souvenirItemsData = [
     // กิจกรรม
-    { sku: 'BOTTLE-ENGI-2025', name: 'กระบอกน้ำ', description: "รับ 'กระบอกน้ำ' เป็นของที่ระลึกสุดพิเศษ", category: 'กิจกรรม', imageUrl: '/souvenir/EngiButton.png', unit: 'ชิ้น', initialStock: 200 },
-    { sku: 'CAP-SUT-2025', name: 'หมวก SUT', description: 'หมวกสีส้ม โลโก้ SUT Engineering', category: 'กิจกรรม', imageUrl: '/souvenir/EngiButton.png', unit: 'ชิ้น', initialStock: 150 },
-    { sku: 'PIN-ENGI-2025', name: 'เข็มกลัด', description: 'เข็มกลัดคณะวิศวกรรมศาสตร์', category: 'กิจกรรม', imageUrl: '/souvenir/EngiButton.png', unit: 'ชิ้น', initialStock: 300 },
+    { sku: 'BOTTLE-ENGI-2025', name: 'กระบอกน้ำ', description: "รับ 'กระบอกน้ำ' เป็นของที่ระลึกสุดพิเศษ", category: 'กิจกรรม', imageUrl: '/souvenir/EngiBottle.png', unit: 'ชิ้น', initialStock: 200 },
+    { sku: 'CAP-SUT-2025', name: 'หมวก SUT', description: 'หมวกสีส้ม โลโก้ SUT Engineering', category: 'กิจกรรม', imageUrl: '/souvenir/EngiCap.png', unit: 'ชิ้น', initialStock: 150 },
+    { sku: 'PIN-ENGI-2025', name: 'เข็มกลัด', description: 'เข็มกลัดคณะวิศวกรรมศาสตร์', category: 'กิจกรรม', imageUrl: '/souvenir/EngiBrooch.png', unit: 'ชิ้น', initialStock: 300 },
     // บริจาค
-    { sku: 'NOTEBOOK-2025', name: 'สมุดบันทึก', description: 'รับสมุดบันทึกแทนคำขอบคุณ', category: 'บริจาค', imageUrl: '/souvenir/Book.png', unit: 'เล่ม', initialStock: 150 },
-    { sku: 'BAG-SUT-2025', name: 'กระเป๋าผ้า', description: 'กระเป๋าผ้า Canvas สไตล์ Minimal', category: 'บริจาค', imageUrl: '/souvenir/Bag.png', unit: 'ใบ', initialStock: 100 },
-    { sku: 'UMBRELLA-2025', name: 'ร่ม SUT', description: 'ร่มสีดำ โลโก้ SUT สีทอง', category: 'บริจาค', imageUrl: '/souvenir/Umbrella.png', unit: 'คัน', initialStock: 80 },
+    { sku: 'NOTEBOOK-2025', name: 'สมุดบันทึก', description: 'รับสมุดบันทึกแทนคำขอบคุณ', category: 'บริจาค', imageUrl: '/souvenir/Book_new.png', unit: 'เล่ม', initialStock: 150 },
+    { sku: 'BAG-SUT-2025', name: 'กระเป๋าผ้า', description: 'กระเป๋าผ้า Canvas สไตล์ Minimal', category: 'บริจาค', imageUrl: '/souvenir/Bag_new.png', unit: 'ใบ', initialStock: 100 },
+    { sku: 'UMBRELLA-2025', name: 'ร่ม SUT', description: 'ร่มสีดำ โลโก้ SUT สีทอง', category: 'บริจาค', imageUrl: '/souvenir/Umbrella_new.png', unit: 'คัน', initialStock: 80 },
   ];
 
   const souvenirItems = await Promise.all(
