@@ -297,16 +297,16 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           {currentStatus === 1 && ( // เช็คว่าสถานะเป็น 1 (รอดำเนินการ) หรือไม่
             <button
               onClick={() => router.push(`/admin/budget_approval/edit/${project.ppid || 1}`)} // ลิงก์ไปหน้าแก้ไข
-              className="bg-[#F36618] text-white h-12 rounded-full hover:bg-orange-700 transition flex items-center justify-center gap-2 text-base font-medium px-8"
+              className="bg-[#F36618] text-white h-10 rounded-full hover:bg-orange-700 transition flex items-center justify-center gap-2 text-base font-medium px-8"
             >
-              <PenLine className="w-5 h-5" />
+              <PenLine className="w-4 h-4" />
               แก้ไข
             </button>
           )}
           
           {/* ปุ่มลบ (ปรับขนาดอัตโนมัติตามสถานะปุ่มแก้ไข) */}
-          <button className={`${currentStatus === 1 ? 'w-14 ml-2' : 'w-full'} h-12 bg-gray-600 text-white rounded-full hover:bg-gray-700 transition flex items-center justify-center shrink-0`}>
-            <Trash2 className="w-5 h-5" />
+          <button className={`${currentStatus === 1 ? 'w-14 ml-2' : 'w-full'} h-10 bg-gray-600 text-white rounded-full hover:bg-gray-700 transition flex items-center justify-center shrink-0`}>
+            <Trash2 className="w-4 h-4" />
           </button>
         </CardFooter>
       </Card>
