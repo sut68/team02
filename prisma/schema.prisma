@@ -453,11 +453,6 @@ enum Option {
   NOT
 }
 
-enum TransactionStatus {
-  PENDING
-  SUCCESS
-  FAILED
-}
 
 // ========================================
 // Booking & Content Management System
