@@ -14,6 +14,8 @@ export async function GET(request: NextRequest) {
             name: true,
             imageUrl: true,
             sku: true,
+            category: true,
+            description: true,
           },
         },
         _count: {

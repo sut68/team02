@@ -172,7 +172,9 @@ export function AdminSouvenirCarousel({ onCardClick, category }: AdminSouvenirCa
         {/* หัวข้อ */}
         <div className="flex items-center justify-between mb-10">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
-            {category === 'บริจาค' ? 'จัดการของที่ระลึกสำหรับโครงการบริจาค' : `ของที่ระลึก${category ? ` (${category})` : ''}`}
+            {category === 'บริจาค' 
+              ? 'จัดการของที่ระลึกสำหรับโครงการบริจาค' 
+              : `ของที่ระลึก${category ? ` (${category})` : ''}`}
           </h2>
         </div>
 

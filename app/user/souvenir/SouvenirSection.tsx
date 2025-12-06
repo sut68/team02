@@ -1,24 +1,120 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface SouvenirItem {
   id: number;
-  sku: string;
   name: string;
-  description: string | null;
+  description: string;
+  imageUrl: string;
   category: string;
-  imageUrl: string | null;
-  linkedEventId?: number;
-  linkedEventName?: string;
-  linkedEventHref?: string;
+  linkedEventId: number | null;
+  linkedEventName: string | null;
+  linkedEventHref: string;
 }
 
-export function SouvenirSection({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
-  const [souvenirItems, setSouvenirItems] = useState<SouvenirItem[]>([]);
-  const [loading, setLoading] = useState(true);
+export function SouvenirSection() {
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+  
+  // ตรวจสอบ authentication จาก cookies หรือ session
+  React.useEffect(() => {
+    // ตรวจสอบว่ามี session หรือไม่
+    fetch('/api/auth/me')
+      .then(res => {
+        if (res.ok) return res.json();
+        return null;
+      })
+      .then(data => {
+        setIsAuthenticated(!!data?.user);
+      })
+      .catch(() => {
+        setIsAuthenticated(false);
+      });
+  }, []);
+  
+  const [souvenirItems, setSouvenirItems] = React.useState<SouvenirItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  // ดึงข้อมูลจาก API
+  React.useEffect(() => {
+    async function fetchData() {
+      try {
+        // ดึงข้อมูล events ที่มีการเชื่อมกับของที่ระลึก
+        const eventsRes = await fetch('/api/admin/events');
+        const events = await eventsRes.json();
+
+        // กรองเฉพาะ events ที่มี souvenirItem และสร้าง map
+        const itemsMap = new Map<number, any>();
+        
+        events.forEach((event: any) => {
+          if (event.souvenirItem && event.souvenirItem.category) {
+            const item = event.souvenirItem;
+            // ใช้ item ที่มี category ชัดเจน
+            if (!itemsMap.has(item.id)) {
+              itemsMap.set(item.id, {
+                id: item.id,
+                name: item.name,
+                description: item.description,
+                imageUrl: item.imageUrl,
+                category: item.category,
+                linkedEventId: event.id,
+                linkedEventName: event.name,
+                linkedEventHref: '#',
+              });
+            }
+          }
+        });
+
+        // แปลง map เป็น array และเรียงตาม category (กิจกรรม -> บริจาค)
+        const categoryOrder = { 'กิจกรรม': 1, 'บริจาค': 2 };
+        const sortedItems = Array.from(itemsMap.values())
+          .filter(item => ['กิจกรรม', 'บริจาค'].includes(item.category))
+          .sort((a, b) => {
+            const orderA = categoryOrder[a.category as keyof typeof categoryOrder] || 999;
+            const orderB = categoryOrder[b.category as keyof typeof categoryOrder] || 999;
+            return orderA - orderB;
+          })
+          .map(item => {
+            // กำหนด title และ href ตาม category
+            let linkedEventName = item.linkedEventName;
+            let linkedEventHref = '#';
+            let description = item.description;
+
+            if (item.category === 'กิจกรรม') {
+              linkedEventName = `ลงทะเบียนเข้าร่วมกิจกรรม ${item.linkedEventName}`;
+              linkedEventHref = `/user/booking`;
+              if (!description) {
+                description = `รับ '${item.name}' เป็นของที่ระลึกสุดพิเศษ`;
+              }
+            } else if (item.category === 'บริจาค') {
+              linkedEventName = `บริจาคเพื่อสนับสนุน ENGi`;
+              linkedEventHref = `/user/donation`;
+              if (!description) {
+                description = `รับ ${item.name} แทนคำขอบคุณ`;
+              }
+            }
+
+            return {
+              ...item,
+              linkedEventName,
+              linkedEventHref,
+              description,
+            };
+          });
+
+        setSouvenirItems(sortedItems);
+      } catch (error) {
+        console.error('Error fetching souvenir data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const [isPaused, setIsPaused] = React.useState(false);
   const trackRef = React.useRef<HTMLDivElement>(null);
@@ -26,48 +122,6 @@ export function SouvenirSection({ isAuthenticated = false }: { isAuthenticated?:
   const loopWidthRef = React.useRef(0);
   const cardWidthRef = React.useRef(0);
   const speedRef = React.useRef(36);
-
-  // Fetch souvenir items and their linked events
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch active souvenir items
-        const souvenirRes = await fetch('/api/admin/souvenir/items');
-        if (!souvenirRes.ok) throw new Error('Failed to fetch souvenirs');
-        const souvenirs = await souvenirRes.json();
-        
-        // Fetch events to find linked ones
-        const eventsRes = await fetch('/api/admin/events');
-        const events = eventsRes.ok ? await eventsRes.json() : [];
-        
-        // Filter only active items and map with event data
-        const activeSouvenirs = souvenirs
-          .filter((item: any) => item.active)
-          .map((item: any) => {
-            const linkedEvent = events.find((e: any) => e.souvenirItemId === item.id);
-            return {
-              id: item.id,
-              sku: item.sku,
-              name: item.name,
-              description: item.description,
-              category: item.category,
-              imageUrl: item.imageUrl,
-              linkedEventId: linkedEvent?.id,
-              linkedEventName: linkedEvent?.name,
-              linkedEventHref: linkedEvent ? `/user/booking/${linkedEvent.id}` : undefined,
-            };
-          });
-        
-        setSouvenirItems(activeSouvenirs);
-      } catch (error) {
-        console.error('Error fetching souvenir data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchData();
-  }, []);
 
   const stepBy = (px: number) => {
     const loopW = loopWidthRef.current || 0;
@@ -90,7 +144,6 @@ export function SouvenirSection({ isAuthenticated = false }: { isAuthenticated?:
     stepBy(delta);
   };
 
-  // Duplicate items for infinite loop (4 copies for smooth scrolling)
   const loopItems = React.useMemo(() => {
     if (souvenirItems.length === 0) return [];
     return [...souvenirItems, ...souvenirItems, ...souvenirItems, ...souvenirItems];
@@ -109,12 +162,11 @@ export function SouvenirSection({ isAuthenticated = false }: { isAuthenticated?:
       track.offsetHeight;
       
       const fullWidth = track.scrollWidth;
-      loopWidthRef.current = fullWidth / 4; // 4 copies
+      loopWidthRef.current = fullWidth / 4;
       const cols = window.innerWidth >= 768 ? 3 : 1;
       cardWidthRef.current = container.clientWidth / cols;
     };
     
-    // Delay measurement to ensure images are loaded
     const timer = setTimeout(measure, 100);
     window.addEventListener('resize', measure);
     return () => {
@@ -197,9 +249,8 @@ export function SouvenirSection({ isAuthenticated = false }: { isAuthenticated?:
         >
           <div ref={trackRef} className="flex gap-12 will-change-transform">
             {loopItems.map((item, idx) => {
-              const href = item.linkedEventHref || '#';
               const requireAuth = item.category === 'บริจาค';
-              const finalHref = requireAuth && !isAuthenticated ? '/auth/login' : href;
+              const finalHref = requireAuth && !isAuthenticated ? '/auth/login' : item.linkedEventHref;
               
               return (
                 <Link 
@@ -216,7 +267,7 @@ export function SouvenirSection({ isAuthenticated = false }: { isAuthenticated?:
                           alt={item.name}
                           fill
                           priority={idx % souvenirItems.length === 0}
-                          className="object-contain p-4"
+                          className="object-contain"
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         />
                       ) : (
@@ -228,16 +279,11 @@ export function SouvenirSection({ isAuthenticated = false }: { isAuthenticated?:
 
                     {/* ข้อความโปรโมต */}
                     <h3 className="mt-6 text-xl md:text-2xl font-medium text-orange-600">
-                      {item.linkedEventName || item.name}
+                      {item.linkedEventName}
                     </h3>
                     <p className="mt-2 text-sm md:text-base text-gray-500 max-w-md">
-                      {item.description || `รับ '${item.name}' เป็นของที่ระลึกสุดพิเศษ`}
+                      {item.description}
                     </p>
-                    {item.category && (
-                      <span className="mt-2 text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
-                        {item.category}
-                      </span>
-                    )}
                   </div>
                 </Link>
               );
