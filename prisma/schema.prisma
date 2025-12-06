@@ -134,6 +134,22 @@ model User {
 
   // Donation Project Relations
   donationTransactions DonationTransaction[]
+
+  // Password Reset Relations
+  passwordResets PasswordReset[]
+}
+
+model PasswordReset {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique // Random token for password reset
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime // Token expiration time
+  used      Boolean  @default(false) // Whether token has been used
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([userId])
 }
 
 model EducationRecord {
