@@ -39,4 +39,4 @@ export interface ProjectWithManager extends ProjectProposal {
   manager?: ProjectManager;
 }
 
-export type ProjectStatus = 'ทั้งหมด' | 'รอดำเนินการ' | 'เปิดรับโหวต' | 'ปิดรับโหวต' | 'อนุมัติแล้ว';
+export type ProjectStatus = 'PENDING' | 'OPEN' | 'CLOSE' | 'APPROVED';

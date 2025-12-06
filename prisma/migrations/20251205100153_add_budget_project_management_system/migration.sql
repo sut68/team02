@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "ProjectProposalStatus" AS ENUM ('DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'COMPLETED');
+CREATE TYPE "ProjectProposalStatus" AS ENUM ('PENDING', 'OPEN', 'CLOSE', 'APPROVED');
 
 -- CreateEnum
 CREATE TYPE "SummarySubmissionStatus" AS ENUM ('DRAFT', 'PENDING_REVIEW', 'APPROVED', 'NEEDS_REVISION');
@@ -50,7 +50,7 @@ CREATE TABLE "ProjectProposal" (
     "scoreTotal" INTEGER,
     "responsibilityUnit" TEXT,
     "coverFilePath" TEXT,
-    "status" "ProjectProposalStatus" NOT NULL DEFAULT 'DRAFT',
+    "status" "ProjectProposalStatus" NOT NULL DEFAULT 'PENDING',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
