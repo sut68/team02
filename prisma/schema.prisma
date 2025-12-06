@@ -543,11 +543,10 @@ model Payment {
 // ========================================
 
 enum ProjectProposalStatus {
-  DRAFT
   PENDING
+  OPEN
+  CLOSE
   APPROVED
-  REJECTED
-  COMPLETED
 }
 
 enum SummarySubmissionStatus {
@@ -606,7 +605,7 @@ model ProjectProposal {
   responsibilityUnit String?
   coverFilePath      String?
 
-  status ProjectProposalStatus @default(DRAFT)
+  status ProjectProposalStatus @default(PENDING)
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

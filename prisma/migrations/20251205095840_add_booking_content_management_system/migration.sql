@@ -11,7 +11,7 @@ CREATE TYPE "ContentCategoryType" AS ENUM ('NEWS', 'EVENT', 'ANNOUNCEMENT', 'ACT
 CREATE TYPE "SouvenirOption" AS ENUM ('HAVE', 'NOT');
 
 -- CreateEnum
-CREATE TYPE "TransactionStatus" AS ENUM ('PENDING', 'SUCCESS', 'FAILED');
+-- CREATE TYPE "TransactionStatus" AS ENUM ('PENDING', 'SUCCESS', 'FAILED');
 
 -- CreateTable
 CREATE TABLE "BookingForm" (

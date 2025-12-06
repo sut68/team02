@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
         coverFilePath,
         budgetRoundId,
         staffId,
-        status: 'DRAFT', // สถานะเริ่มต้น
+        status: 'PENDING', // สถานะเริ่มต้น
         
         // ✅ Logic สร้าง Manager (Nested Write)
         // ถ้ามีข้อมูล manager ส่งมา ให้สร้างลงตาราง ProjectManager พร้อมกันเลย
