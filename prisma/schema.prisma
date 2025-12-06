@@ -119,19 +119,19 @@ model User {
   shipments          Shipment[]
   bookings           Booking[]
   contents           Content[]
-  
+
   // Budget System Relations
-  proposalsAsStaff   ProjectProposal[]   @relation("StaffProposals")
-  summarySubmissions SummarySubmission[]
-  budgetDonations    BudgetDonation[]
-  projectVotes       ProjectVote[]
+  proposalsAsStaff    ProjectProposal[]   @relation("StaffProposals")
+  summarySubmissions  SummarySubmission[]
+  budgetDonations     BudgetDonation[]
+  projectVotes        ProjectVote[]
   createdBudgetRounds BudgetRound[]
-  
+
   // Forum System Relations
-  topics             Topic[]
-  comments           Comment[]
+  topics                Topic[]
+  comments              Comment[]
   contentManagementLogs ContentManagementLog[]
-  
+
   // Donation Project Relations
   donationTransactions DonationTransaction[]
 }
@@ -247,31 +247,31 @@ model SubmissionFile {
 // ========================================
 
 model Event {
-  id            Int      @id @default(autoincrement())
-  name          String
-  description   String?
-  startDate     DateTime
-  endDate       DateTime?
-  location      String?
-  maxAttendees  Int?
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           Int       @id @default(autoincrement())
+  name         String
+  description  String?
+  startDate    DateTime
+  endDate      DateTime?
+  location     String?
+  maxAttendees Int?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   registrations EventRegistration[]
   entitlements  Entitlement[]
 }
 
 model EventRegistration {
-  id             Int      @id @default(autoincrement())
-  eventId        Int
-  userId         Int
-  registeredAt   DateTime @default(now())
+  id               Int      @id @default(autoincrement())
+  eventId          Int
+  userId           Int
+  registeredAt     DateTime @default(now())
   attendanceStatus String? // "registered" | "attended" | "absent"
-  
-  event          Event    @relation(fields: [eventId], references: [id])
-  user           User     @relation(fields: [userId], references: [id])
-  entitlements   Entitlement[]
+
+  event        Event         @relation(fields: [eventId], references: [id])
+  user         User          @relation(fields: [userId], references: [id])
+  entitlements Entitlement[]
 
   @@unique([eventId, userId])
 }
@@ -281,17 +281,17 @@ model EventRegistration {
 // ========================================
 
 model Donation {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  amount      Float
-  donatedAt   DateTime @default(now())
-  purpose     String?
-  status      String   @default("completed") // "pending" | "completed" | "failed"
-  
-  user        User     @relation(fields: [userId], references: [id])
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  amount    Float
+  donatedAt DateTime @default(now())
+  purpose   String?
+  status    String   @default("completed") // "pending" | "completed" | "failed"
+
+  user         User          @relation(fields: [userId], references: [id])
   entitlements Entitlement[]
-  shipments   Shipment[]
-  
+  shipments    Shipment[]
+
   @@map("Donation")
 }
 
@@ -301,16 +301,16 @@ model Donation {
 
 // ของที่ระลึกแต่ละชิ้น
 model SouvenirItem {
-  id           Int      @id @default(autoincrement())
-  sku          String   @unique        // โค้ดสินค้า เช่น CAP-ENGI-2025-BK
-  name         String
-  description  String?
-  category     String?                  // เช่น "กิจกรรม", "บริจาค"
-  imageUrl     String?
-  unit         String?                  // เช่น "ชิ้น", "ใบ", "เซ็ต"
+  id          Int     @id @default(autoincrement())
+  sku         String  @unique // โค้ดสินค้า เช่น CAP-ENGI-2025-BK
+  name        String
+  description String?
+  category    String? // เช่น "กิจกรรม", "บริจาค"
+  imageUrl    String?
+  unit        String? // เช่น "ชิ้น", "ใบ", "เซ็ต"
 
-  initialStock Int      @default(0)    // สต็อกเริ่มต้น
-  active       Boolean  @default(true)
+  initialStock Int     @default(0) // สต็อกเริ่มต้น
+  active       Boolean @default(true)
 
   // ความสัมพันธ์ฝั่งของที่ระลึก
   movements    StockMovement[]
@@ -318,8 +318,8 @@ model SouvenirItem {
   redemptions  Redemption[]
   shipments    Shipment[]
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // บันทึกการเคลื่อนไหวสต็อก (เติม/ตัดของ)
@@ -327,38 +327,38 @@ model SouvenirItem {
 model StockMovement {
   id        Int      @id @default(autoincrement())
   itemId    Int
-  delta     Int                     // + เพิ่มสต็อก, - ตัดสต็อก
-  reason    String?                 // "purchase" | "manual_adjust" | "redeem" | "ship"
-  refType   String?                 // "Redemption" | "Shipment" | ...
-  createdBy Int?                    // เก็บ userId ของ admin ก็ได้
+  delta     Int // + เพิ่มสต็อก, - ตัดสต็อก
+  reason    String? // "purchase" | "manual_adjust" | "redeem" | "ship"
+  refType   String? // "Redemption" | "Shipment" | ...
+  createdBy Int? // เก็บ userId ของ admin ก็ได้
   createdAt DateTime @default(now())
 
-  item      SouvenirItem @relation(fields: [itemId], references: [id])
+  item SouvenirItem @relation(fields: [itemId], references: [id])
 }
 
 // ใบสิทธิ์รับของของแต่ละคน (จากกิจกรรม หรือการบริจาค)
 model Entitlement {
-  id                  Int                @id @default(autoincrement())
+  id                  Int               @id @default(autoincrement())
   userId              Int
   itemId              Int
-  source              EntitlementSource  // EVENT | DONATION
-  eventId             Int?               // อ้างถึงกิจกรรม (ถ้ามาจาก EVENT)
-  eventRegistrationId Int?               // ถ้ามาจากกิจกรรม
-  donationId          Int?               // ถ้ามาจากบริจาค
+  source              EntitlementSource // EVENT | DONATION
+  eventId             Int? // อ้างถึงกิจกรรม (ถ้ามาจาก EVENT)
+  eventRegistrationId Int? // ถ้ามาจากกิจกรรม
+  donationId          Int? // ถ้ามาจากบริจาค
 
-  qtyGranted          Int      @default(1)  // ได้สิทธิ์ทั้งหมดกี่ชิ้น
-  qtyUsed             Int      @default(0)  // ใช้สิทธิ์ไปแล้วกี่ชิ้น
+  qtyGranted Int @default(1) // ได้สิทธิ์ทั้งหมดกี่ชิ้น
+  qtyUsed    Int @default(0) // ใช้สิทธิ์ไปแล้วกี่ชิ้น
 
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user                User               @relation(fields: [userId], references: [id])
-  item                SouvenirItem       @relation(fields: [itemId], references: [id])
-  event               Event?             @relation(fields: [eventId], references: [id])
-  eventRegistration   EventRegistration? @relation(fields: [eventRegistrationId], references: [id])
-  donation            Donation?          @relation(fields: [donationId], references: [id])
+  user              User               @relation(fields: [userId], references: [id])
+  item              SouvenirItem       @relation(fields: [itemId], references: [id])
+  event             Event?             @relation(fields: [eventId], references: [id])
+  eventRegistration EventRegistration? @relation(fields: [eventRegistrationId], references: [id])
+  donation          Donation?          @relation(fields: [donationId], references: [id])
 
-  redemptions         Redemption[]
+  redemptions Redemption[]
 
   @@index([userId, itemId])
 }
@@ -366,25 +366,25 @@ model Entitlement {
 // การแลกรับของจริง (ใช้ตอนสแกน QR หรือให้ของด้วยมือ)
 model Redemption {
   id            Int          @id @default(autoincrement())
-  entitlementId Int          // สิทธิ์ที่ใช้
+  entitlementId Int // สิทธิ์ที่ใช้
   itemId        Int
-  userId        Int          // เจ้าของสิทธิ์
-  method        RedeemMethod @default(QR_SCAN)  // QR_SCAN | MANUAL
+  userId        Int // เจ้าของสิทธิ์
+  method        RedeemMethod @default(QR_SCAN) // QR_SCAN | MANUAL
   redeemedAt    DateTime     @default(now())
-  handledBy     Int?         // เก็บ userId ของเจ้าหน้าที่
+  handledBy     Int? // เก็บ userId ของเจ้าหน้าที่
 
-  entitlement   Entitlement  @relation(fields: [entitlementId], references: [id])
-  item          SouvenirItem @relation(fields: [itemId], references: [id])
-  user          User         @relation(fields: [userId], references: [id])
+  entitlement Entitlement  @relation(fields: [entitlementId], references: [id])
+  item        SouvenirItem @relation(fields: [itemId], references: [id])
+  user        User         @relation(fields: [userId], references: [id])
 }
 
 // การจัดส่งของที่ระลึก (สำหรับสายบริจาค/ส่งถึงบ้าน)
 model Shipment {
-  id           Int        @id @default(autoincrement())
-  donationId   Int        // มาจากการบริจาคอันไหน
-  userId       Int        // ผู้รับ (เจ้าของสิทธิ์)
-  itemId       Int
-  qty          Int        @default(1)
+  id         Int @id @default(autoincrement())
+  donationId Int // มาจากการบริจาคอันไหน
+  userId     Int // ผู้รับ (เจ้าของสิทธิ์)
+  itemId     Int
+  qty        Int @default(1)
 
   receiverName String
   addressLine  String
@@ -394,15 +394,15 @@ model Shipment {
   postalCode   String
   phone        String
 
-  status       ShipStatus @default(PENDING)    // PENDING | DELIVERED 
-  trackingNo   String?
+  status     ShipStatus @default(PENDING) // PENDING | DELIVERED 
+  trackingNo String?
 
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  donation     Donation     @relation(fields: [donationId], references: [id])
-  user         User         @relation(fields: [userId], references: [id])
-  item         SouvenirItem @relation(fields: [itemId], references: [id])
+  donation Donation     @relation(fields: [donationId], references: [id])
+  user     User         @relation(fields: [userId], references: [id])
+  item     SouvenirItem @relation(fields: [itemId], references: [id])
 }
 
 // ========================================
@@ -452,7 +452,7 @@ enum ContentCategoryType {
   GENERAL
 }
 
-enum SouvenirOption {
+enum Option {
   HAVE
   NOT
 }
@@ -469,21 +469,22 @@ enum TransactionStatus {
 
 // ฟอร์มจองงานกิจกรรม/อีเวนต์
 model BookingForm {
-  id          Int         @id @default(autoincrement())
+  id          Int        @id @default(autoincrement())
   Type        EventType?
   BatchNumber Int?
   TotalSeats  Int?
   StartDate   DateTime?
   EndDate     DateTime?
   PriceType   PriceMode?
-  batchPrices Json?       // ใช้ตอน PriceType = BY_BATCH
-  Souvenir    SouvenirOption? // ฟอร์มนี้มีของที่ระลึกไหม (HAVE/NOT)
-  
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  singlePrice Int? // ใช้เมื่อ PriceType = SINGLE
+  batchPrices Json? // ใช้ตอน PriceType = BY_BATCH
+  Souvenir    Option? // ฟอร์มนี้มีของที่ระลึกไหม (HAVE/NOT)
 
-  contents    Content[]
-  bookings    Booking[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contents Content[]
+  bookings Booking[]
 }
 
 // ข้อมูลที่ผู้ใช้กรอกในแต่ละการจอง
@@ -499,7 +500,7 @@ model BookingField {
   Souvenir     String?
   Note         String?
 
-  booking      Booking? // 1:1 relation from Booking side
+  booking Booking? // 1:1 relation from Booking side
 }
 
 // การจองของผู้ใช้
@@ -511,86 +512,70 @@ model Booking {
   BookingFieldID    Int?              @unique
   PaymentID         Int?              @unique
   transactionStatus TransactionStatus @default(PENDING)
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
 
-  user              User?             @relation(fields: [Userid], references: [id])
-  content           Content?          @relation(fields: [ContentID], references: [id])
-  bookingField      BookingField?     @relation(fields: [BookingFieldID], references: [id])
-  payment           Payment?          @relation(fields: [PaymentID], references: [id])
-  bookingForm       BookingForm?      @relation(fields: [bookingFormId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  bookingFormId     Int?
-  attendees         Attendee[]
+  user         User?         @relation(fields: [Userid], references: [id])
+  content      Content?      @relation(fields: [ContentID], references: [id])
+  bookingField BookingField? @relation(fields: [BookingFieldID], references: [id])
+  payment      Payment?      @relation(fields: [PaymentID], references: [id])
+  bookingForm  BookingForm?  @relation(fields: [bookingFormId], references: [id])
+
+  bookingFormId Int?
+  attendees     Attendee[]
 }
 
 // ผู้เข้าร่วมในแต่ละการจอง
 model Attendee {
-  id        Int      @id @default(autoincrement())
+  id        Int    @id @default(autoincrement())
   Name      String
   bookingId Int
-  
+
   createdAt DateTime @default(now())
 
-  booking   Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  checkins  CheckinLog[]
+  booking  Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  checkins CheckinLog[]
 }
 
 // บันทึกการเช็คอิน
 model CheckinLog {
-  id         Int       @id @default(autoincrement())
-  Date       DateTime  @default(now())
+  id         Int      @id @default(autoincrement())
+  Date       DateTime @default(now())
   Name       String?
   AttendeeID Int
 
-  attendee   Attendee  @relation(fields: [AttendeeID], references: [id], onDelete: Cascade)
+  attendee Attendee @relation(fields: [AttendeeID], references: [id], onDelete: Cascade)
 }
 
 // เนื้อหา/ข่าวสาร/กิจกรรม
 model Content {
   id            Int                  @id @default(autoincrement())
   Description   String?
-  Date          DateTime             @default(now())
-  Booking       String?
-  Author        String?
+  categories    ContentCategoryType?
+  Booking       Option?
   Userid        Int?
   BookingFormID Int?
-  StatusID      Int?
-  categories    ContentCategoryType?
-  
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
 
-  user          User?                @relation(fields: [Userid], references: [id])
-  bookingForm   BookingForm?         @relation(fields: [BookingFormID], references: [id])
-  status        Status?              @relation(fields: [StatusID], references: [StatusID])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  pictures      PictureContent[]
-  bookings      Booking[]
+  user        User?        @relation(fields: [Userid], references: [id])
+  bookingForm BookingForm? @relation(fields: [BookingFormID], references: [id])
+
+  pictures PictureContent[]
+  bookings Booking[]
 }
 
 // รูปภาพที่เกี่ยวข้องกับเนื้อหา
 model PictureContent {
-  id        Int      @id @default(autoincrement())
+  id        Int    @id @default(autoincrement())
   Path      String
   ContentID Int
-  
+
   createdAt DateTime @default(now())
 
-  content   Content  @relation(fields: [ContentID], references: [id], onDelete: Cascade)
-}
-
-// สถานะของเนื้อหา
-model Status {
-  StatusID    Int       @id @default(autoincrement())
-  StatusName  String
-  Description String?
-  
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  contents    Content[]
+  content Content @relation(fields: [ContentID], references: [id], onDelete: Cascade)
 }
 
 // การชำระเงิน
@@ -598,14 +583,14 @@ model Payment {
   id            Int               @id @default(autoincrement())
   amount        Float
   paymentDate   DateTime          @default(now())
-  paymentMethod String?           // เช่น "credit_card", "bank_transfer", "qr_code"
+  paymentMethod String? // เช่น "credit_card", "bank_transfer", "qr_code"
   status        TransactionStatus @default(PENDING)
-  referenceNo   String?           // เลขที่อ้างอิง/slip
-  
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  referenceNo   String? // เลขที่อ้างอิง/slip
 
-  booking       Booking?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  booking Booking?
 }
 
 // ========================================
@@ -629,18 +614,18 @@ enum SummarySubmissionStatus {
 
 // ผู้จัดการโครงการ
 model ProjectManager {
-  id          Int      @id @default(autoincrement())
+  id          Int     @id @default(autoincrement())
   firstName   String
   lastName    String
   department  String?
   position    String?
   phoneNumber String?
   email       String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
-  proposals   ProjectProposal[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  proposals ProjectProposal[]
 }
 
 // รอบงบประมาณ
@@ -651,44 +636,44 @@ model BudgetRound {
   totalBudget Float?
   startDate   DateTime?
   endDate     DateTime?
-  
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
 
-  creatorId   Int?
-  creator     User?     @relation(fields: [creatorId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
-  proposals      ProjectProposal[]
+  creatorId Int?
+  creator   User? @relation(fields: [creatorId], references: [id])
+
+  proposals       ProjectProposal[]
   budgetDonations BudgetDonation[]
 }
 
 // ข้อเสนอโครงการ
 model ProjectProposal {
-  id                 Int                   @id @default(autoincrement())
+  id                 Int       @id @default(autoincrement())
   projectName        String
   objective          String?
-  description        String?               @db.Text
+  description        String?   @db.Text
   requestedAmount    Float?
   projectStartDate   DateTime?
   projectEndDate     DateTime?
   scoreTotal         Int?
   responsibilityUnit String?
   coverFilePath      String?
-  
-  status             ProjectProposalStatus @default(DRAFT)
 
-  createdAt          DateTime              @default(now())
-  updatedAt          DateTime              @updatedAt
-  deletedAt          DateTime?
+  status ProjectProposalStatus @default(DRAFT)
 
-  budgetRoundId      Int?
-  managerId          Int?
-  staffId            Int?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
-  budgetRound        BudgetRound?    @relation(fields: [budgetRoundId], references: [id])
-  manager            ProjectManager? @relation(fields: [managerId], references: [id])
-  staff              User?           @relation("StaffProposals", fields: [staffId], references: [id])
+  budgetRoundId Int?
+  managerId     Int?
+  staffId       Int?
+
+  budgetRound BudgetRound?    @relation(fields: [budgetRoundId], references: [id])
+  manager     ProjectManager? @relation(fields: [managerId], references: [id])
+  staff       User?           @relation("StaffProposals", fields: [staffId], references: [id])
 
   summarySubmissions SummarySubmission[]
   votes              ProjectVote[]
@@ -696,64 +681,64 @@ model ProjectProposal {
 
 // การส่งสรุปโครงการ
 model SummarySubmission {
-  id                 Int                     @id @default(autoincrement())
+  id                 Int       @id @default(autoincrement())
   totalActualExpense Float?
   summaryFilePath    String?
   submissionDate     DateTime?
-  
-  status             SummarySubmissionStatus @default(DRAFT)
 
-  createdAt          DateTime                @default(now())
-  updatedAt          DateTime                @updatedAt
-  deletedAt          DateTime?
+  status SummarySubmissionStatus @default(DRAFT)
 
-  proposalId         Int
-  submitterId        Int?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
-  proposal           ProjectProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
-  submitter          User?           @relation(fields: [submitterId], references: [id])
-  images             SubmissionImage[]
+  proposalId  Int
+  submitterId Int?
+
+  proposal  ProjectProposal   @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  submitter User?             @relation(fields: [submitterId], references: [id])
+  images    SubmissionImage[]
 }
 
 // รูปภาพสรุปโครงการ
 model SubmissionImage {
-  id           Int               @id @default(autoincrement())
-  imagePath    String
-  
-  createdAt    DateTime          @default(now())
-  
+  id        Int    @id @default(autoincrement())
+  imagePath String
+
+  createdAt DateTime @default(now())
+
   submissionId Int
   submission   SummarySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 }
 
 // การบริจาคเข้ารอบงบประมาณ
 model BudgetDonation {
-  id            Int         @id @default(autoincrement())
-  amount        Float
-  
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  deletedAt     DateTime?
+  id     Int   @id @default(autoincrement())
+  amount Float
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   budgetRoundId Int
   userId        Int
 
-  budgetRound   BudgetRound @relation(fields: [budgetRoundId], references: [id])
-  user          User        @relation(fields: [userId], references: [id])
+  budgetRound BudgetRound @relation(fields: [budgetRoundId], references: [id])
+  user        User        @relation(fields: [userId], references: [id])
 }
 
 // การโหวตโครงการ
 model ProjectVote {
-  id            Int             @id @default(autoincrement())
-  voteWeight    Int             @default(1)
-  
-  alumniId      Int
-  proposalId    Int
+  id         Int @id @default(autoincrement())
+  voteWeight Int @default(1)
 
-  alumni        User            @relation(fields: [alumniId], references: [id])
-  proposal      ProjectProposal @relation(fields: [proposalId], references: [id])
+  alumniId   Int
+  proposalId Int
 
-  createdAt     DateTime        @default(now())
+  alumni   User            @relation(fields: [alumniId], references: [id])
+  proposal ProjectProposal @relation(fields: [proposalId], references: [id])
+
+  createdAt DateTime @default(now())
 
   @@unique([alumniId, proposalId])
 }
@@ -764,13 +749,13 @@ model ProjectVote {
 
 // หมวดหมู่กระทู้
 model Category {
-  id           Int      @id @default(autoincrement())
+  id           Int    @id @default(autoincrement())
   categoryname String
-  
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
 
-  topics       Topic[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  topics Topic[]
 }
 
 // กระทู้หลัก
@@ -783,16 +768,16 @@ model Topic {
   createddate      DateTime    @default(now())
   lastactivitydate DateTime    @default(now())
   commentcount     Int         @default(0)
-  
-  user_id          Int
-  category_id      Int
 
-  user             User        @relation(fields: [user_id], references: [id])
-  category         Category    @relation(fields: [category_id], references: [id])
+  user_id     Int
+  category_id Int
 
-  comments         Comment[]
-  editHistory      TopicEditHistory[]
-  
+  user     User     @relation(fields: [user_id], references: [id])
+  category Category @relation(fields: [category_id], references: [id])
+
+  comments    Comment[]
+  editHistory TopicEditHistory[]
+
   @@index([user_id])
   @@index([category_id])
   @@index([status])
@@ -806,13 +791,13 @@ model Comment {
   createddate  DateTime      @default(now())
   status       CommentStatus @default(ACTIVE)
   commentcount Int           @default(0)
-  
-  topic_id     Int
-  user_id      Int
 
-  topic        Topic         @relation(fields: [topic_id], references: [id], onDelete: Cascade)
-  user         User          @relation(fields: [user_id], references: [id])
-  
+  topic_id Int
+  user_id  Int
+
+  topic Topic @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [user_id], references: [id])
+
   @@index([topic_id])
   @@index([user_id])
   @@index([status])
@@ -824,28 +809,28 @@ model TopicEditHistory {
   editedByUserID String
   oldcontent     String   @db.Text
   editdate       DateTime @default(now())
-  
-  staffuser_id   Int?
-  topic_id       Int
 
-  topic          Topic    @relation(fields: [topic_id], references: [id], onDelete: Cascade)
-  
+  staffuser_id Int?
+  topic_id     Int
+
+  topic Topic @relation(fields: [topic_id], references: [id], onDelete: Cascade)
+
   @@index([topic_id])
 }
 
 // Audit Log สำหรับการจัดการเนื้อหา
 model ContentManagementLog {
-  id           Int                 @id @default(autoincrement())
-  targettype   ContentTargetType
-  TargetID     Int
-  status       ContentActionStatus
-  reason       String?
-  actiondate   DateTime            @default(now())
-  
+  id         Int                 @id @default(autoincrement())
+  targettype ContentTargetType
+  TargetID   Int
+  status     ContentActionStatus
+  reason     String?
+  actiondate DateTime            @default(now())
+
   staffuser_id Int
 
-  staff        User                @relation(fields: [staffuser_id], references: [id])
-  
+  staff User @relation(fields: [staffuser_id], references: [id])
+
   @@index([targettype, TargetID])
   @@index([staffuser_id])
 }
@@ -856,23 +841,23 @@ model ContentManagementLog {
 
 // โครงการระดมทุน
 model DonationProject {
-  id                 Int                 @id @default(autoincrement())
-  title              String
-  description        String              @db.Text
-  goalAmount         Float
-  currentAmount      Float               @default(0)
-  startDate          DateTime
-  endDate            DateTime
-  ownerName          String
-  contact            String
-  status             ProjectStatus       @default(OPEN)
-  posterUrl          String?
-  
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  id            Int           @id @default(autoincrement())
+  title         String
+  description   String        @db.Text
+  goalAmount    Float
+  currentAmount Float         @default(0)
+  startDate     DateTime
+  endDate       DateTime
+  ownerName     String
+  contact       String
+  status        ProjectStatus @default(OPEN)
+  posterUrl     String?
 
-  transactions       DonationTransaction[]
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions DonationTransaction[]
+
   @@index([status])
   @@index([startDate])
   @@index([endDate])
@@ -880,72 +865,72 @@ model DonationProject {
 
 // วิธีการชำระเงิน
 model PaymentMethodRecord {
-  id                 Int                 @id @default(autoincrement())
-  methodName         PaymentMethodType   @default(PROMPTPAY)
-  accountNumber      String?
-  provider           String?
-  isActive           Boolean             @default(true)
-  
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  id            Int               @id @default(autoincrement())
+  methodName    PaymentMethodType @default(PROMPTPAY)
+  accountNumber String?
+  provider      String?
+  isActive      Boolean           @default(true)
 
-  payments           PaymentRecord[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payments PaymentRecord[]
 }
 
 // บันทึกการชำระเงิน
 model PaymentRecord {
-  id                 Int                 @id @default(autoincrement())
-  
+  id Int @id @default(autoincrement())
+
   // Omise/Payment Gateway ID
-  paymentRefId       String?             @unique
-  
-  amount             Float
-  transactionCode    String?
-  paymentSlipUrl     String?             // url ของสลิป
-  
-  paymentStatus      PaymentStatusType   @default(CONFIRMED)
-  
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  paymentRefId String? @unique
+
+  amount          Float
+  transactionCode String?
+  paymentSlipUrl  String? // url ของสลิป
+
+  paymentStatus PaymentStatusType @default(CONFIRMED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  paymentMethodId    Int?
-  paymentMethod      PaymentMethodRecord? @relation(fields: [paymentMethodId], references: [id])
-  
-  transaction        DonationTransaction?
-  
+  paymentMethodId Int?
+  paymentMethod   PaymentMethodRecord? @relation(fields: [paymentMethodId], references: [id])
+
+  transaction DonationTransaction?
+
   @@index([paymentStatus])
   @@index([createdAt])
 }
 
 // ธุรกรรมการบริจาค
 model DonationTransaction {
-  id                 Int                 @id @default(autoincrement())
-  
-  amount             Float
-  status             TransactionStatus   @default(PENDING)
-  
-  message            String?             @db.Text
-  isPublic           Boolean             @default(true)
-  
+  id Int @id @default(autoincrement())
+
+  amount Float
+  status TransactionStatus @default(PENDING)
+
+  message  String? @db.Text
+  isPublic Boolean @default(true)
+
   // ข้อมูลผู้บริจาค (สำหรับผู้ไม่ได้ Login)
-  donorName          String?
-  donorEmail         String?
-  donorPhone         String?
-  
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
+  donorName  String?
+  donorEmail String?
+  donorPhone String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  userId             Int?
-  user               User?               @relation(fields: [userId], references: [id])
-  
-  projectId          Int
-  project            DonationProject     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  paymentId          Int?                @unique
-  paymentRecord      PaymentRecord?      @relation(fields: [paymentId], references: [id])
-  
+  userId Int?
+  user   User? @relation(fields: [userId], references: [id])
+
+  projectId Int
+  project   DonationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  paymentId     Int?           @unique
+  paymentRecord PaymentRecord? @relation(fields: [paymentId], references: [id])
+
   @@index([userId])
   @@index([projectId])
   @@index([status])

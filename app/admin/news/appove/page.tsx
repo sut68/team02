@@ -68,25 +68,26 @@ export function AdminSubmissionPage() {
     load();
   }, []);
 
+
   const statusLabel = (status: VerifyStatus) => {
     switch (status) {
       case "APPROVED":
-        return "ผ่าน";
+        return "อนุมัติแล้ว";
       case "REJECTED":
-        return "ไม่ผ่าน";
+        return "ไม่อนุมัติ";
       default:
-        return "รอตรวจสอบ";
+        return "รอดำเนินการ";
     }
   };
 
   const statusColor = (status: VerifyStatus) => {
     switch (status) {
       case "APPROVED":
-        return "bg-orange-500";
+        return "bg-orange-100 text-orange-700 border border-orange-300";
       case "REJECTED":
-        return "bg-gray-500";
-      default:
-        return "bg-yellow-400";
+        return "bg-red-100 text-red-700 border border-red-300";
+      default: // PENDING
+        return "bg-gray-100 text-gray-700 border border-gray-300";
     }
   };
 
@@ -190,7 +191,7 @@ export function AdminSubmissionPage() {
                 <TableHead>วัน/เดือน/ปี</TableHead>
                 <TableHead>ชื่อ</TableHead>
                 <TableHead>รายละเอียด</TableHead>
-                <TableHead>ผลการอนุมัติ</TableHead>
+                <TableHead>สถานะ</TableHead>
                 <TableHead>หมายเหตุ</TableHead>
               </TableRow>
             </TableHeader>
@@ -250,31 +251,37 @@ export function AdminSubmissionPage() {
                         )}
                       </TableCell>
 
-                      {/* สถานะ */}
+                      {/* สถานะ = select แบบเม็ดสี */}
                       <TableCell>
                         <div className="flex flex-col gap-1">
-                          <select
-                            className="border rounded-lg px-2 py-1 text-sm"
-                            value={currentStatus}
-                            onChange={(e) =>
-                              handleChangeStatus(
-                                item.id,
-                                e.target.value as VerifyStatus
-                              )
-                            }
-                          >
-                            <option value="PENDING">รอตรวจสอบ</option>
-                            <option value="APPROVED">ผ่าน</option>
-                            <option value="REJECTED">ไม่ผ่าน</option>
-                          </select>
-
-                          <span
-                            className={`px-2 py-0.5 text-white rounded-full text-[10px] inline-block ${statusColor(
-                              currentStatus
-                            )}`}
-                          >
-                            {statusLabel(currentStatus)}
-                          </span>
+                          <div className="relative inline-block">
+                            <select
+                              className={`pl-4 pr-8 py-1 rounded-full text-sm appearance-none cursor-pointer ${statusColor(
+                                currentStatus
+                              )}`}
+                              value={currentStatus}
+                              onChange={(e) =>
+                                handleChangeStatus(
+                                  item.id,
+                                  e.target.value as VerifyStatus
+                                )
+                              }
+                            >
+                              <option value="PENDING">
+                                {statusLabel("PENDING")}
+                              </option>
+                              <option value="APPROVED">
+                                {statusLabel("APPROVED")}
+                              </option>
+                              <option value="REJECTED">
+                                {statusLabel("REJECTED")}
+                              </option>
+                            </select>
+                            {/* เล็กๆ ทำไอคอนลูกศรขวา */}
+                            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-gray-500">
+                              ▾
+                            </span>
+                          </div>
                         </div>
                       </TableCell>
 

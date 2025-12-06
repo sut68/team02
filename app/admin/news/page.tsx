@@ -1,7 +1,7 @@
 // app/dashboard/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; 
 import Link from 'next/link';
 import {
   Table,
@@ -13,7 +13,7 @@ import {
 } from '../../components/tables/Table';
 import { Card, CardHeader, CardContent } from '../../components/ui/Card';
 
-import { AdminSubmissionPage } from '../../admin/news/appove/page'; 
+import { AdminSubmissionPage } from '../../admin/news/appove/page';
 import { FileText, PlusCircle, List } from 'lucide-react';
 
 // ----------------------------------------------------------------------
@@ -62,14 +62,8 @@ const DashboardMenuCard = ({
 };
 
 // ----------------------------------------------------------------------
-// Mock Data
+// Mock Data (ยังใช้เฉพาะฝั่ง registrations)
 // ----------------------------------------------------------------------
-const mockAllPostsData = [
-  { id: 1, title: 'แข่งขัน DSA Mascot Contest 2025', author: 'งานกิจกรรม', status: 'เผยแพร่' },
-  { id: 2, title: 'ทุนการศึกษาประจำปี 2568', author: 'งานการเงิน', status: 'ร่าง' },
-  { id: 3, title: 'งานเลี้ยงรุ่นวิศวกรรมคอมพิวเตอร์', author: 'ศิษย์เก่าสัมพันธ์', status: 'เผยแพร่' },
-];
-
 const mockAllRegistrationData = [
   { id: 1, name: 'งานเลี้ยงรุ่นวิศวกรรมคอมพิวเตอร์', registrations: 120 },
   { id: 2, name: 'โครงการฝึกอบรมเชิงปฏิบัติการ AI', registrations: 45 },
@@ -78,19 +72,64 @@ const mockAllRegistrationData = [
 
 type ViewType = 'all_registrations' | 'all_posts' | 'joined_registrations';
 
+// row ที่ใช้ render ในตาราง “โพสต์ทั้งหมด”
+type PostRow = {
+  id: number;
+  title: string;
+  author: string;
+  status: string;
+};
+
 // ----------------------------------------------------------------------
 // Dashboard Page
 // ----------------------------------------------------------------------
 export default function DashboardPage() {
   const [currentView, setCurrentView] = useState<ViewType>('all_registrations');
 
+  // ✅ state สำหรับโพสต์ที่ดึงจาก DB
+  const [posts, setPosts] = useState<PostRow[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState<boolean>(false);
+
+  // ✅ ดึง Content จาก /api/content แค่ครั้งแรก
+  useEffect(() => {
+    const fetchContents = async () => {
+      try {
+        setLoadingPosts(true);
+        const res = await fetch('/api/content'); // ใช้ API ที่ bro สร้าง
+        const data = await res.json();
+
+        if (!res.ok) {
+          console.error('Error fetching contents:', data);
+          return;
+        }
+
+        // map ข้อมูลจาก Content ให้มาอยู่ในรูป PostRow
+        const mapped: PostRow[] = (data.contents || []).map((c: any) => ({
+          id: c.id,
+          title: c.Description || '(ไม่มีชื่อเรื่อง)',
+          author: c.user?.fullName || 'ไม่ระบุ',
+          status: c.Booking === 'HAVE' ? 'ต้องลงทะเบียน' : 'ทั่วไป',
+        }))
+        .sort((a: PostRow, b: PostRow) => a.id - b.id);
+
+        setPosts(mapped);
+      } catch (err) {
+        console.error('Unexpected error fetching contents:', err);
+      } finally {
+        setLoadingPosts(false);
+      }
+    };
+
+    fetchContents();
+  }, []);
+
   const renderTableContent = () => {
     switch (currentView) {
       case 'all_posts':
         return {
           title: 'รายการโพสต์ทั้งหมด',
-          headers: ['ลำดับ', 'ชื่อกิจกรรม', 'ผู้สร้าง', 'สถานะ'],
-          data: mockAllPostsData.map((p) => [p.id, p.title, p.author, p.status]),
+          headers: ['ลำดับ', 'ชื่อกิจกรรม / เนื้อหา', 'ผู้สร้าง', 'สถานะ'],
+          data: posts.map((p) => [p.id, p.title, p.author, p.status]),
         };
 
       case 'joined_registrations':
@@ -115,7 +154,6 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-10 space-y-12">
-
       {/* --------------------------------------------------------------- */}
       {/*       ⬆️  Admin Submission Section (ยังคงอยู่ด้านบน)        */}
       {/* --------------------------------------------------------------- */}
@@ -159,43 +197,51 @@ export default function DashboardPage() {
           <div className="space-y-3">
             <h3 className="text-xl font-medium text-gray-800">{title}</h3>
 
-            
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    {headers.map((h, idx) => (
-                      <TableHead key={idx}>{h}</TableHead>
-                    ))}
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  {headers.map((h, idx) => (
+                    <TableHead key={idx}>{h}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {/* แสดงสถานะกำลังโหลดเฉพาะตอนอยู่หน้าโพสต์ทั้งหมด */}
+                {currentView === 'all_posts' && loadingPosts && (
+                  <TableRow>
+                    <TableCell colSpan={headers.length} className="py-4 text-gray-500">
+                      กำลังโหลดข้อมูลโพสต์...
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
+                )}
 
-                <TableBody>
-                  {data.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={headers.length} className="py-4 text-gray-500">
-                        ยังไม่มีข้อมูล
-                      </TableCell>
+                {!loadingPosts && data.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={headers.length} className="py-4 text-gray-500">
+                      ยังไม่มีข้อมูล
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  !loadingPosts &&
+                  data.map((row, rowIdx) => (
+                    <TableRow key={rowIdx}>
+                      {row.map((cell, cellIdx) => (
+                        <TableCell key={cellIdx} className={cellIdx === 0 ? 'font-medium' : ''}>
+                          {cell}
+                        </TableCell>
+                      ))}
                     </TableRow>
-                  ) : (
-                    data.map((row, rowIdx) => (
-                      <TableRow key={rowIdx}>
-                        {row.map((cell, cellIdx) => (
-                          <TableCell key={cellIdx} className={cellIdx === 0 ? 'font-medium' : ''}>
-                            {cell}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                  ))
+                )}
+              </TableBody>
+            </Table>
 
-              {/* ลูกศรล่างให้เหมือนกัน */}
-              <div className="flex justify-end px-4 py-1 text-xs text-gray-400">
-                &raquo;
-              </div>
+            {/* ลูกศรล่างให้เหมือนกัน */}
+            <div className="flex justify-end px-4 py-1 text-xs text-gray-400">
+              &raquo;
             </div>
-         
+          </div>
         </CardContent>
       </Card>
     </div>
