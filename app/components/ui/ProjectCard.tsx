@@ -313,7 +313,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
 
       {/* Modal ยืนยันเปลี่ยนสถานะ */}
       {isConfirmOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl transform transition-all scale-100">
             <div className="flex flex-col items-center text-center gap-4">
               <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">

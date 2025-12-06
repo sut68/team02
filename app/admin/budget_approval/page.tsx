@@ -137,15 +137,15 @@ export default function ProjectManagementPage() {
 
         {/* Section Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">
-            โครงการส่งพิจารณา ({filteredProjects.length})
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+            โครงการส่งพิจารณา
           </h2>
           <Link
             href="/admin/budget_approval/create"
             className="bg-orange-500 text-white px-6 py-3 rounded-full hover:bg-orange-600 transition flex items-center gap-2 shadow-md hover:shadow-lg"
           >
             <CirclePlus className="w-6 h-6" />
-            เพิ่มโครงการ
+            <span className="font-semibold">เพิ่มโครงการ</span>
           </Link>
         </div>
 

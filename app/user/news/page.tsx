@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useEffect, useState } from "react";
 import { Card, CardHeader, CardContent } from '../../components/ui/Card';
 import { PrimaryButton } from '../../components/ui/Button';
+import { SouvenirSection } from '../souvenir/SouvenirSection';
 
 // ** Mock Data **
 export const mockData = {
@@ -99,6 +100,7 @@ export function News() {
   const { featured, secondary, archives, upcoming } = mockData;
   const { isLoggedIn, isAdmin, isUser, loading } = useAuth();
   return (
+    <>
     <section className="container mx-auto mb-16 px-4 py-0 ">
       {/* 🔶 Full-width Banner */}
             <div className="relative w-screen h-[500px] left-[50%] right-[50%] mb-25 -ml-[50vw] -mr-[50vw] overflow-hidden">
@@ -292,6 +294,12 @@ export function News() {
 
 
     </section>
+
+    {/* ส่วนของที่ระลึก */}
+    <div id="souvenir" className="scroll-mt-28">
+      <SouvenirSection isAuthenticated={isLoggedIn} />
+    </div>
+  </>
   );
 }
 

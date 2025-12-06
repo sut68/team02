@@ -1,20 +1,14 @@
 import Link from 'next/link';
 import React from 'react';
 import { News } from './user/news/page';
-import { SouvenirSection } from './user/souvenir/SouvenirSection';
+import { cookies } from 'next/headers';
 
 // นี่คือเนื้อหาหลักของหน้าแรก (Home Page)
-export default function HomePage() {
+export default async function HomePage() {
   return (
-
     <div className="min-h-screen">
       {/* ส่วนข่าวสารและกิจกรรม */}
       <News />
-      
-      {/* ส่วนของที่ระลึก (มี anchor สำหรับเลื่อนจากเมนู) */}
-      <div id="souvenir" className="scroll-mt-28">
-        <SouvenirSection />
-      </div>
     </div>
   );
 } 
