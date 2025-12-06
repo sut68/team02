@@ -1,11 +1,11 @@
+// app/create-project/page.tsx
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Image as ImageIcon } from 'lucide-react';
 import { ProjectProposal, ProjectManager } from '@/app/types/budget_approval';
-// ❌ ลบ import actions เดิมออก
-// import { createProjectProposal, createProjectManager } from '@/app/lib/actions';
+import { createProjectProposal, createProjectManager } from '@/app/lib/actions';
 
 import { Input } from '@/app/components/ui/Input';
 import { InputIcon } from '@/app/components/ui/InputIcon';
@@ -64,9 +64,7 @@ export default function CreateProjectPage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setCoverFilePreview(reader.result as string);
-        // ในสถานการณ์จริง ควรมีการ upload file ไป API และได้ path กลับมา
-        // อันนี้จำลอง path ไปก่อน หรือถ้าใช้ API upload-poster ที่ทำไว้แล้วก็สามารถเรียกใช้ได้
-        setProjectData(prev => ({ ...prev, coverFilePath: `/budget/uploads/${file.name}` }));
+        setProjectData(prev => ({ ...prev, coverFilePath: `/uploads/${file.name}` }));
         if (errors.coverFilePath) setErrors(prev => { const n = {...prev}; delete n.coverFilePath; return n; });
       };
       reader.readAsDataURL(file);
@@ -87,8 +85,8 @@ export default function CreateProjectPage() {
             newErrors.projectEndDate = 'วันสิ้นสุดต้องไม่ก่อนวันเริ่มต้น';
         }
     }
-    // if (!projectData.description.trim()) newErrors.description = 'กรุณาระบุรายละเอียด';
-    // if (!projectData.coverFilePath) newErrors.coverFilePath = 'กรุณาอัปโหลดรูปภาพปก';
+    if (!projectData.description.trim()) newErrors.description = 'กรุณาระบุรายละเอียด';
+    if (!projectData.coverFilePath) newErrors.coverFilePath = 'กรุณาอัปโหลดรูปภาพปก';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -102,10 +100,10 @@ export default function CreateProjectPage() {
     if (!managerData.department.trim()) newErrors.department = 'กรุณาระบุสังกัด';
     if (!managerData.position.trim()) newErrors.position = 'กรุณาระบุตำแหน่ง';
     if (!managerData.phoneNumber.trim()) newErrors.phoneNumber = 'กรุณาระบุเบอร์โทร';
-    // else if (!/^\d{9,10}$/.test(managerData.phoneNumber.replace(/-/g, ''))) newErrors.phoneNumber = 'เบอร์โทรศัพท์ไม่ถูกต้อง';
+    else if (!/^\d{9,10}$/.test(managerData.phoneNumber.replace(/-/g, ''))) newErrors.phoneNumber = 'เบอร์โทรศัพท์ไม่ถูกต้อง';
     
     if (!managerData.email.trim()) newErrors.email = 'กรุณาระบุอีเมล';
-    // else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(managerData.email)) newErrors.email = 'รูปแบบอีเมลไม่ถูกต้อง';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(managerData.email)) newErrors.email = 'รูปแบบอีเมลไม่ถูกต้อง';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -128,23 +126,12 @@ export default function CreateProjectPage() {
 
     setIsSubmitting(true);
     try {
-      // ✅ ส่งข้อมูลไปยัง API แทนการใช้ actions
-      const response = await fetch('/api/project-proposal', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...projectData,
-          manager: managerData // ส่งข้อมูล manager ไปพร้อมกันเพื่อให้ API สร้าง
-        }),
-      });
-
-      if (response.ok) {
+      const projectRes = await createProjectProposal(projectData);
+      if (projectRes.success && projectRes.ppid) {
+        await createProjectManager(projectRes.ppid, managerData);
+        
+        // เปิด Modal เมื่อสำเร็จ
         setShowSuccessModal(true); 
-      } else {
-        const data = await response.json();
-        throw new Error(data.error || 'API Error');
       }
     } catch (error) {
       console.error(error);
@@ -156,6 +143,7 @@ export default function CreateProjectPage() {
 
   const handleModalClose = () => {
       setShowSuccessModal(false);
+      // แก้ไขจาก budget_appoval เป็น budget_approval
       router.push('/admin/budget_approval'); 
   };
 
@@ -217,13 +205,13 @@ export default function CreateProjectPage() {
               </div>
 
               <div>
-                <label className={labelStyle}>รายละเอียดเพิ่มเติม</label>
+                <label className={labelStyle}>รายละเอียดเพิ่มเติม <span className="text-red-500">*</span></label>
                 <Textarea name="description" value={projectData.description} onChange={handleProjectChange} className={`rounded-3xl min-h-[100px] ${errors.description ? 'border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500' : 'border-gray-300 focus-visible:border-orange-500 focus-visible:ring-orange-500'}`} />
                 {errors.description && <p className="text-red-500 text-xs mt-1 ml-4">{errors.description}</p>}
               </div>
 
               <div>
-                <label className={labelStyle}>ภาพปก/ภาพโปสเตอร์กิจกรรม</label>
+                <label className={labelStyle}>ภาพปก/ภาพโปสเตอร์กิจกรรม <span className="text-red-500">*</span></label>
                 <div className={`mt-2 border rounded-3xl h-64 flex flex-col items-center justify-center relative overflow-hidden bg-white hover:bg-orange-50 transition-colors cursor-pointer ${errors.coverFilePath ? 'border-red-500 border-2' : 'border-gray-300 hover:border-orange-500'}`}>
                   {coverFilePreview ? (
                     <>
