@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Layers,
   RefreshCw,
@@ -8,25 +8,30 @@ import {
   Ban,
   CheckCircle,
   CirclePlus,
+  Settings2,
 } from "lucide-react";
 import Link from "next/link";
 import ProjectCard from "@/app/components/ui/ProjectCard";
 import { ProjectWithManager } from "@/app/types/budget_approval";
 
-// กำหนดประเภทของ Filter Label (ภาษาไทยสำหรับแสดงผล)
-type FilterLabel = "ทั้งหมด" | "รอดำเนินการ" | "เปิดรับโหวต" | "ปิดรับโหวต" | "อนุมัติแล้ว";
+// กำหนดประเภทของ Filter Label
+type FilterLabel =
+  | "ทั้งหมด"
+  | "รอดำเนินการ"
+  | "เปิดรับโหวต"
+  | "ปิดรับโหวต"
+  | "อนุมัติแล้ว";
 
-// ✅ การตั้งค่าตัวกรอง: ใช้ Label เดิม แต่แก้ Key ให้ตรงกับ Enum ใหม่ใน DB
 const statusFilters: {
   label: FilterLabel;
   icon: any;
   key?: string;
 }[] = [
   { label: "ทั้งหมด", icon: Layers },
-  { label: "รอดำเนินการ", icon: RefreshCw, key: 'PENDING' },
-  { label: "เปิดรับโหวต", icon: ThumbsUp, key: 'OPEN' },
-  { label: "ปิดรับโหวต", icon: Ban, key: 'CLOSE' },
-  { label: "อนุมัติแล้ว", icon: CheckCircle, key: 'APPROVED' },
+  { label: "รอดำเนินการ", icon: RefreshCw, key: "PENDING" },
+  { label: "เปิดรับโหวต", icon: ThumbsUp, key: "OPEN" },
+  { label: "ปิดรับโหวต", icon: Ban, key: "CLOSE" },
+  { label: "อนุมัติแล้ว", icon: CheckCircle, key: "APPROVED" },
 ];
 
 export default function ProjectManagementPage() {
@@ -34,37 +39,36 @@ export default function ProjectManagementPage() {
   const [projects, setProjects] = useState<ProjectWithManager[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ดึงข้อมูลจริงจาก API เมื่อหน้าเว็บโหลด
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const res = await fetch('/api/project-proposal');
-        if (res.ok) {
-          const data = await res.json();
-          setProjects(data.proposals || []);
-        }
-      } catch (error) {
-        console.error("Failed to fetch projects", error);
-      } finally {
-        setLoading(false);
+  // ✅ 1. สร้างฟังก์ชัน fetchProjects แบบ Reusable (ใช้ useCallback เพื่อประสิทธิภาพ)
+  const fetchProjects = useCallback(async () => {
+    try {
+      // ไม่ต้อง setLoading(true) ที่นี่ เพื่อไม่ให้หน้ากระพริบตอนอัปเดต
+      const res = await fetch("/api/project-proposal");
+      if (res.ok) {
+        const data = await res.json();
+        setProjects(data.proposals || []);
       }
-    };
-    fetchProjects();
+    } catch (error) {
+      console.error("Failed to fetch projects", error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // เรียกข้อมูลเมื่อหน้าโหลด
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
 
   // Logic การกรองข้อมูล
   const filteredProjects = projects.filter((project) => {
     if (activeFilter === "ทั้งหมด") return true;
-    
-    const filterConfig = statusFilters.find(f => f.label === activeFilter);
+    const filterConfig = statusFilters.find((f) => f.label === activeFilter);
     if (!filterConfig?.key) return false;
-    
-    // ใช้ project.status (String)
     const projectStatus = (project as any).status || project.status;
     return projectStatus === filterConfig.key;
   });
 
-  // Helper: นับจำนวนโครงการตามสถานะ
   const getStatusCount = (filterKey?: string) => {
     if (!filterKey) return projects.length;
     return projects.filter((p) => {
@@ -76,8 +80,7 @@ export default function ProjectManagementPage() {
   return (
     <main className="min-h-screen bg-white py-4 px-4 font-sans">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        
-        {/* Status Cards Grid (ส่วนตัวกรองด้านบน) */}
+        {/* Status Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           {statusFilters.map((filter) => {
             const Icon = filter.icon;
@@ -97,9 +100,10 @@ export default function ProjectManagementPage() {
                   duration-300 
                   ease-out
                   hover:shadow-md
-                  ${isActive 
-                    ? 'border-orange-300 shadow-[0_0_15px_rgba(242,101,34,0.15)]' 
-                    : 'border-orange-100'
+                  ${
+                    isActive
+                      ? "border-orange-300 shadow-[0_0_15px_rgba(242,101,34,0.15)]"
+                      : "border-orange-100"
                   }
                 `}
               >
@@ -112,14 +116,18 @@ export default function ProjectManagementPage() {
                       strokeWidth={1.3}
                     />
                   </div>
-                  <h3 className={`text-base font-normal transition-colors ${
+                  <h3
+                    className={`text-base font-normal transition-colors ${
                       isActive ? "text-gray-900" : "text-gray-500"
-                  }`}>
+                    }`}
+                  >
                     {filter.label}
                   </h3>
-                  <p className={`text-2xl font-medium mt-2 ${
+                  <p
+                    className={`text-2xl font-medium mt-2 ${
                       isActive ? "text-orange-600" : "text-gray-400"
-                  }`}>
+                    }`}
+                  >
                     {loading ? "..." : count}
                   </p>
                 </div>
@@ -128,30 +136,42 @@ export default function ProjectManagementPage() {
           })}
         </div>
 
-        {/* Section Header & Add Button */}
+        {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
             โครงการส่งพิจารณา
           </h2>
-          <Link
-            href="/admin/budget_approval/create"
-            className="h-10 bg-orange-500 text-white px-6 py-3 rounded-full hover:bg-orange-600 transition flex items-center gap-2 shadow-md hover:shadow-lg"
-          >
-            <CirclePlus className="w-5 h-5" />
-            <span className="font-semibold">เพิ่มโครงการ</span>
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href="/admin/budget_approval/create-round"
+              className="h-10 bg-white text-gray-700 border border-gray-300 px-6 py-3 rounded-lg hover:bg-gray-50 transition flex items-center gap-2 shadow-sm hover:shadow-md"
+            >
+              <Settings2 className="w-5 h-5" />
+              <span className="font-medium">จัดการรอบงบประมาณ</span>
+            </Link>
+            <Link
+              href="/admin/budget_approval/create"
+              className="h-10 bg-orange-500 text-white border border-transparent px-6 py-3 rounded-lg hover:bg-orange-600 transition flex items-center gap-2 shadow-sm hover:shadow-md"
+            >
+              <CirclePlus className="w-5 h-5" />
+              <span className="font-medium">เพิ่มโครงการ</span>
+            </Link>
+          </div>
         </div>
 
         {/* Projects Grid */}
         {loading ? (
-          <div className="text-center py-16 text-gray-500">กำลังโหลดข้อมูล...</div>
+          <div className="text-center py-16 text-gray-500">
+            กำลังโหลดข้อมูล...
+          </div>
         ) : filteredProjects.length > 0 ? (
-          // ใช้ Grid Layout เดิมตามที่คุณต้องการ
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
             {filteredProjects.map((project) => (
-              <ProjectCard 
-                key={project.id || project.ppid} 
-                project={project} 
+              <ProjectCard
+                key={project.id || project.ppid}
+                project={project}
+                // ✅ 2. ส่งฟังก์ชัน fetchProjects ลงไปให้ลูกเรียกใช้ตอนอัปเดตเสร็จ
+                onUpdate={fetchProjects}
               />
             ))}
           </div>
@@ -160,7 +180,9 @@ export default function ProjectManagementPage() {
             <div className="text-gray-300 mb-4">
               <Layers className="w-16 h-16 mx-auto" strokeWidth={1.5} />
             </div>
-            <p className="text-gray-500 text-lg font-medium mb-4">ไม่พบโครงการ</p>
+            <p className="text-gray-500 text-lg font-medium mb-4">
+              ไม่พบโครงการ
+            </p>
           </div>
         )}
       </div>

@@ -116,7 +116,7 @@ export default function EditProjectPage() {
       reader.onloadend = () => {
         setCoverFilePreview(reader.result as string);
         // ในระบบจริงควร Upload ไป API แล้วเอา URL มาใส่
-        setProjectData(prev => ({ ...prev, coverFilePath: `/budget/uploads/${file.name}` }));
+        setProjectData(prev => ({ ...prev, coverFilePath: `/budget/upload/${file.name}` }));
       };
       reader.readAsDataURL(file);
     }

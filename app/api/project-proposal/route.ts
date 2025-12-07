@@ -73,64 +73,91 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const {
-      projectName,
-      objective,
-      description,
-      requestedAmount,
-      projectStartDate,
-      projectEndDate,
-      responsibilityUnit,
-      coverFilePath,
-      budgetRoundId,
-      manager, // ✅ รับข้อมูล manager เป็น object
-      staffId,
-    } = body;
+    
+    // Destructure ข้อมูล project และ manager ออกจาก body
+    const { project, manager } = body;
 
-    if (!projectName) {
+    // 1. Validation เบื้องต้น
+    if (!project || !project.projectName) {
       return NextResponse.json(
         { error: 'กรุณาระบุชื่อโครงการ' },
         { status: 400 }
       );
     }
 
-    const proposal = await prisma.projectProposal.create({
-      data: {
-        projectName,
-        objective,
-        description,
-        requestedAmount,
-        projectStartDate: projectStartDate ? new Date(projectStartDate) : undefined,
-        projectEndDate: projectEndDate ? new Date(projectEndDate) : undefined,
-        responsibilityUnit,
-        coverFilePath,
-        budgetRoundId,
-        staffId,
-        status: 'PENDING', // สถานะเริ่มต้น
+    if (!project.budget && !project.requestedAmount) {
+      return NextResponse.json(
+        { error: 'กรุณาระบุงบประมาณ' },
+        { status: 400 }
+      );
+    }
+
+    // 2. เตรียมข้อมูลสำหรับ ProjectManager (Connect หรือ Create)
+    let managerRelation = {};
+
+    if (manager) {
+      if (manager.id) {
+        // กรณี A: มี ID ส่งมา (เลือกจากการค้นหา) -> ให้ Connect
+        managerRelation = {
+          connect: { id: Number(manager.id) }
+        };
+      } else {
+        // กรณี B: ไม่มี ID (กรอกใหม่) -> ให้ Create
         
-        // ✅ Logic สร้าง Manager (Nested Write)
-        // ถ้ามีข้อมูล manager ส่งมา ให้สร้างลงตาราง ProjectManager พร้อมกันเลย
-        manager: manager ? {
+        // จัดการชื่อ-นามสกุล (เผื่อ Frontend ส่งมาเป็น name รวม หรือแยก firstName/lastName)
+        let fName = manager.firstName;
+        let lName = manager.lastName;
+        
+        // Fallback: ถ้าส่งมาเป็น name string เดียว ให้ลองแยกเอง
+        if (!fName && manager.name) {
+             const parts = manager.name.trim().split(' ');
+             fName = parts[0];
+             lName = parts.slice(1).join(' ') || '';
+        }
+
+        managerRelation = {
           create: {
-            firstName: manager.firstName,
-            lastName: manager.lastName,
-            department: manager.department,
+            firstName: fName || 'ไม่ระบุ',
+            lastName: lName || '',
+            department: manager.department || manager.division, // รองรับทั้งสองชื่อ
             position: manager.position,
-            phoneNumber: manager.phoneNumber,
+            phoneNumber: manager.phoneNumber || manager.phone, // รองรับทั้งสองชื่อ
             email: manager.email,
           }
-        } : undefined
+        };
+      }
+    }
+
+    // 3. บันทึกลง Database (ProjectProposal)
+    const proposal = await prisma.projectProposal.create({
+      data: {
+        // --- Map Fields ให้ตรงกับ Schema ---
+        projectName: project.name || project.projectName, 
+        objective: project.objective,
+        description: project.description || project.rationale, // ใช้ description ตาม schema
+        requestedAmount: parseFloat(project.budget || project.requestedAmount || 0),
+        responsibilityUnit: project.responsibilityUnit,
+        coverFilePath: project.coverFilePath,
+        
+        // แปลงวันที่ (ถ้ามี)
+        projectStartDate: project.dateStart || project.projectStartDate ? new Date(project.dateStart || project.projectStartDate) : null,
+        projectEndDate: project.dateEnd || project.projectEndDate ? new Date(project.dateEnd || project.projectEndDate) : null,
+        
+        status: 'PENDING', // กำหนดสถานะเริ่มต้น
+
+        // --- เชื่อมโยง Relations ---
+        // เชื่อม BudgetRound (ถ้ามีส่งมา)
+        budgetRound: project.budgetRoundId ? { connect: { id: Number(project.budgetRoundId) } } : undefined,
+        
+        // เชื่อม User/Staff ผู้สร้าง (ถ้ามีส่งมา)
+        staff: project.staffId ? { connect: { id: Number(project.staffId) } } : undefined,
+
+        // เชื่อม ProjectManager (Logic ที่เตรียมไว้ข้างบน)
+        manager: Object.keys(managerRelation).length > 0 ? managerRelation : undefined,
       },
       include: {
-        budgetRound: true,
-        manager: true,
-        staff: {
-          select: {
-            id: true,
-            fullName: true,
-            email: true,
-          },
-        },
+        manager: true,      // return ข้อมูล manager กลับมาด้วย
+        budgetRound: true,  // return ข้อมูลรอบงบประมาณกลับมาด้วย
       },
     });
 
@@ -141,6 +168,7 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
+
   } catch (error) {
     console.error('Error creating proposal:', error);
     return NextResponse.json(
