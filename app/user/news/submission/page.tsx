@@ -69,6 +69,7 @@ export function SubmissionPage() {
     fetchSubmissions();
   }, []);
 
+  // 🏷 ชื่อสถานะที่อยากให้แสดงฝั่ง user
   const statusLabel = (status: VerifyStatus) => {
     switch (status) {
       case "APPROVED":
@@ -246,7 +247,7 @@ export function SubmissionPage() {
                         )}
                       </TableCell>
 
-                      {/* สถานะ */}
+                      {/* สถานะ = เม็ดสีแบบเดียวกับแอดมิน */}
                       <TableCell>
                         <span
                           className={`px-3 py-1 rounded-full text-xs inline-flex items-center justify-center ${statusColor(

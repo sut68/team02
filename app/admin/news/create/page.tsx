@@ -83,81 +83,93 @@ export default function EditPostPage() {
       Booking: value,
     }));
   };
+  const [mainImageFile, setMainImageFile] = useState<File | null>(null);
+  const [extraImageFiles, setExtraImageFiles] = useState<File[]>([]);
 
   // รูปหลัก (กล่องใหญ่ตรงกลาง)
   const handleMainImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    const file = e.target.files[0];
+  if (!e.target.files || e.target.files.length === 0) return;
 
-    // ใช้ object URL สำหรับ preview
-    const imageUrl = URL.createObjectURL(file);
+  const file = e.target.files[0];
+  setMainImageFile(file);
 
-    setPostData((prev) => ({
-      ...prev,
-      coverImageUrl: imageUrl,
-      // ถ้าไม่มี extraImages เลย ก็ใส่รูปนี้เป็นรูปแรกใน extraImages ด้วย
-      extraImages: prev.extraImages.length ? prev.extraImages : [imageUrl],
-    }));
-  };
+  const url = URL.createObjectURL(file);
 
-  // รูปหลายรูป (เพิ่มลงในโพสต์ของคุณ)
-  const handleExtraImagesUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
+  setPostData((prev) => ({
+    ...prev,
+    coverImageUrl: url,
+    extraImages: prev.extraImages.length ? prev.extraImages : [url],
+  }));
 
-    const files = Array.from(e.target.files);
-    const newUrls = files.map((file) => URL.createObjectURL(file));
+  // ถ้าไม่มีภาพอื่น ให้เพิ่มเข้า extraImageFiles ด้วย
+  setExtraImageFiles((prev) => (prev.length ? prev : [file]));
+};
 
-    setPostData((prev) => {
-      const combined = [...prev.extraImages, ...newUrls];
-      return {
-        ...prev,
-        extraImages: combined,
-        // ถ้ายังไม่มี cover ให้เอารูปแรกที่อัปโหลดรอบนี้เป็น cover
-        coverImageUrl: prev.coverImageUrl || newUrls[0],
-      };
-    });
-  };
+
+
+ const handleExtraImagesUpload = (e: ChangeEvent<HTMLInputElement>) => {
+  if (!e.target.files || e.target.files.length === 0) return;
+
+  const files = Array.from(e.target.files);
+
+  setExtraImageFiles((prev) => [...prev, ...files]);
+
+  const urls = files.map((f) => URL.createObjectURL(f));
+
+  setPostData((prev) => ({
+    ...prev,
+    extraImages: [...prev.extraImages, ...urls],
+    coverImageUrl: prev.coverImageUrl || urls[0],
+  }));
+};
+
 
   const handlePublish = async () => {
-  if (!bookingFormIdFromQuery) {
-    alert('ไม่พบข้อมูลฟอร์มการจอง (bookingFormId) ใน URL');
-    return;
+  
+
+  const formData = new FormData();
+  formData.append("title", postData.title); 
+  formData.append("description", postData.body);
+  formData.append("categories", postData.categories);
+  formData.append("booking", postData.Booking);
+  formData.append("userId", String(currentUserId));
+  formData.append("bookingFormId", String(bookingFormIdFromQuery));
+
+  // รูปหลายรูป
+  extraImageFiles.forEach((file) => {
+    formData.append("pictures", file); 
+  });
+  if (bookingFormIdFromQuery) {
+    formData.append("bookingFormId", String(bookingFormIdFromQuery));
   }
 
-  const payload = {
-    description: postData.body,          
-    categories: postData.categories,     
-    booking: postData.Booking,           
-    userId: currentUserId,               
-    bookingFormId: Number(bookingFormIdFromQuery), 
-    pictures: postData.extraImages,     
-  };
+  // ถ้าภาพหลักไม่อยู่ใน extra ให้เพิ่ม
+  if (mainImageFile && !extraImageFiles.includes(mainImageFile)) {
+    formData.append("pictures", mainImageFile);
+  }
 
   try {
-    const res = await fetch('/api/content', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+    const res = await fetch("/api/content", {
+      method: "POST",
+      body: formData, // ❌ ห้ามใส่ Content-Type
     });
 
     const data = await res.json();
 
     if (!res.ok) {
-      console.error('Create content error:', data);
-      alert('❌ สร้างเนื้อหาไม่สำเร็จ: ' + (data.error || 'Unknown error'));
+      alert("❌ สร้างเนื้อหาไม่สำเร็จ: " + data.error);
       return;
     }
 
-    alert('🎉 เผยแพร่โพสต์สำเร็จ!');
-    console.log('Created content:', data.content);
+    alert("🎉 เผยแพร่โพสต์สำเร็จ!");
+    router.push("/admin/news");
 
-    // redirect ไปหน้ารายการข่าว/กิจกรรม
-    router.push('/admin/news');
   } catch (err) {
-    console.error('Unexpected error:', err);
-    alert('เกิดข้อผิดพลาด ไม่สามารถเผยแพร่โพสต์ได้');
+    console.error(err);
+    alert("เกิดข้อผิดพลาดขณะเผยแพร่โพสต์");
   }
 };
+
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-10">

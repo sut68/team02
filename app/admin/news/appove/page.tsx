@@ -80,6 +80,7 @@ export function AdminSubmissionPage() {
     }
   };
 
+  // 🎨 สีเม็ดสถานะแบบในรูป
   const statusColor = (status: VerifyStatus) => {
     switch (status) {
       case "APPROVED":

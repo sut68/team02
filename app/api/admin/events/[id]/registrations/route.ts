@@ -20,16 +20,6 @@ export async function GET(
             email: true,
           },
         },
-        entitlements: {
-          include: {
-            item: {
-              select: {
-                name: true,
-              },
-            },
-            redemptions: true,
-          },
-        },
       },
       orderBy: { registeredAt: 'desc' },
     });

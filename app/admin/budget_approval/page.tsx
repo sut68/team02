@@ -7,6 +7,7 @@ import {
   ThumbsUp,
   Ban,
   CheckCircle,
+  Plus,
   CirclePlus,
   Settings2,
 } from "lucide-react";
@@ -176,9 +177,9 @@ export default function ProjectManagementPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-35 rounded-xl">
+          <div className="text-center py-16 border-2 border-dashed border-gray-100 rounded-xl">
             <div className="text-gray-300 mb-4">
-              <Layers className="w-16 h-16 mx-auto" strokeWidth={1.5} />
+              <Layers className="w-16 h-16 mx-auto" strokeWidth={1.0} />
             </div>
             <p className="text-gray-500 text-lg font-medium mb-4">
               ไม่พบโครงการ

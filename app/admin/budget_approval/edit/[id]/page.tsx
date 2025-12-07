@@ -1,3 +1,4 @@
+// app/admin/budget_approval/edit/[id]/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,6 +11,49 @@ import { InputIcon } from '@/app/components/ui/InputIcon';
 import { Textarea } from '@/app/components/ui/InputTextArea';
 import { CancelButton, PrimaryButton } from '@/app/components/ui/Button';
 import SuccessModal from '@/app/components/ui/SuccessModal';
+
+// --- 1. MOCK DATA (อิงจากหน้า budget_approval/page.tsx) ---
+// จำลองข้อมูลว่าดึงมาจาก Database ตาม ID
+const mockGetProjectById = (id: string) => {
+  return new Promise<{project: ProjectProposal, manager: ProjectManager}>((resolve) => {
+    setTimeout(() => {
+      resolve({
+        project: {
+          ppid: parseInt(id) || 1,
+          projectName: 'โครงการอบรมทักษะวิชาชีพ (แก้ไข)',
+          objective: 'พัฒนาทักษะนักศึกษาวิศวกรรมศาสตร์',
+          description: 'จัดกิจกรรมอบรมเชิงปฏิบัติการเพื่อพัฒนาทักษะด้านวิทยาศาสตร์และเทคโนโลยี',
+          requestedAmount: 150000,
+          projectStartDate: '2025-01-15',
+          projectEndDate: '2025-03-30',
+          responsibilityUnit: 'สำนักวิชาวิศวกรรมศาสตร์',
+          coverFilePath: '', // หรือใส่ URL รูปภาพถ้ามี
+          statusId: 1, // *** สำคัญ: 1 = รอดำเนินการ (ถ้าเปลี่ยนเป็น 2,3,4 จะแก้ไขไม่ได้) ***
+          scoreTotal: 5474
+        },
+        manager: {
+          pmid: 1,
+          firstName: 'สมชาย',
+          lastName: 'ใจดี',
+          department: 'สำนักวิชาวิศวกรรมศาสตร์',
+          position: 'หัวหน้าโครงการ',
+          phoneNumber: '081-234-5678',
+          email: 'somchai@sut.ac.th'
+        }
+      });
+    }, 800); // จำลองเวลาโหลด
+  });
+};
+
+const mockUpdateProject = (id: string, data: any) => {
+  return new Promise<{success: boolean}>((resolve) => {
+    setTimeout(() => {
+      console.log("Updated Data (Mock):", data);
+      resolve({ success: true });
+    }, 1500);
+  });
+};
+// -------------------------------------------------------
 
 export default function EditProjectPage() {
   const router = useRouter();
@@ -36,59 +80,33 @@ export default function EditProjectPage() {
   const headerPillStyle = "w-full bg-[#F3F4F6] rounded-full py-3 text-center mb-6 border border-gray-200";
   const headerTextStyle = "text-gray-600 font-bold text-lg";
   const labelStyle = "block text-sm text-gray-600 mb-2 ml-4";
-  
-  // Helper for Input Styles
-  const getInputClass = (fieldName: string) => {
-    const baseClass = "border-gray-300 focus-visible:border-orange-500 focus-visible:ring-orange-500";
-    const errorClass = "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500";
-    return errors[fieldName] ? errorClass : baseClass;
-  };
+  const getInputClass = (fieldName: string) => errors[fieldName] ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500" : "border-gray-300 focus-visible:border-orange-500 focus-visible:ring-orange-500";
 
-  // ✅ 1. Fetch Data เมื่อเข้าหน้าเว็บ
+  // Fetch Data เมื่อเข้าหน้าเว็บ
   useEffect(() => {
     const fetchData = async () => {
       if (!projectId) return;
       try {
-        // ยิง API ไปดึงข้อมูลตาม ID
-        const res = await fetch(`/api/project-proposal?id=${projectId}`);
-        const data = await res.json();
-        const project = data.proposals ? data.proposals[0] : null;
-
-        if (!project) {
-          throw new Error('ไม่พบข้อมูลโครงการ');
-        }
+        const result = await mockGetProjectById(projectId);
         
-        // ✅ ตรวจสอบสถานะ: ต้องเป็น PENDING (รอดำเนินการ) เท่านั้นถึงจะแก้ได้
-        // (เผื่อใน DB ยังเก็บเป็น statusId แบบเก่า ก็เช็คเผื่อไว้ด้วย)
-        const currentStatus = project.status || 'PENDING';
-        if (currentStatus !== 'PENDING' && currentStatus !== 'DRAFT') {
-            alert(`โครงการนี้อยู่ในสถานะ "${currentStatus}" ไม่สามารถแก้ไขได้`);
+        // *** กฏเหล็ก: ถ้า statusId ไม่ใช่ 1 (รอดำเนินการ) ห้ามแก้ ***
+        if (result.project.statusId !== 1) {
+            alert('โครงการนี้ผ่านการพิจารณาไปแล้ว ไม่สามารถแก้ไขได้');
             router.push('/admin/budget_approval');
             return;
         }
 
-        // แปลงวันที่ให้เป็น YYYY-MM-DD สำหรับ input type="date"
-        const formatDate = (isoStr: string | undefined) => isoStr ? new Date(isoStr).toISOString().split('T')[0] : '';
-
-        setProjectData({
-            ...project,
-            projectStartDate: formatDate(project.projectStartDate),
-            projectEndDate: formatDate(project.projectEndDate),
-        });
-
-        // ถ้ามีข้อมูล Manager ก็ใส่เข้าไป
-        if (project.manager) {
-            setManagerData(project.manager);
-        }
+        setProjectData(result.project);
+        setManagerData(result.manager);
         
-        if (project.coverFilePath) {
-            setCoverFilePreview(project.coverFilePath);
+        if (result.project.coverFilePath) {
+            setCoverFilePreview(result.project.coverFilePath);
         }
 
       } catch (error) {
         console.error(error);
-        alert('ไม่พบข้อมูลโครงการ หรือเกิดข้อผิดพลาดในการโหลด');
-        router.push('/admin/budget_approval');
+        alert('ไม่พบข้อมูลโครงการ');
+        router.back();
       } finally {
         setIsLoading(false);
       }
@@ -128,29 +146,12 @@ export default function EditProjectPage() {
     window.scrollTo(0, 0);
   };
 
-  // ✅ 2. Submit Data (Update)
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/project-proposal', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            id: parseInt(projectId),
-            ...projectData,
-            // ส่งข้อมูล Manager ไปด้วย (หมายเหตุ: ต้องมั่นใจว่า Backend รองรับการอัปเดต Manager แบบ Nested)
-            // หรือถ้า Backend ยังไม่รองรับ อาจต้องเขียน Logic เพิ่มที่ API ฝั่ง Server
-            manager: managerData 
-        })
-      });
-
-      if (res.ok) {
-        setShowSuccessModal(true); 
-      } else {
-        throw new Error('Update failed');
-      }
+      await mockUpdateProject(projectId, { ...projectData, manager: managerData });
+      setShowSuccessModal(true); 
     } catch (error) {
-      console.error(error);
       alert('เกิดข้อผิดพลาดในการบันทึก');
     } finally {
       setIsSubmitting(false);
@@ -216,7 +217,7 @@ export default function EditProjectPage() {
                   {coverFilePreview ? (
                      <>
                        <img src={coverFilePreview} className="w-full h-full object-contain" alt="Preview"/>
-                       <button onClick={(e)=>{e.stopPropagation(); setCoverFilePreview(null); setProjectData(p => ({...p, coverFilePath: ''}));}} className="absolute top-4 right-4 bg-white rounded-full p-2 shadow text-orange-500 font-bold z-10">ลบรูปภาพ</button>
+                       <button onClick={(e)=>{e.stopPropagation(); setCoverFilePreview(null);}} className="absolute top-4 right-4 bg-white rounded-full p-2 shadow text-orange-500 font-bold z-10">ลบรูปภาพ</button>
                      </>
                   ) : (
                     <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
@@ -266,4 +267,4 @@ export default function EditProjectPage() {
       </div>
     </div>
   );
-}
+} 
