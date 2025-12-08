@@ -105,7 +105,7 @@ export function News() {
       {/* 🔶 Full-width Banner */}
             <div className="relative w-screen h-[500px] left-[50%] right-[50%] mb-25 -ml-[50vw] -mr-[50vw] overflow-hidden">
               <Image
-                src="/42.jpg"
+                src="/25.jpg"
                 alt="Home"
                 fill
                 className="object-cover object-center"
@@ -297,7 +297,7 @@ export function News() {
 
     {/* ส่วนของที่ระลึก */}
     <div id="souvenir" className="scroll-mt-28">
-      <SouvenirSection isAuthenticated={isLoggedIn} />
+      <SouvenirSection />
     </div>
   </>
   );
