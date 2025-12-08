@@ -68,7 +68,7 @@ export default function Navbar() {
       await fetch('/api/auth/logout', { method: 'POST' });
       setUser(null);
       router.push('/auth/login');
-      window.location.href = '/auth/login'; // Force reload
+      window.location.href = '/auth/login'; 
     } catch (error) {
       // Silent error
     }
