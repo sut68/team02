@@ -1,5 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
+import jwt from 'jsonwebtoken'; // ✅ Import jwt
+
+// ดึง Secret Key
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
+
+// ✅ ฟังก์ชัน Helper: แกะ User ID จาก Token
+function getUserFromToken(req: NextRequest) {
+  const token = req.cookies.get("token")?.value;
+  if (!token) return null;
+  try {
+    // แกะ Token ออกมา
+    return jwt.verify(token, JWT_SECRET) as { userId: number; email: string; role: string };
+  } catch (e) {
+    return null;
+  }
+}
 
 // GET - ดึงรายการรอบงบประมาณทั้งหมด
 export async function GET(request: NextRequest) {
@@ -75,6 +91,18 @@ export async function GET(request: NextRequest) {
 // POST - สร้างรอบงบประมาณใหม่
 export async function POST(request: NextRequest) {
   try {
+    // ✅ 1. ตรวจสอบตัวตนผู้ใช้งาน (Admin)
+    const user = getUserFromToken(request);
+    
+    if (!user) {
+      return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบก่อนทำรายการ' }, { status: 401 });
+    }
+
+    // (Optionally) เช็ค Role ว่าเป็น ADMIN หรือไม่
+    if (user.role !== 'ADMIN') {
+        return NextResponse.json({ error: 'คุณไม่มีสิทธิ์ทำรายการนี้' }, { status: 403 });
+    }
+
     const body = await request.json();
     const {
       roundName,
@@ -82,7 +110,7 @@ export async function POST(request: NextRequest) {
       totalBudget,
       startDate,
       endDate,
-      creatorId,
+      // creatorId, // ไม่ต้องรับค่านี้จาก Body แล้ว
     } = body;
 
     if (!roundName) {
@@ -99,7 +127,7 @@ export async function POST(request: NextRequest) {
         totalBudget,
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
-        creatorId,
+        creatorId: user.userId, 
       },
       include: {
         creator: {
@@ -131,6 +159,12 @@ export async function POST(request: NextRequest) {
 // PUT - อัพเดทรอบงบประมาณ
 export async function PUT(request: NextRequest) {
   try {
+    // ✅ (Optional) เช็ค Auth สำหรับการแก้ไขด้วยก็ได้
+    const user = getUserFromToken(request);
+    if (!user || user.role !== 'ADMIN') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { id, ...updateData } = body;
 
@@ -171,6 +205,12 @@ export async function PUT(request: NextRequest) {
 // DELETE - ลบรอบงบประมาณ (soft delete)
 export async function DELETE(request: NextRequest) {
   try {
+    // ✅ (Optional) เช็ค Auth สำหรับการลบด้วย
+    const user = getUserFromToken(request);
+    if (!user || user.role !== 'ADMIN') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 

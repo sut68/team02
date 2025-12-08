@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ImageUp as ImageUp, Search as SearchIcon } from "lucide-react";
+import { ImageUp, Search as SearchIcon } from "lucide-react"; // แก้ import ให้กระชับ
 import { ProjectProposal, ProjectManager } from "@/app/types/budget_approval";
 
-// เรียกใช้ Components ตาม path ที่คุณใช้งาน
+// เรียกใช้ Components
 import { Input } from "@/app/components/ui/Input";
 import { InputIcon } from "@/app/components/ui/InputIcon";
 import { Textarea } from "@/app/components/ui/InputTextArea";
@@ -19,35 +19,37 @@ export default function CreateBudgetProjectPage() {
 
   // Modal State
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-
+  // Fetch IDs
+  const [staffId, setStaffId] = useState<number | null>(null);
+  const [budgetRoundId, setBudgetRoundId] = useState<number | null>(null);
   // Error State
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // --- Step 1: Project Data ---
   const [projectData, setProjectData] = useState({
     projectName: "",
-    responsibilityUnit: "", // หน่วยงานรับผิดชอบ
+    responsibilityUnit: "",
     objective: "",
-    requestedAmount: 0, // งบประมาณ
+    requestedAmount: 0,
     projectStartDate: "",
     projectEndDate: "",
-    description: "", // รายละเอียด/หลักการและเหตุผล
+    description: "",
     coverFilePath: "",
   });
   const [coverFilePreview, setCoverFilePreview] = useState<string | null>(null);
 
   // --- Step 2: Manager Data ---
   const [managerData, setManagerData] = useState({
-    id: null as number | null, // เก็บ ID ถ้ามาจากการ Search
+    id: null as number | null,
     firstName: "",
     lastName: "",
-    department: "", // สังกัด/หน่วยงาน
+    department: "",
     position: "",
     phoneNumber: "",
     email: "",
   });
 
-  // --- Search State (สำหรับ Step 2) ---
+  // --- Search State ---
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResult, setSearchResult] = useState<ProjectManager[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -58,7 +60,6 @@ export default function CreateBudgetProjectPage() {
   const headerTextStyle = "text-gray-600 font-semibold text-lg";
   const labelStyle = "block text-sm text-gray-600 mb-2 ml-4 font-medium";
 
-  // Helper for Input Styles
   const getInputClass = (fieldName: string) => {
     const baseClass =
       "border-gray-300 focus-visible:border-orange-500 focus-visible:ring-orange-500";
@@ -67,34 +68,88 @@ export default function CreateBudgetProjectPage() {
     return errors[fieldName] ? errorClass : baseClass;
   };
 
-  // Helper เพื่อหาวันที่ปัจจุบัน (YYYY-MM-DD)
-  const getTodayString = () => new Date().toISOString().split("T")[0];
+  // ✅ FIX: ใช้ Local Time แทน UTC เพื่อป้องกันบั๊กวันที่ผิดเพี้ยนตอนเช้า
+  const getTodayString = () => {
+    const date = new Date();
+    // ปรับ Format เป็น YYYY-MM-DD แบบ Local
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  useEffect(() => {
+    // 1.1 ดึง User ID
+    const fetchUser = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          setStaffId(data.id);
+        }
+      } catch (err) {
+        console.error("Error fetching user:", err);
+      }
+    };
+
+    // 1.2 ดึงรอบงบประมาณปัจจุบัน
+    const fetchActiveRound = async () => {
+      try {
+        const res = await fetch("/api/budget-round");
+        if (res.ok) {
+          const data = await res.json();
+          const rounds = data.budgetRounds || [];
+          const now = new Date();
+          
+          // หา active round ที่วันนี้อยู่ระหว่าง startDate และ endDate
+          const active = rounds.find((r: any) => {
+            if (!r.startDate || !r.endDate) return false;
+            const start = new Date(r.startDate);
+            const end = new Date(r.endDate);
+            return now >= start && now <= end;
+          });
+
+          if (active) {
+            setBudgetRoundId(active.id);
+            console.log("Active Budget Round ID:", active.id);
+          } else {
+            console.warn("No active budget round found.");
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching budget rounds:", err);
+      }
+    };
+
+    fetchUser();
+    fetchActiveRound();
+  }, []);
 
   // --- Handlers ---
-
   const handleProjectChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     setProjectData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name])
+    if (errors[name]) {
       setErrors((prev) => {
         const n = { ...prev };
         delete n[name];
         return n;
       });
+    }
   };
 
   const handleManagerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    // ถ้ามีการแก้ไขข้อมูลเอง ให้เคลียร์ ID เก่าทิ้ง เพราะถือว่าเป็นคนใหม่ หรือแก้ไขข้อมูลเดิม
     setManagerData((prev) => ({ ...prev, [name]: value, id: null }));
-    if (errors[name])
+    if (errors[name]) {
       setErrors((prev) => {
         const n = { ...prev };
         delete n[name];
         return n;
       });
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,7 +157,6 @@ export default function CreateBudgetProjectPage() {
     if (file) {
       const formData = new FormData();
       formData.append("file", file);
-
       formData.append("folder", "budget/upload");
 
       try {
@@ -117,16 +171,16 @@ export default function CreateBudgetProjectPage() {
         }
 
         const data = await res.json();
-
         setProjectData((prev) => ({ ...prev, coverFilePath: data.url }));
         setCoverFilePreview(data.url);
 
-        if (errors.coverFilePath)
+        if (errors.coverFilePath) {
           setErrors((prev) => {
             const n = { ...prev };
             delete n.coverFilePath;
             return n;
           });
+        }
       } catch (error) {
         console.error("Upload error:", error);
         alert("อัปโหลดรูปภาพไม่สำเร็จ: " + (error as Error).message);
@@ -139,12 +193,10 @@ export default function CreateBudgetProjectPage() {
     if (!searchQuery) return;
     setIsSearching(true);
     try {
-      // เปลี่ยน URL ตรงนี้ให้ชี้ไปที่ API ใหม่ของเรา
       const res = await fetch(`/api/project-manager?q=${searchQuery}`);
-
       if (res.ok) {
         const data = await res.json();
-        setSearchResult(data); // เก็บผลลัพธ์เพื่อแสดงเป็น Dropdown ให้เลือก
+        setSearchResult(data);
       }
     } catch (error) {
       console.error("Error searching manager:", error);
@@ -155,40 +207,29 @@ export default function CreateBudgetProjectPage() {
 
   const handleSelectManager = (manager: ProjectManager) => {
     setManagerData({
-      // เช็คว่า id มีค่าไหม ถ้าไม่มีให้ใช้ pmid (ตาม interface ที่คุณกันไว้)
       id: manager.id ?? null,
       firstName: manager.firstName,
       lastName: manager.lastName,
-      department: manager.department,
-      position: manager.position,
-      phoneNumber: manager.phoneNumber,
-      email: manager.email,
+      department: manager.department ?? "",
+      position: manager.position ?? "",
+      phoneNumber: manager.phoneNumber ?? "",
+      email: manager.email ?? "",
     });
-
-    // เคลียร์การค้นหา
     setSearchResult([]);
     setSearchQuery("");
   };
 
   // --- Validation ---
-
   const validateStep1 = () => {
     const newErrors: Record<string, string> = {};
     const todayStr = getTodayString();
 
-    if (!projectData.projectName.trim())
-      newErrors.projectName = "กรุณาระบุชื่อโครงการ";
-    if (!projectData.responsibilityUnit.trim())
-      newErrors.responsibilityUnit = "กรุณาระบุหน่วยงาน";
-    if (!projectData.objective.trim())
-      newErrors.objective = "กรุณาระบุวัตถุประสงค์";
-    if (
-      !projectData.requestedAmount ||
-      Number(projectData.requestedAmount) <= 0
-    )
+    if (!projectData.projectName.trim()) newErrors.projectName = "กรุณาระบุชื่อโครงการ";
+    if (!projectData.responsibilityUnit.trim()) newErrors.responsibilityUnit = "กรุณาระบุหน่วยงาน";
+    if (!projectData.objective.trim()) newErrors.objective = "กรุณาระบุวัตถุประสงค์";
+    if (!projectData.requestedAmount || Number(projectData.requestedAmount) <= 0)
       newErrors.requestedAmount = "งบประมาณต้องมากกว่า 0";
 
-    // ✅ เพิ่ม Validation วันที่
     if (!projectData.projectStartDate) {
       newErrors.projectStartDate = "กรุณาระบุวันเริ่มต้น";
     } else if (projectData.projectStartDate < todayStr) {
@@ -203,8 +244,7 @@ export default function CreateBudgetProjectPage() {
     ) {
       newErrors.projectEndDate = "วันสิ้นสุดต้องไม่ก่อนวันเริ่มต้น";
     }
-    if (!projectData.coverFilePath)
-      newErrors.coverFilePath = "กรุณาเพิ่มรูปภาพปกโครงการ";
+    if (!projectData.coverFilePath) newErrors.coverFilePath = "กรุณาเพิ่มรูปภาพปกโครงการ";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -214,11 +254,9 @@ export default function CreateBudgetProjectPage() {
     const newErrors: Record<string, string> = {};
     if (!managerData.firstName.trim()) newErrors.firstName = "กรุณาระบุชื่อ";
     if (!managerData.lastName.trim()) newErrors.lastName = "กรุณาระบุนามสกุล";
-    if (!managerData.department.trim())
-      newErrors.department = "กรุณาระบุสังกัด";
+    if (!managerData.department.trim()) newErrors.department = "กรุณาระบุสังกัด";
     if (!managerData.position.trim()) newErrors.position = "กรุณาระบุตำแหน่ง";
-    if (!managerData.phoneNumber.trim())
-      newErrors.phoneNumber = "กรุณาระบุเบอร์โทร";
+    if (!managerData.phoneNumber.trim()) newErrors.phoneNumber = "กรุณาระบุเบอร์โทร";
     if (!managerData.email.trim()) newErrors.email = "กรุณาระบุอีเมล";
 
     setErrors(newErrors);
@@ -226,32 +264,25 @@ export default function CreateBudgetProjectPage() {
   };
 
   // --- Navigation & Submit ---
-
   const handleNext = () => {
     if (validateStep1()) {
       setStep(2);
       window.scrollTo(0, 0);
-    } else {
-      // alert('กรุณากรอกข้อมูลให้ครบถ้วน');
     }
   };
 
   const handleSubmit = async () => {
-    // 1. Validate ข้อมูล Step 2 ก่อน
-    if (!validateStep2()) {
-      // alert('กรุณากรอกข้อมูลผู้รับผิดชอบให้ครบถ้วน'); // Optional: เปิดแจ้งเตือนถ้าต้องการ
-      return;
-    }
-
+    if (!validateStep2()) return;
     setIsSubmitting(true);
 
     try {
-      // 2. เตรียม Payload ให้ตรงกับ Interface และ Database
+      // ✅ 2. ส่ง staffId และ budgetRoundId ไปด้วย
       const payload = {
         project: {
           ...projectData,
-          // ✅ สำคัญ: แปลง String จาก Input ให้เป็น Number
           requestedAmount: Number(projectData.requestedAmount),
+          staffId: staffId,           // ส่ง ID คนทำรายการ
+          budgetRoundId: budgetRoundId, // ส่ง ID รอบงบประมาณปัจจุบัน
         },
         manager: {
           ...managerData,
@@ -259,7 +290,6 @@ export default function CreateBudgetProjectPage() {
         },
       };
 
-      // 3. ส่งข้อมูลไปที่ API
       const response = await fetch("/api/project-proposal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -267,10 +297,8 @@ export default function CreateBudgetProjectPage() {
       });
 
       if (response.ok) {
-        // 4. ถ้าสำเร็จ ให้แสดง Modal
         setShowSuccessModal(true);
       } else {
-        // 5. ถ้า Server ตอบกลับมาว่า Error
         const data = await response.json();
         throw new Error(data.error || "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ");
       }
@@ -278,7 +306,6 @@ export default function CreateBudgetProjectPage() {
       console.error("Submit Error:", error);
       alert("บันทึกข้อมูลไม่สำเร็จ: " + (error as Error).message);
     } finally {
-      // 6. ปิดสถานะ Loading เสมอ ไม่ว่าจะสำเร็จหรือไม่
       setIsSubmitting(false);
     }
   };
@@ -301,6 +328,12 @@ export default function CreateBudgetProjectPage() {
           เพิ่มโครงการ
         </h1>
 
+        {!budgetRoundId && !isSearching && (
+           <div className="mb-4 p-3 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg text-sm text-center">
+             ⚠️ ขณะนี้ไม่มีรอบงบประมาณที่เปิดใช้งาน โครงการจะถูกบันทึกโดยไม่มีรอบงบประมาณ
+           </div>
+        )}
+
         {/* === STEP 1: ข้อมูลโครงการ === */}
         {step === 1 && (
           <div>
@@ -309,6 +342,7 @@ export default function CreateBudgetProjectPage() {
             </div>
 
             <div className="space-y-6 px-0">
+              {/* Project Name */}
               <div>
                 <label className={labelStyle}>
                   ชื่อโครงการ <span className="text-red-500">*</span>
@@ -322,12 +356,11 @@ export default function CreateBudgetProjectPage() {
                   placeholder="เช่น โครงการทุนการศึกษาวิศวกรรมศาสตร์ ภาค 1/2568"
                 />
                 {errors.projectName && (
-                  <p className="text-red-500 text-xs mt-1 ml-4">
-                    {errors.projectName}
-                  </p>
+                  <p className="text-red-500 text-xs mt-1 ml-4">{errors.projectName}</p>
                 )}
               </div>
 
+              {/* Unit */}
               <div>
                 <label className={labelStyle}>
                   ชื่อหน่วยงาน/องค์กร <span className="text-red-500">*</span>
@@ -341,12 +374,11 @@ export default function CreateBudgetProjectPage() {
                   placeholder="เช่น สำนักวิชาวิศวกรรมศาสตร์"
                 />
                 {errors.responsibilityUnit && (
-                  <p className="text-red-500 text-xs mt-1 ml-4">
-                    {errors.responsibilityUnit}
-                  </p>
+                  <p className="text-red-500 text-xs mt-1 ml-4">{errors.responsibilityUnit}</p>
                 )}
               </div>
 
+              {/* Grid: Objective & Amount */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className={labelStyle}>
@@ -361,19 +393,15 @@ export default function CreateBudgetProjectPage() {
                     className={getInputClass("objective")}
                     placeholder="เช่น เพื่อสนับสนุนทุนการศึกษาให้แก่นักศึกษาที่ขาดแคลน"
                   />
-
-                  {/* ส่วน Error + ตัวนับคำ ที่จัดไว้สวยแล้ว */}
+                  {/* ✅ ส่วน Error + ตัวนับคำ: จัดให้อยู่บรรทัดเดียวกัน */}
                   <div className="flex justify-between items-start mt-1">
                     <div className="flex-1">
                       {errors.objective && (
-                        <p className="text-red-500 text-xs ml-4">
-                          {errors.objective}
-                        </p>
+                        <p className="text-red-500 text-xs ml-4">{errors.objective}</p>
                       )}
                     </div>
                     <div className="text-right text-xs text-gray-500 whitespace-nowrap ml-2">
-                      {projectData.objective ? projectData.objective.length : 0}{" "}
-                      / 100 ตัวอักษร
+                      {projectData.objective ? projectData.objective.length : 0} / 100 ตัวอักษร
                     </div>
                   </div>
                 </div>
@@ -393,32 +421,29 @@ export default function CreateBudgetProjectPage() {
                     placeholder="0.00"
                   />
                   {errors.requestedAmount && (
-                    <p className="text-red-500 text-xs mt-1 ml-4">
-                      {errors.requestedAmount}
-                    </p>
+                    <p className="text-red-500 text-xs mt-1 ml-4">{errors.requestedAmount}</p>
                   )}
                 </div>
               </div>
+
+              {/* Grid: Dates */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className={labelStyle}>
                     วันเริ่มจัดโครงการ <span className="text-red-500">*</span>
                   </label>
-                  <InputIcon
+                  {/* ✅ FIX: เปลี่ยนจาก InputIcon เป็น Input ธรรมดา (เหมือน End Date) */}
+                  <Input
                     type="date"
                     name="projectStartDate"
                     value={projectData.projectStartDate}
                     onChange={handleProjectChange}
                     radius="md"
                     min={getTodayString()}
-                    className={`cursor-pointer ${getInputClass(
-                      "projectStartDate"
-                    )}`}
+                    className={`cursor-pointer ${getInputClass("projectStartDate")}`}
                   />
                   {errors.projectStartDate && (
-                    <p className="text-red-500 text-xs mt-1 ml-4">
-                      {errors.projectStartDate}
-                    </p>
+                    <p className="text-red-500 text-xs mt-1 ml-4">{errors.projectStartDate}</p>
                   )}
                 </div>
                 <div>
@@ -432,18 +457,15 @@ export default function CreateBudgetProjectPage() {
                     onChange={handleProjectChange}
                     radius="md"
                     min={projectData.projectStartDate || getTodayString()}
-                    className={`cursor-pointer ${getInputClass(
-                      "projectEndDate"
-                    )}`}
+                    className={`cursor-pointer ${getInputClass("projectEndDate")}`}
                   />
                   {errors.projectEndDate && (
-                    <p className="text-red-500 text-xs mt-1 ml-4">
-                      {errors.projectEndDate}
-                    </p>
+                    <p className="text-red-500 text-xs mt-1 ml-4">{errors.projectEndDate}</p>
                   )}
                 </div>
               </div>
 
+              {/* Description */}
               <div>
                 <label className={labelStyle}>รายละเอียดเพิ่มเติม</label>
                 <Textarea
@@ -451,23 +473,19 @@ export default function CreateBudgetProjectPage() {
                   value={projectData.description}
                   onChange={handleProjectChange}
                   maxLength={500}
-                  className={`rounded-2xl min-h-[120px] focus-visible:ring-0 focus-visible:ring-offset-0 border-gray-300 focus:border-gray-400 ${getInputClass(
-                    "description"
-                  )}`}
+                  className={`rounded-2xl min-h-[120px] focus-visible:ring-0 focus-visible:ring-offset-0 border-gray-300 focus:border-gray-400 ${getInputClass("description")}`}
                   placeholder="สำหรับกรอกข้อมูลเพิ่มเติม เช่น หลักการและเหตุผลของโครงการ สามารถเว้นว่างได้หรือไม่เกิน 500 ตัวอักษร"
                 />
                 <div className="text-right text-xs text-gray-500 mt-1">
-                  {projectData.description ? projectData.description.length : 0}{" "}
-                  / 500 ตัวอักษร
+                  {projectData.description ? projectData.description.length : 0} / 500 ตัวอักษร
                 </div>
               </div>
 
+              {/* Upload */}
               <div>
                 <label className={labelStyle}>
-                  ภาพปก/ภาพโปสเตอร์กิจกรรม{" "}
-                  <span className="text-red-500">*</span>
+                  ภาพปก/ภาพโปสเตอร์กิจกรรม <span className="text-red-500">*</span>
                 </label>
-
                 <div
                   className={`mt-2 border rounded-2xl h-64 flex flex-col items-center justify-center relative overflow-hidden bg-white hover:bg-orange-50 transition-colors cursor-pointer ${
                     errors.coverFilePath
@@ -502,10 +520,7 @@ export default function CreateBudgetProjectPage() {
                       <span className="text-gray-500 text-[14px] font-medium">
                         คลิกเพื่ออัปโหลดรูปภาพ
                       </span>
-                      {/* เพิ่มคำแนะนำย่อยๆ ไว้ตรงนี้ด้วยก็ได้ ถ้าอยากให้ข้างล่างโล่ง */}
-                      <span className="text-gray-400 text-xs mt-2">
-                        (รองรับ jpg, png, gif)
-                      </span>
+                      <span className="text-gray-400 text-xs mt-2">(รองรับ jpg, png, gif)</span>
                       <input
                         type="file"
                         className="hidden"
@@ -515,9 +530,7 @@ export default function CreateBudgetProjectPage() {
                     </label>
                   )}
                 </div>
-
                 <div className="flex justify-between items-start mt-2 px-1">
-                  {/* ฝั่งซ้าย: Error Message */}
                   <div className="flex-1 text-left">
                     {errors.coverFilePath && (
                       <p className="text-red-500 text-xs animate-in slide-in-from-top-1">
@@ -525,33 +538,25 @@ export default function CreateBudgetProjectPage() {
                       </p>
                     )}
                   </div>
-
                   <div className="text-right text-xs text-gray-500 ml-2">
                     ขนาดไฟล์ไม่เกิน 5MB
                   </div>
                 </div>
               </div>
 
+              {/* Buttons Step 1 */}
               <div className="flex justify-end pt-8 pb-10 gap-4">
                 <CancelButton
                   type="button"
                   onClick={() => router.back()}
-                  style={{
-                    borderRadius: "8px",
-                    width: "140px",
-                    height: "40px",
-                  }}
+                  style={{ borderRadius: "8px", width: "140px", height: "40px" }}
                 >
                   ยกเลิก
                 </CancelButton>
                 <PrimaryButton
                   type="button"
                   onClick={handleNext}
-                  style={{
-                    borderRadius: "8px",
-                    width: "140px",
-                    height: "40px",
-                  }}
+                  style={{ borderRadius: "8px", width: "140px", height: "40px" }}
                 >
                   ถัดไป
                 </PrimaryButton>
@@ -566,9 +571,8 @@ export default function CreateBudgetProjectPage() {
             <div className={headerPillStyle}>
               <h2 className={headerTextStyle}>รายละเอียดผู้รับผิดชอบโครงการ</h2>
             </div>
-
             <div className="space-y-6 px-0">
-              {/* --- SEARCH BOX --- */}
+              {/* Search Box */}
               <div className="bg-orange-50/50 p-6 rounded-2xl border border-orange-100 mb-6">
                 <div className="flex flex-col md:flex-row gap-4 items-end">
                   <div className="w-full">
@@ -590,17 +594,11 @@ export default function CreateBudgetProjectPage() {
                     onClick={handleSearchManager}
                     disabled={isSearching}
                     className="mb-0.5"
-                    style={{
-                      borderRadius: "8px",
-                      width: "auto",
-                      minWidth: "100px",
-                      height: "40px",
-                    }}
+                    style={{ borderRadius: "8px", width: "auto", minWidth: "100px", height: "40px" }}
                   >
                     {isSearching ? "..." : "ค้นหา"}
                   </PrimaryButton>
                 </div>
-
                 {/* Search Result */}
                 {searchResult.length > 0 && (
                   <div className="mt-3 bg-white rounded-2xl shadow-lg border border-gray-100 max-h-60 overflow-y-auto divide-y divide-gray-100">
@@ -625,7 +623,7 @@ export default function CreateBudgetProjectPage() {
                 )}
               </div>
 
-              {/* --- FORM FIELDS --- */}
+              {/* Form Fields Step 2 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className={labelStyle}>
@@ -639,9 +637,7 @@ export default function CreateBudgetProjectPage() {
                     className={getInputClass("firstName")}
                   />
                   {errors.firstName && (
-                    <p className="text-red-500 text-xs mt-1 ml-4">
-                      {errors.firstName}
-                    </p>
+                    <p className="text-red-500 text-xs mt-1 ml-4">{errors.firstName}</p>
                   )}
                 </div>
                 <div>
@@ -656,13 +652,10 @@ export default function CreateBudgetProjectPage() {
                     className={getInputClass("lastName")}
                   />
                   {errors.lastName && (
-                    <p className="text-red-500 text-xs mt-1 ml-4">
-                      {errors.lastName}
-                    </p>
+                    <p className="text-red-500 text-xs mt-1 ml-4">{errors.lastName}</p>
                   )}
                 </div>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className={labelStyle}>
@@ -676,9 +669,7 @@ export default function CreateBudgetProjectPage() {
                     className={getInputClass("department")}
                   />
                   {errors.department && (
-                    <p className="text-red-500 text-xs mt-1 ml-4">
-                      {errors.department}
-                    </p>
+                    <p className="text-red-500 text-xs mt-1 ml-4">{errors.department}</p>
                   )}
                 </div>
                 <div>
@@ -693,13 +684,10 @@ export default function CreateBudgetProjectPage() {
                     className={getInputClass("position")}
                   />
                   {errors.position && (
-                    <p className="text-red-500 text-xs mt-1 ml-4">
-                      {errors.position}
-                    </p>
+                    <p className="text-red-500 text-xs mt-1 ml-4">{errors.position}</p>
                   )}
                 </div>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className={labelStyle}>
@@ -713,9 +701,7 @@ export default function CreateBudgetProjectPage() {
                     className={getInputClass("phoneNumber")}
                   />
                   {errors.phoneNumber && (
-                    <p className="text-red-500 text-xs mt-1 ml-4">
-                      {errors.phoneNumber}
-                    </p>
+                    <p className="text-red-500 text-xs mt-1 ml-4">{errors.phoneNumber}</p>
                   )}
                 </div>
                 <div>
@@ -730,22 +716,17 @@ export default function CreateBudgetProjectPage() {
                     className={getInputClass("email")}
                   />
                   {errors.email && (
-                    <p className="text-red-500 text-xs mt-1 ml-4">
-                      {errors.email}
-                    </p>
+                    <p className="text-red-500 text-xs mt-1 ml-4">{errors.email}</p>
                   )}
                 </div>
               </div>
 
+              {/* Buttons Step 2 */}
               <div className="flex justify-end pt-8 pb-10 gap-4">
                 <CancelButton
                   type="button"
                   onClick={() => setStep(1)}
-                  style={{
-                    borderRadius: "8px",
-                    width: "140px",
-                    height: "40px",
-                  }}
+                  style={{ borderRadius: "8px", width: "140px", height: "40px" }}
                 >
                   ย้อนกลับ
                 </CancelButton>
@@ -753,11 +734,7 @@ export default function CreateBudgetProjectPage() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={isSubmitting}
-                  style={{
-                    borderRadius: "8px",
-                    width: "140px",
-                    height: "40px",
-                  }}
+                  style={{ borderRadius: "8px", width: "140px", height: "40px" }}
                 >
                   {isSubmitting ? "กำลังบันทึก..." : "บันทึก"}
                 </PrimaryButton>
