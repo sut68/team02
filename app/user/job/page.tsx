@@ -35,7 +35,7 @@ export default function ToolsPage() {
      
 
       {/* Hero Banner */}
-      <div className="relative w-full h-150">
+      <div className="relative w-full h-100">
         <Image
           src="/17.jpg"
           alt="Hero Banner"

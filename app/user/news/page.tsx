@@ -103,9 +103,9 @@ export function News() {
     <>
     <section className="container mx-auto mb-16 px-4 py-0 ">
       {/* 🔶 Full-width Banner */}
-            <div className="relative w-screen h-[500px] left-[50%] right-[50%] mb-25 -ml-[50vw] -mr-[50vw] overflow-hidden">
+            <div className="relative w-screen h-[600px] left-[50%] right-[50%] mb-25 -ml-[50vw] -mr-[50vw] overflow-hidden">
               <Image
-                src="/25.jpg"
+                src="/18.jpg"
                 alt="Home"
                 fill
                 className="object-cover object-center"

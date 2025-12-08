@@ -66,7 +66,7 @@ export default function BudgetReportPage() {
     <div className="min-h-screen bg-white font-sans text-slate-900">
       
       {/* --- Hero Section --- */}
-      <section className="relative h-80 md:h-80 w-full overflow-hidden">
+      <section className="relative h-80 md:h-100 w-full overflow-hidden">
         <div className="absolute inset-0">
           <Image 
             src="/budget/22-01.jpg" 
