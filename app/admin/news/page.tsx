@@ -86,11 +86,11 @@ type PostRow = {
 export default function DashboardPage() {
   const [currentView, setCurrentView] = useState<ViewType>('all_registrations');
 
-  // ✅ state สำหรับโพสต์ที่ดึงจาก DB
+  //  state สำหรับโพสต์ที่ดึงจาก DB
   const [posts, setPosts] = useState<PostRow[]>([]);
   const [loadingPosts, setLoadingPosts] = useState<boolean>(false);
 
-  // ✅ ดึง Content จาก /api/content แค่ครั้งแรก
+  //  ดึง Content จาก /api/content แค่ครั้งแรก
   useEffect(() => {
     const fetchContents = async () => {
       try {
@@ -106,9 +106,9 @@ export default function DashboardPage() {
         // map ข้อมูลจาก Content ให้มาอยู่ในรูป PostRow
         const mapped: PostRow[] = (data.contents || []).map((c: any) => ({
           id: c.id,
-          title: c.Description || '(ไม่มีชื่อเรื่อง)',
+          title: c.TitleName || '(ไม่มีชื่อเรื่อง)',
           author: c.user?.fullName || 'ไม่ระบุ',
-          status: c.Booking === 'HAVE' ? 'ต้องลงทะเบียน' : 'ทั่วไป',
+          status: c.Booking === 'HAVE' ? 'ลงทะเบียน' : 'ไม่ลงทะเบียน',
         }))
         .sort((a: PostRow, b: PostRow) => a.id - b.id);
 

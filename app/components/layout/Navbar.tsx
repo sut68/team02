@@ -136,7 +136,7 @@ export default function Navbar() {
               </div>
             </div>
 
-            <Link href="/user/budget" className="hover:text-gray-900">รายงานงบประมาณ</Link>
+            <Link href="/budget" className="hover:text-gray-900">รายงานงบประมาณ</Link>
             <Link href="/user/talk" className="hover:text-gray-900">กระดานสนทนา</Link>
           </>
         )}

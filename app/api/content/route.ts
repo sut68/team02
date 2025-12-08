@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
+import path from "path";
+import { promises as fs } from "fs";
+import { ContentCategoryType, Option } from "@prisma/client"; 
 
 // ============================
 // GET - ดึงรายการ Content ทั้งหมด
@@ -34,43 +37,90 @@ export async function GET(req: NextRequest) {
 
 // ============================
 // POST - สร้าง Content + PictureContent หลายรูป
+//      (แก้ให้เหมือน submission + handle enum)
 // ============================
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    // ✅ เปลี่ยนจาก req.json() → formData() เพื่อรับไฟล์จริง
+    const formData = await req.formData();
+    const title = (formData.get("title") as string) || "";
+    const description = (formData.get("description") as string) || "";
+    const categoriesRaw = formData.get("categories") as string | null;
+    const bookingRaw = formData.get("booking") as string | null;
+    const userIdRaw = formData.get("userId") as string | null;
+    const bookingFormIdRaw = formData.get("bookingFormId") as string | null;
 
-    const {
-      description,
-      categories,
-      booking,
-      userId,
-      bookingFormId,
-      pictures, // array ของ path
-    } = body;
+    const userId = userIdRaw ? Number(userIdRaw) : null;
+    const bookingFormId = bookingFormIdRaw ? Number(bookingFormIdRaw) : null;
 
-    if (!categories) {
+    if (!categoriesRaw) {
       return NextResponse.json(
         { error: "ต้องระบุ categories" },
         { status: 400 }
       );
     }
 
-    // transaction ปลอดภัยกว่า
+    // ✅ แปลง string → enum ContentCategoryType
+    let category: ContentCategoryType | null = null;
+    if (Object.values(ContentCategoryType).includes(categoriesRaw as ContentCategoryType)) {
+      category = categoriesRaw as ContentCategoryType;
+    } else {
+      return NextResponse.json(
+        { error: "categories ไม่ถูกต้อง" },
+        { status: 400 }
+      );
+    }
+
+    // ✅ แปลง string → enum Option (HAVE / NOT) หรือ null
+    let booking: Option | null = null;
+    if (bookingRaw && Object.values(Option).includes(bookingRaw as Option)) {
+      booking = bookingRaw as Option;
+    }
+
+    // ✅ รับไฟล์รูปหลายไฟล์จาก field ชื่อ "pictures"
+    const pictureFiles = formData.getAll("pictures") as File[];
+
+    // ✅ เซฟไฟล์ลง /public/uploads/contents เหมือน submission
+    const uploadDir = path.join(process.cwd(), "public", "uploads", "content");
+    await fs.mkdir(uploadDir, { recursive: true });
+
+    const picturePaths: string[] = [];
+
+    for (const file of pictureFiles) {
+      // กันเผื่อมีค่าอื่นปนมา
+      if (!file || typeof file === "string") continue;
+
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+
+      const safeName = file.name.replace(/\s+/g, "_");
+      const fileNameOnDisk = `${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2)}_${safeName}`;
+      const filePathOnDisk = path.join(uploadDir, fileNameOnDisk);
+      const publicPath = `/uploads/content/${fileNameOnDisk}`;
+
+      await fs.writeFile(filePathOnDisk, buffer);
+      picturePaths.push(publicPath);
+    }
+
+    // ✅ ใช้ transaction เดิม แต่เปลี่ยนมาจาก picturePaths ที่เซฟจริงแล้ว
     const createdContent = await prisma.$transaction(async (tx) => {
       const content = await tx.content.create({
         data: {
+          TitleName: title || "", 
           Description: description || "",
-          categories: categories,
-          Booking: booking || null,
+          categories: category,
+          Booking: booking,
           Userid: userId || null,
           BookingFormID: bookingFormId || null,
         },
       });
 
       // ถ้ามีรูป → สร้าง PictureContent หลายรายการ
-      if (pictures && pictures.length > 0) {
+      if (picturePaths && picturePaths.length > 0) {
         await tx.pictureContent.createMany({
-          data: pictures.map((p: string) => ({
+          data: picturePaths.map((p: string) => ({
             Path: p,
             ContentID: content.id,
           })),
@@ -104,6 +154,7 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
     const {
       id,
+      title,
       description,
       categories,
       booking,

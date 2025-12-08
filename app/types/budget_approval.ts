@@ -1,42 +1,37 @@
-export interface ProjectProposal {
-  id?: number;      // ✅ เพิ่ม id ให้ตรง DB
-  ppid?: number;    // (เก็บไว้กัน error โค้ดเก่า)
-  
-  projectName: string;
-  objective: string;
-  description: string;
-  requestedAmount: number;
-  projectStartDate: string;
-  projectEndDate: string;
-  responsibilityUnit: string;
-  coverFilePath?: string;
-  scoreTotal?: number;
-  
-  status?: string;    // ✅ เพิ่ม status เป็น String (PENDING, APPROVED)
-  statusId?: number;  // (เก็บไว้กัน error โค้ดเก่า)
-  
-  managerId?: number;
-  pmid?: number;
-  
-  budgetRoundId?: number;
-  staffId?: number;
-  createdAt?: string;
-}
+// app/types/budget_approval.ts
+
+// Enum สถานะตาม Database
+export type ProjectStatus = 'PENDING' | 'OPEN' | 'CLOSE' | 'APPROVED';
 
 export interface ProjectManager {
-  id?: number;      // ✅ เพิ่ม id
-  pmid?: number;
-  
+  id: number;           // ใช้ id ตามมาตรฐาน Database
   firstName: string;
   lastName: string;
-  department: string;
-  position: string;
-  phoneNumber: string;
-  email: string;
+  department?: string;
+  position?: string;
+  phoneNumber?: string;
+  email?: string;
 }
 
-export interface ProjectWithManager extends ProjectProposal {
+export interface ProjectProposal {
+  id: number;           // ใช้ id ตามมาตรฐาน Database
+  projectName: string;
+  objective?: string;
+  description?: string | null;
+  requestedAmount?: number;
+  projectStartDate?: string | Date;
+  projectEndDate?: string | Date;
+  responsibilityUnit?: string;
+  coverFilePath?: string;
+  scoreTotal?: number;
+  status: ProjectStatus; // ใช้ Enum String
+  createdAt?: string | Date;
+  
+  // Relations
   manager?: ProjectManager;
+  budgetRound?: any;
+  staff?: any;
 }
 
-export type ProjectStatus = 'ทั้งหมด' | 'รอดำเนินการ' | 'เปิดรับโหวต' | 'ปิดรับโหวต' | 'อนุมัติแล้ว';
+// Alias สำหรับการใช้งานที่อาจเรียกชื่อต่างกัน
+export interface ProjectWithManager extends ProjectProposal {}

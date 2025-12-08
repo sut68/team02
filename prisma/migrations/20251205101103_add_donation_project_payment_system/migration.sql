@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "ProjectStatus" AS ENUM ('OPEN', 'CLOSED', 'COMPLETED');
+--CREATE TYPE "ProjectStatus" AS ENUM ('OPEN', 'CLOSED', 'COMPLETED');
 
 -- CreateEnum
 CREATE TYPE "PaymentMethodType" AS ENUM ('PROMPTPAY', 'CREDIT_CARD', 'BANK_TRANSFER');
@@ -8,24 +8,20 @@ CREATE TYPE "PaymentMethodType" AS ENUM ('PROMPTPAY', 'CREDIT_CARD', 'BANK_TRANS
 CREATE TYPE "PaymentStatusType" AS ENUM ('CONFIRMED', 'CANCELLED', 'REFUNDED');
 
 -- CreateTable
-CREATE TABLE "DonationProject" (
-    "id" SERIAL NOT NULL,
-    "title" TEXT NOT NULL,
-    "description" TEXT NOT NULL,
-    "goalAmount" DOUBLE PRECISION NOT NULL,
-    "currentAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "startDate" TIMESTAMP(3) NOT NULL,
-    "endDate" TIMESTAMP(3) NOT NULL,
-    "ownerName" TEXT NOT NULL,
-    "contact" TEXT NOT NULL,
-    "status" "ProjectStatus" NOT NULL DEFAULT 'OPEN',
-    "posterUrl" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
+-- CREATE TABLE "DonationProject" (
+--     "id" SERIAL NOT NULL,
+--     "title" TEXT NOT NULL,
+--     "description" TEXT,
+--     "goalAmount" DOUBLE PRECISION NOT NULL,
+--     "currentAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+--     "startDate" TIMESTAMP(3) NOT NULL,
+--     "endDate" TIMESTAMP(3) NOT NULL,
+--     "status" "ProjectStatus" NOT NULL DEFAULT 'OPEN',
+--     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "DonationProject_pkey" PRIMARY KEY ("id")
-);
-
+--     CONSTRAINT "DonationProject_pkey" PRIMARY KEY ("id")
+-- );
 -- CreateTable
 CREATE TABLE "PaymentMethodRecord" (
     "id" SERIAL NOT NULL,
@@ -53,8 +49,8 @@ CREATE TABLE "PaymentRecord" (
 
     CONSTRAINT "PaymentRecord_pkey" PRIMARY KEY ("id")
 );
-
--- CreateTable
+DROP TABLE IF EXISTS "DonationTransaction";
+--CreateTable
 CREATE TABLE "DonationTransaction" (
     "id" SERIAL NOT NULL,
     "amount" DOUBLE PRECISION NOT NULL,
