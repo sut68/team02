@@ -1,39 +1,100 @@
-// app/tools/page.tsx
-import Link from 'next/link';
-import React from 'react';
-import { Calendar, User, Menu, Plus } from 'lucide-react';
+'use client';
+import React, { useState, useEffect } from 'react';
+import { Calendar, User, Plus } from 'lucide-react';
 import Image from 'next/image';
 
-export default function ToolsPage() {
-  const cards = [
-    {
-      id: 1,
-      title: "ประกาศรับสมัครงาน บริษัท....",
-      description: "ประกาศรับสมัครพนักงานบริษัท DENSO TEN (Thailand) Limited\nOur Mission: The best provider to automobile manufacturers in Thailand of our best quality products ...",
-      date: "01 พ.ค. 2566",
-      author: "ความยาว.ส"
-    },
-    {
-      id: 2,
-      title: "ประกาศรับสมัครงาน บริษัท....",
-      description: "ประกาศรับสมัครพนักงานบริษัท DENSO TEN (Thailand) Limited\nOur Mission: The best provider to automobile manufacturers in Thailand of our best quality products ...",
-      date: "01 พ.ค. 2566",
-      author: "ความยาว.ส"
-    },
-    {
-      id: 3,
-      title: "บริษัท ว.ชี.เอส.(ไทยแลนด์) จำกัดรับสมัคร วิศวกร ทุกสาขา 10ตำแหน่ง ด่วน!",
-      description: "บริษัท ว.ชี.เอส (ไทยแลนด์) จำกัดรับสมัคร วิศวกร ทุกสาขา #10ตำแหน่ง ด่วน!\nเพื่อเข้าทำงานบริษัทฯด้านการเริ่มรับงานภาพ QC\nสนใจติดต่อ :- คุณสมชัย อีเมวช์ลต์สผู\n(เช้อความละเอียดของผู้สมัคร, สวัสดิ และ สัมภาษณ์กับ โรคศัพท์)",
-      date: "01 พ.ค. 2566",
-      author: "ความยาว.ส"
+interface Job {
+  id: number;
+  jobTitle: string;
+  title: string;
+  position: string;
+  jobType: string;
+  education: string;
+  salary: string;
+  companyName: string;
+  positions: string;
+  address: string;
+  contact: string;
+  transportation: string;
+  previews?: {
+    attachment: string | null;
+    logo: string | null;
+    image: string | null;
+  };
+  status: string;
+  date: string;
+  createdAt: string;
+}
+
+export default function JobListPage() {
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [displayedJobs, setDisplayedJobs] = useState<Job[]>([]);
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 3;
+
+  useEffect(() => {
+    loadJobs();
+    
+    // ฟังการเปลี่ยนแปลงของ localStorage
+    const handleStorageChange = () => {
+      loadJobs();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // รีเฟรชทุก 2 วินาทีเพื่ออัปเดตข้อมูล
+    const interval = setInterval(loadJobs, 2000);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    // แสดงงานที่อนุมัติแล้วเท่านั้น
+    const approvedJobs = jobs.filter(job => job.status === 'อนุมัติแล้ว');
+    setDisplayedJobs(approvedJobs.slice(0, page * itemsPerPage));
+  }, [jobs, page]);
+
+  useEffect(() => {
+    // Infinite scroll
+    const handleScroll = () => {
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
+        loadMore();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [jobs, page]);
+
+  const loadJobs = () => {
+    const storedJobs = JSON.parse(localStorage.getItem('jobs') || '[]');
+    // เรียงตามวันที่สร้างล่าสุด
+    const sortedJobs = storedJobs.sort((a: Job, b: Job) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    setJobs(sortedJobs);
+  };
+
+  const loadMore = () => {
+    const approvedJobs = jobs.filter(job => job.status === 'อนุมัติแล้ว');
+    if (displayedJobs.length < approvedJobs.length) {
+      setPage(prev => prev + 1);
     }
-  ];
+  };
+
+  const handleCreateJob = () => {
+    window.location.href = '/user/job/create';
+  };
+
+  const handleViewDetail = (jobId: number) => {
+    window.location.href = `/user/job/detail/${jobId}`;
+  };
 
   return (
     <div className="min-h-screen bg-[#FFFFFF]">
-      {/* Header */}
-     
-
       {/* Hero Banner */}
       <div className="relative w-full h-150">
         <Image
@@ -47,66 +108,98 @@ export default function ToolsPage() {
 
       {/* Main Content */}
       <main className="max-w-5xl mx-auto px-4 py-8">
-        <div className="space-y-8">
-          {cards.map((card) => (
-            <div
-              key={card.id}
-              className="bg-[#F5F5F5] rounded-none shadow-sm hover:shadow-md transition-shadow p-6"
+        {displayedJobs.length === 0 ? (
+          <div className="text-center py-16">
+            <p className="text-gray-500 text-lg mb-4">ยังไม่มีประกาศงาน</p>
+            <button
+              onClick={handleCreateJob}
+              className="px-6 py-3 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors"
             >
-              <div className="flex flex-col md:flex-row gap-6">
-                {/* Image Section */}
-                <div className="w-full md:w-56 h-64 bg-[#FFFFFF] rounded-lg flex-shrink-0 overflow-hidden relative">
-                  <Image
-                    src="/Poster1.png"
-                    alt={card.title}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
+              สร้างประกาศแรกของคุณ
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {displayedJobs.map((job) => (
+              <div
+                key={job.id}
+                className="bg-[#F5F5F5] rounded-none shadow-sm hover:shadow-md transition-shadow p-6"
+              >
+                <div className="flex flex-col md:flex-row gap-6">
+                  {/* Image Section - แสดงเฉพาะเมื่อมีไฟล์แนบเท่านั้น */}
+                  {job.previews?.attachment && (
+                    <div className="w-full md:w-56 h-64 bg-[#FFFFFF] rounded-lg flex-shrink-0 overflow-hidden relative">
+                      <img
+                        src={job.previews.attachment}
+                        alt={job.jobTitle}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
 
-                {/* Content Section */}
-                <div className="flex-1 flex flex-col">
-                  {/* Title */}
-                  <h3 className="text-xl font-semibold text-[#111827] mb-3">
-                    {card.title}
-                  </h3>
+                  {/* Content Section */}
+                  <div className="flex-1 flex flex-col">
+                    {/* Title */}
+                    <h3 className="text-xl font-semibold text-[#111827] mb-3">
+                      {job.jobTitle ||  ''}
+                    </h3>
 
-                  {/* Description */}
-                  <p className="text-[#374151] mb-6 flex-1 whitespace-pre-line leading-relaxed">
-                    {card.description}
-                  </p>
-
-                  {/* Footer */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 text-sm text-[#4B5563]">
-                      <div className="flex items-center gap-1.5">
-                        <Calendar className="w-4 h-4" />
-                        <span>{card.date}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <User className="w-4 h-4" />
-                        <span>{card.author}</span>
-                      </div>
+                    {/* Description */}
+                    <div className="text-[#374151] mb-6 flex-1 whitespace-pre-line leading-relaxed">
+                      <p className="line-clamp-4">
+                        {job.title }
+    
+                      </p>
                     </div>
 
-                    {/* Read More Button */}
-                    <Link
-                      href={`/user/job/detail/`}
-                      className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-2 rounded-full text-sm font-medium transition-colors inline-block"
-                    >
-                      อ่านต่อ...
-                    </Link>
+                    {/* Footer */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 text-sm text-[#4B5563]">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-4 h-4" />
+                          <span>{job.date}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <User className="w-4 h-4" />
+                          <span>{job.companyName || 'ไม่ระบุ'}</span>
+                        </div>
+                      </div>
+
+                      {/* Read More Button */}
+                      <button
+                        onClick={() => handleViewDetail(job.id)}
+                        className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-2 rounded-full text-sm font-medium transition-colors"
+                      >
+                        อ่านต่อ...
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+
+            {/* Loading More Indicator */}
+            {displayedJobs.length < jobs.filter(j => j.status === 'อนุมัติแล้ว').length && (
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-orange-500 border-t-transparent"></div>
+                <p className="text-gray-500 mt-2">กำลังโหลดเพิ่มเติม...</p>
+              </div>
+            )}
+
+            {/* End of List */}
+            {displayedJobs.length === jobs.filter(j => j.status === 'อนุมัติแล้ว').length && 
+             displayedJobs.length > itemsPerPage && (
+              <div className="text-center py-8">
+                <p className="text-gray-500">ไม่มีข้อมูลเพิ่มเติม</p>
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* Floating Action Button - Liquid Glass */}
-      <Link
-        href="/user/job/create"
+      <button
+        onClick={handleCreateJob}
         className="fixed bottom-8 right-8 rounded-full z-50"
       >
         <div
@@ -127,7 +220,7 @@ export default function ToolsPage() {
           <Plus className="w-5 h-5 text-[#F97316] z-10" />
           <span className="text-[#F97316] font-medium z-10">สร้างประกาศ</span>
         </div>
-      </Link>
+      </button>
     </div>
   );
 }

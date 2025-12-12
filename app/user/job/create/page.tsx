@@ -1,23 +1,22 @@
 'use client';
 import React, { useState } from 'react';
 import { Upload, ChevronDown } from 'lucide-react';
-import { Input } from '../../../components/ui/Input';
-import { Textarea } from '../../../components/ui/InputTextArea';
-import { InputIcon } from '../../../components/ui/InputIcon';
-
-interface FileState {
-  attachment: File | null;
-  logo: File | null;
-  image: File | null;
-}
-
-interface PreviewState {
-  attachment: string | null;
-  logo: string | null;
-  image: string | null;
-}
 
 export default function JobPostPage() {
+  const [formData, setFormData] = useState({
+    jobTitle: '',
+    title: '',
+    position: '',
+    jobType: 'Select Type',
+    education: '',
+    salary: '',
+    companyName: '',
+    positions: '',
+    address: '',
+    contact: '',
+    transportation: ''
+  });
+
   const [files, setFiles] = useState<{
     attachment: File | null;
     logo: File | null;
@@ -38,19 +37,82 @@ export default function JobPostPage() {
     image: null
   });
 
+  const handleInputChange = (field: string, value: string) => {
+    setFormData({ ...formData, [field]: value });
+  };
+
   const handleFileChange = (field: string, file: File | null) => {
     if (file) {
-      setFiles({...files, [field]: file});
+      setFiles({ ...files, [field]: file });
       
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onloadend = () => {
-          setPreviews({...previews, [field]: reader.result as string});
+          setPreviews({ ...previews, [field]: reader.result as string });
         };
         reader.readAsDataURL(file);
       } else {
-        setPreviews({...previews, [field]: null});
+        setPreviews({ ...previews, [field]: null });
       }
+    }
+  };
+
+  const handleCancel = () => {
+    setFormData({
+      jobTitle: '',
+      title: '',
+      position: '',
+      jobType: 'Select Type',
+      education: '',
+      salary: '',
+      companyName: '',
+      positions: '',
+      address: '',
+      contact: '',
+      transportation: ''
+    });
+    setFiles({ attachment: null, logo: null, image: null });
+    setPreviews({ attachment: null, logo: null, image: null });
+    
+    // กลับไปหน้า /user/job
+    window.location.href = '/user/job';
+  };
+
+  const handleSubmit = () => {
+    // Validate required fields
+    if (!formData.jobTitle) {
+      alert('กรุณาระบุชื่อหัวข้อของงาน');
+      return;
+    }
+
+    // Create job object
+    const newJob = {
+      id: Date.now(),
+      ...formData,
+      previews: { ...previews }, // ใช้ previews จริง (base64)
+      status: 'รออนุมัติ',
+      date: new Date().toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }),
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+        // Save to localStorage
+        const existingJobs = JSON.parse(localStorage.getItem('jobs') || '[]');
+        localStorage.setItem('jobs', JSON.stringify([...existingJobs, newJob]));
+
+        // Show success message
+        alert('บันทึกประกาศงานสำเร็จ!');
+
+        // กลับไปหน้า List
+        window.location.href = '/user/job';
+        
+    } catch (error) {
+        alert('เกิดข้อผิดพลาด: พื้นที่จัดเก็บเต็ม (Quota Exceeded)');
+        console.error(error);
     }
   };
 
@@ -66,9 +128,15 @@ export default function JobPostPage() {
             {/* ชื่อหัวข้อของงาน */}
             <div>
               <label className="block text-sm text-[#6B7280] mb-2">
-                ชื่อหัวข้อของงาน
+                ชื่อหัวข้อของงาน <span className="text-red-500">*</span>
               </label>
-              <Input radius='full' placeholder="ระบุชื่อหัวข้อของงาน" />
+              <input 
+                type="text"
+                className="w-full px-4 py-3 border border-[#D1D5DB] rounded-full text-sm focus:border-[#FB923C] focus:outline-none"
+                placeholder="ระบุชื่อหัวข้อของงาน"
+                value={formData.jobTitle}
+                onChange={(e) => handleInputChange('jobTitle', e.target.value)}
+              />
             </div>
 
             {/* title */}
@@ -76,7 +144,13 @@ export default function JobPostPage() {
               <label className="block text-sm text-[#6B7280] mb-2">
                 title
               </label>
-              <Input radius='full' placeholder="ระบุ title" />
+              <input 
+                type="text"
+                className="w-full px-4 py-3 border border-[#D1D5DB] rounded-full text-sm focus:border-[#FB923C] focus:outline-none"
+                placeholder="ระบุ title"
+                value={formData.title}
+                onChange={(e) => handleInputChange('title', e.target.value)}
+              />
             </div>
 
             {/* ตำแหน่งงาน และ ประเภทของงาน */}
@@ -85,14 +159,24 @@ export default function JobPostPage() {
                 <label className="block text-sm text-[#6B7280] mb-2">
                   ตำแหน่งงาน
                 </label>
-                <Input radius='full' placeholder="ระบุตำแหน่งงาน" />
+                <input 
+                  type="text"
+                  className="w-full px-4 py-3 border border-[#D1D5DB] rounded-full text-sm focus:border-[#FB923C] focus:outline-none"
+                  placeholder="ระบุตำแหน่งงาน"
+                  value={formData.position}
+                  onChange={(e) => handleInputChange('position', e.target.value)}
+                />
               </div>
               <div>
                 <label className="block text-sm text-[#6B7280] mb-2">
                   ประเภทของงาน
                 </label>
                 <div className="relative">
-                  <select className="w-full px-4 py-3 border border-[#D1D5DB] rounded-full text-sm text-[#9CA3AF] focus:border-[#FB923C] focus:outline-none appearance-none bg-[#E5E7EB] cursor-pointer pr-10">
+                  <select 
+                    className="w-full px-4 py-3 border border-[#D1D5DB] rounded-full text-sm text-[#9CA3AF] focus:border-[#FB923C] focus:outline-none appearance-none bg-[#E5E7EB] cursor-pointer pr-10"
+                    value={formData.jobType}
+                    onChange={(e) => handleInputChange('jobType', e.target.value)}
+                  >
                     <option>Select Type</option>
                     <option>Full-time</option>
                     <option>Part-time</option>
@@ -110,13 +194,25 @@ export default function JobPostPage() {
                 <label className="block text-sm text-[#6B7280] mb-2">
                   ระดับการศึกษา
                 </label>
-                <Input radius='full' placeholder="ระบุระดับการศึกษา" />
+                <input 
+                  type="text"
+                  className="w-full px-4 py-3 border border-[#D1D5DB] rounded-full text-sm focus:border-[#FB923C] focus:outline-none"
+                  placeholder="ระบุระดับการศึกษา"
+                  value={formData.education}
+                  onChange={(e) => handleInputChange('education', e.target.value)}
+                />
               </div>
               <div>
                 <label className="block text-sm text-[#6B7280] mb-2">
                   รายได้เฉลี่ย
                 </label>
-                <Input radius='full' placeholder="ระบุรายได้เฉลี่ย" />
+                <input 
+                  type="text"
+                  className="w-full px-4 py-3 border border-[#D1D5DB] rounded-full text-sm focus:border-[#FB923C] focus:outline-none"
+                  placeholder="ระบุรายได้เฉลี่ย"
+                  value={formData.salary}
+                  onChange={(e) => handleInputChange('salary', e.target.value)}
+                />
               </div>
             </div>
 
@@ -126,13 +222,25 @@ export default function JobPostPage() {
                 <label className="block text-sm text-[#6B7280] mb-2">
                   ชื่อบริษัท
                 </label>
-                <Input radius='full' placeholder="ระบุชื่อบริษัท" />
+                <input 
+                  type="text"
+                  className="w-full px-4 py-3 border border-[#D1D5DB] rounded-full text-sm focus:border-[#FB923C] focus:outline-none"
+                  placeholder="ระบุชื่อบริษัท"
+                  value={formData.companyName}
+                  onChange={(e) => handleInputChange('companyName', e.target.value)}
+                />
               </div>
               <div>
                 <label className="block text-sm text-[#6B7280] mb-2">
                   จำนวนอัตรา
                 </label>
-                <Input radius='full' placeholder="ระบุจำนวนอัตรา" type="number" />
+                <input 
+                  type="number"
+                  className="w-full px-4 py-3 border border-[#D1D5DB] rounded-full text-sm focus:border-[#FB923C] focus:outline-none"
+                  placeholder="ระบุจำนวนอัตรา"
+                  value={formData.positions}
+                  onChange={(e) => handleInputChange('positions', e.target.value)}
+                />
               </div>
             </div>
 
@@ -141,7 +249,13 @@ export default function JobPostPage() {
               <label className="block text-sm text-[#6B7280] mb-2">
                 ที่อยู่บริษัท
               </label>
-              <Textarea placeholder="ระบุที่อยู่บริษัท" />
+              <textarea 
+                className="w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none resize-none"
+                rows={3}
+                placeholder="ระบุที่อยู่บริษัท"
+                value={formData.address}
+                onChange={(e) => handleInputChange('address', e.target.value)}
+              />
             </div>
 
             {/* ช่องทางการติดต่อ */}
@@ -149,7 +263,13 @@ export default function JobPostPage() {
               <label className="block text-sm text-[#6B7280] mb-2">
                 ช่องทางการติดต่อ
               </label>
-              <Textarea placeholder="ระบุช่องทางการติดต่อ" />
+              <textarea 
+                className="w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none resize-none"
+                rows={3}
+                placeholder="ระบุช่องทางการติดต่อ"
+                value={formData.contact}
+                onChange={(e) => handleInputChange('contact', e.target.value)}
+              />
             </div>
 
             {/* วิธีการเดินทาง */}
@@ -157,7 +277,13 @@ export default function JobPostPage() {
               <label className="block text-sm text-[#6B7280] mb-2">
                 วิธีการเดินทาง
               </label>
-              <Textarea placeholder="ระบุวิธีการเดินทาง" />
+              <textarea 
+                className="w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none resize-none"
+                rows={3}
+                placeholder="ระบุวิธีการเดินทาง"
+                value={formData.transportation}
+                onChange={(e) => handleInputChange('transportation', e.target.value)}
+              />
             </div>
 
             {/* File Uploads */}
@@ -291,10 +417,16 @@ export default function JobPostPage() {
 
             {/* Buttons */}
             <div className="flex justify-end gap-4 pt-6">
-              <button className="px-8 py-3 border border-[#D1D5DB] text-[#374151] text-sm font-medium rounded-full hover:bg-[#F9FAFB] transition-colors">
+              <button 
+                onClick={handleCancel}
+                className="px-8 py-3 border border-[#D1D5DB] text-[#374151] text-sm font-medium rounded-full hover:bg-[#F9FAFB] transition-colors"
+              >
                 ยกเลิก
               </button>
-              <button className="px-8 py-3 bg-[#F97316] hover:bg-[#EA580C] text-[#FFFFFF] text-sm font-medium rounded-full transition-colors">
+              <button 
+                onClick={handleSubmit}
+                className="px-8 py-3 bg-[#F97316] hover:bg-[#EA580C] text-[#FFFFFF] text-sm font-medium rounded-full transition-colors"
+              >
                 บันทึก
               </button>
             </div>
