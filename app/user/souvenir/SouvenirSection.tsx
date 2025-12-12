@@ -4,46 +4,124 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-// ** Mock Data สำหรับของที่ระลึก **
-export const souvenirMockData = {
-  featured: [
-    {
-      id: 1,
-      title: 'ลงทะเบียนเข้าร่วมกิจกรรม ENGi Day',
-      description:
-        "รับ 'เข็มกลัด We are SUT' เป็นของที่ระลึกสุดพิเศษ สำหรับผู้เข้าร่วมงานเท่านั้น",
-      imageSrc: '/souvenir/EngiButton.png',
-      href: '/auth/login',
-      requireAuth: false,
-    },
-    {
-      id: 2,
-      title: 'บริจาคเพื่อสนับสนุน ENGi',
-      description: 'รับหมวก ENGi Cap แทนคำขอบคุณ',
-      imageSrc: '/souvenir/EngiCap.png',
-      href: '/user/donation',
-      requireAuth: true,
-    },
-    {
-      id: 3,
-      title: 'ของที่ระลึกประจำปี SUT',
-      description: 'สะท้อนความเรียบ เท่ และยั่งยืน สำหรับผู้สนับสนุนโครงการ',
-      imageSrc: '/souvenir/EngiBrooch.png',
-      href: '/user/souvenir',
-      requireAuth: true,
-    },
-  ],
-};
+interface SouvenirItem {
+  id: number;
+  name: string;
+  description: string;
+  imageUrl: string;
+  category: string;
+  linkedEventId: number | null;
+  linkedEventName: string | null;
+  linkedEventHref: string;
+}
 
-export function SouvenirSection({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
-  const { featured } = souvenirMockData;
+export function SouvenirSection() {
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+  
+  // ตรวจสอบ authentication จาก cookies หรือ session
+  React.useEffect(() => {
+    // ตรวจสอบว่ามี session หรือไม่
+    fetch('/api/auth/me')
+      .then(res => {
+        if (res.ok) return res.json();
+        return null;
+      })
+      .then(data => {
+        setIsAuthenticated(!!data?.user);
+      })
+      .catch(() => {
+        setIsAuthenticated(false);
+      });
+  }, []);
+  
+  const [souvenirItems, setSouvenirItems] = React.useState<SouvenirItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  // ดึงข้อมูลจาก API
+  React.useEffect(() => {
+    async function fetchData() {
+      try {
+        // ดึงข้อมูล events ที่มีการเชื่อมกับของที่ระลึก
+        const eventsRes = await fetch('/api/admin/events');
+        const events = await eventsRes.json();
+
+        // กรองเฉพาะ events ที่มี souvenirItem และสร้าง map
+        const itemsMap = new Map<number, any>();
+        
+        events.forEach((event: any) => {
+          if (event.souvenirItem && event.souvenirItem.category) {
+            const item = event.souvenirItem;
+            // ใช้ item ที่มี category ชัดเจน
+            if (!itemsMap.has(item.id)) {
+              itemsMap.set(item.id, {
+                id: item.id,
+                name: item.name,
+                description: item.description,
+                imageUrl: item.imageUrl,
+                category: item.category,
+                linkedEventId: event.id,
+                linkedEventName: event.name,
+                linkedEventHref: '#',
+              });
+            }
+          }
+        });
+
+        // แปลง map เป็น array และเรียงตาม category (กิจกรรม -> บริจาค)
+        const categoryOrder = { 'กิจกรรม': 1, 'บริจาค': 2 };
+        const sortedItems = Array.from(itemsMap.values())
+          .filter(item => ['กิจกรรม', 'บริจาค'].includes(item.category))
+          .sort((a, b) => {
+            const orderA = categoryOrder[a.category as keyof typeof categoryOrder] || 999;
+            const orderB = categoryOrder[b.category as keyof typeof categoryOrder] || 999;
+            return orderA - orderB;
+          })
+          .map(item => {
+            // กำหนด title และ href ตาม category
+            let linkedEventName = item.linkedEventName;
+            let linkedEventHref = '#';
+            let description = item.description;
+
+            if (item.category === 'กิจกรรม') {
+              linkedEventName = `ลงทะเบียนเข้าร่วมกิจกรรม ${item.linkedEventName}`;
+              linkedEventHref = `/user/booking`;
+              if (!description) {
+                description = `รับ '${item.name}' เป็นของที่ระลึกสุดพิเศษ`;
+              }
+            } else if (item.category === 'บริจาค') {
+              linkedEventName = `บริจาคเพื่อสนับสนุน ENGi`;
+              linkedEventHref = `/user/donation`;
+              if (!description) {
+                description = `รับ ${item.name} แทนคำขอบคุณ`;
+              }
+            }
+
+            return {
+              ...item,
+              linkedEventName,
+              linkedEventHref,
+              description,
+            };
+          });
+
+        setSouvenirItems(sortedItems);
+      } catch (error) {
+        console.error('Error fetching souvenir data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const [isPaused, setIsPaused] = React.useState(false);
   const trackRef = React.useRef<HTMLDivElement>(null);
   const offsetRef = React.useRef(0);
   const loopWidthRef = React.useRef(0);
   const cardWidthRef = React.useRef(0);
-  const speedRef = React.useRef(36); // px per second (slightly faster continuous)
+  const speedRef = React.useRef(36);
 
   const stepBy = (px: number) => {
     const loopW = loopWidthRef.current || 0;
@@ -62,30 +140,45 @@ export function SouvenirSection({ isAuthenticated = false }: { isAuthenticated?:
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const delta = Math.sign(e.deltaY) * 60; // smooth manual nudge
+    const delta = Math.sign(e.deltaY) * 60;
     stepBy(delta);
   };
 
-  const loopItems = React.useMemo(() => [...featured, ...featured], [featured]);
+  const loopItems = React.useMemo(() => {
+    if (souvenirItems.length === 0) return [];
+    return [...souvenirItems, ...souvenirItems, ...souvenirItems, ...souvenirItems];
+  }, [souvenirItems]);
 
   // Measure widths for seamless loop and step sizing
   React.useEffect(() => {
+    if (souvenirItems.length === 0) return;
+    
     const measure = () => {
       const track = trackRef.current;
       const container = scrollContainerRef.current;
       if (!track || !container) return;
+      
+      // Force a reflow to ensure scrollWidth is calculated
+      track.offsetHeight;
+      
       const fullWidth = track.scrollWidth;
-      loopWidthRef.current = fullWidth / 2; // since items duplicated
+      loopWidthRef.current = fullWidth / 4;
       const cols = window.innerWidth >= 768 ? 3 : 1;
       cardWidthRef.current = container.clientWidth / cols;
     };
-    measure();
+    
+    const timer = setTimeout(measure, 100);
     window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, []);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', measure);
+    };
+  }, [souvenirItems]);
 
   // Continuous auto-scroll using requestAnimationFrame
   React.useEffect(() => {
+    if (souvenirItems.length === 0) return;
+    
     let rafId = 0;
     let last = performance.now();
     const tick = (now: number) => {
@@ -98,16 +191,35 @@ export function SouvenirSection({ isAuthenticated = false }: { isAuthenticated?:
     };
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [isPaused]);
+  }, [isPaused, souvenirItems]);
 
-  // (Removed interval autoplay; continuous RAF scrolling handles auto movement)
+  if (loading) {
+    return (
+      <section className="w-full bg-white px-4 py-16 min-h-[calc(100vh-80px)] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">กำลังโหลดข้อมูล...</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (souvenirItems.length === 0) {
+    return (
+      <section className="w-full bg-white px-4 py-16 min-h-[calc(100vh-80px)] flex items-center justify-center">
+        <div className="text-center text-gray-500">
+          ยังไม่มีของที่ระลึกในขณะนี้
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="w-full bg-white px-4 py-16 min-h-[calc(100vh-80px)] md:min-h-[calc(100vh-88px)] flex items-center">
       <div className="container mx-auto relative">
         {/* หัวข้อ */}
         <div className="flex items-center justify-between mb-10">
-          <h2 className="text-3xl md:text-4xl font-semibold text-gray-800">ของที่ระลึก</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900">ของที่ระลึก</h2>
         </div>
 
         {/* Navigation Buttons */}
@@ -136,35 +248,46 @@ export function SouvenirSection({ isAuthenticated = false }: { isAuthenticated?:
           className="relative overflow-hidden max-w-7xl mx-auto"
         >
           <div ref={trackRef} className="flex gap-12 will-change-transform">
-            {loopItems.map((item, idx) => (
-              <Link 
-                key={`${item.id}-${idx}`} 
-                href={item.requireAuth && !isAuthenticated ? '/auth/login' : item.href} 
-                className="group block basis-full md:basis-1/3 shrink-0"
-              >
-                <div className="flex flex-col items-center text-center">
-                  {/* รูปหลัก */}
-                  <div className="relative w-full h-96 md:h-[420px] bg-white rounded-3xl overflow-hidden transition-all duration-300 shadow-sm group-hover:shadow-2xl group-hover:-translate-y-0.5 group-hover:ring-1 group-hover:ring-gray-200">
-                    <Image
-                      src={item.imageSrc}
-                      alt={item.title}
-                      fill
-                      priority={idx % featured.length === 1}
-                      className={'object-contain'}
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    />
-                  </div>
+            {loopItems.map((item, idx) => {
+              const requireAuth = item.category === 'บริจาค';
+              const finalHref = requireAuth && !isAuthenticated ? '/auth/login' : item.linkedEventHref;
+              
+              return (
+                <Link 
+                  key={`${item.id}-${idx}`} 
+                  href={finalHref}
+                  className="group block basis-full md:basis-1/3 shrink-0"
+                >
+                  <div className="flex flex-col items-center text-center">
+                    {/* รูปหลัก */}
+                    <div className="relative w-full h-96 md:h-[420px] bg-white rounded-3xl overflow-hidden transition-all duration-300 shadow-sm group-hover:shadow-2xl group-hover:-translate-y-0.5 group-hover:ring-1 group-hover:ring-gray-200">
+                      {item.imageUrl ? (
+                        <Image
+                          src={item.imageUrl}
+                          alt={item.name}
+                          fill
+                          priority={idx % souvenirItems.length === 0}
+                          className="object-contain"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                          <p className="text-gray-400">ไม่มีรูปภาพ</p>
+                        </div>
+                      )}
+                    </div>
 
-                  {/* ข้อความโปรโมต */}
-                  <h3 className="mt-6 text-xl md:text-2xl font-medium text-orange-600">
-                    {item.title}
-                  </h3>
-                  <p className="mt-2 text-sm md:text-base text-gray-500 max-w-md">
-                    {item.description}
-                  </p>
-                </div>
-              </Link>
-            ))}
+                    {/* ข้อความโปรโมต */}
+                    <h3 className="mt-6 text-xl md:text-2xl font-medium text-orange-600">
+                      {item.linkedEventName}
+                    </h3>
+                    <p className="mt-2 text-sm md:text-base text-gray-500 max-w-md">
+                      {item.description}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </div>
