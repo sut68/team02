@@ -131,28 +131,30 @@ export function News() {
 
   return (
     <>
-      <section className="container mx-auto mb-16 px-4 py-0 ">
-        {/* Banner */}
-        <div className="relative w-screen h-[500px] left-[50%] right-[50%] mb-25 -ml-[50vw] -mr-[50vw] overflow-hidden">
-          <Image
-            src="/42.jpg"
-            alt="Home"
-            fill
-            className="object-cover object-center"
-            priority
-          />
-          <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
-          <div className="absolute inset-0 flex flex-col justify-end items-start text-left p-8 md:p-16 font-sans">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white/95 mb-4 drop-shadow-lg">
-              AlumniConnext
-            </h1>
-            <p className="text-lg md:text-xl text-white/75 max-w-2xl font-light leading-relaxed drop-shadow-md">
-              เชื่อมโยงศิษย์เก่าและมหาวิทยาลัย สร้างเครือข่ายที่เข้มแข็ง{" "}
-              <br className="hidden md:block" />
-              เพื่ออนาคตที่ยั่งยืนและการเรียนรู้ตลอดชีวิต
-            </p>
-          </div>
-        </div>
+    <section className="container mx-auto mb-16 px-4 py-0 ">
+      {/* 🔶 Full-width Banner */}
+            <div className="relative w-screen h-[600px] left-[50%] right-[50%] mb-25 -ml-[50vw] -mr-[50vw] overflow-hidden">
+              <Image
+                src="/18.jpg"
+                alt="Home"
+                fill
+                className="object-cover object-center"
+                priority
+              />
+              <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+
+              {/* Text Container */}
+              <div className="absolute inset-0 flex flex-col justify-end items-start text-left p-8 md:p-16 font-sans">
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white/95 mb-4 drop-shadow-lg">
+                  AlumniConnext
+                </h1>
+                <p className="text-lg md:text-xl text-white/75 max-w-2xl font-light leading-relaxed drop-shadow-md">
+                  เชื่อมโยงศิษย์เก่าและมหาวิทยาลัย สร้างเครือข่ายที่เข้มแข็ง <br className="hidden md:block" />
+                  เพื่ออนาคตที่ยั่งยืนและการเรียนรู้ตลอดชีวิต
+                </p>
+              </div>
+            </div>
+      
 
         {/* หัวข้อ + ปุ่ม */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
@@ -311,10 +313,11 @@ export function News() {
         )}
       </section>
 
-      <div id="souvenir" className="scroll-mt-28">
-        <SouvenirSection isAuthenticated={isLoggedIn} />
-      </div>
-    </>
+    {/* ส่วนของที่ระลึก */}
+    <div id="souvenir" className="scroll-mt-28">
+      <SouvenirSection />
+    </div>
+  </>
   );
 }
 
