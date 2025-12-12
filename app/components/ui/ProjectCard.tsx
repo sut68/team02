@@ -202,6 +202,7 @@ import { ProjectWithManager } from "@/app/types/budget_approval";
 import { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/app/components/ui/Card";
 import { useRouter } from 'next/navigation'; // 1. อย่าลืม import useRouter
+import { set } from "react-hook-form";
 
 interface ProjectCardProps {
   project: ProjectWithManager;
@@ -227,7 +228,7 @@ export default function ProjectCard({ project, onUpdate }: ProjectCardProps) {
   
   // State สำหรับ Modal เปลี่ยนสถานะ
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [pendingStatus, setPendingStatus] = useState<number | null>(null);
+  const [pendingOption, setPendingOption] = useState<typeof STATUS_OPTIONS[0] | null>(null);
 
   // State สำหรับ Modal ลบ
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -239,6 +240,11 @@ export default function ProjectCard({ project, onUpdate }: ProjectCardProps) {
     setPendingOption(option);
     setIsMenuOpen(false);
     setIsConfirmOpen(true);
+  };
+
+  const cancelChange = () => {
+    setIsConfirmOpen(false);
+    setPendingOption(null);
   };
 
   const confirmChange = async () => {
@@ -255,6 +261,8 @@ export default function ProjectCard({ project, onUpdate }: ProjectCardProps) {
 
         if (res.ok) {
           setCurrentOption(pendingOption);
+          setIsConfirmOpen(false);
+          setPendingOption(null);
           if (onUpdate) onUpdate(); 
           else router.refresh();
         } else {
@@ -266,7 +274,6 @@ export default function ProjectCard({ project, onUpdate }: ProjectCardProps) {
       }
     }
     setIsConfirmOpen(false);
-    setPendingStatus(null);
   };
 
   // --- Handlers: Delete ---
@@ -279,6 +286,7 @@ export default function ProjectCard({ project, onUpdate }: ProjectCardProps) {
         });
         
         if (res.ok) {
+          setIsDeleteModalOpen(false);
             if (onUpdate) onUpdate(); 
             else router.refresh();
         } else {
