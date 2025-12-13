@@ -569,6 +569,12 @@ enum SummarySubmissionStatus {
   NEEDS_REVISION
 }
 
+enum RoundStatus {
+  PREPARING // กำลังเตรียม (ค่า Default)
+  OPEN      // เปิดรับบริจาค/โหวต
+  CLOSED    // ปิดแล้ว
+}
+
 // ผู้จัดการโครงการ
 model ProjectManager {
   id          Int     @id @default(autoincrement())
@@ -593,6 +599,10 @@ model BudgetRound {
   totalBudget Float?
   startDate   DateTime?
   endDate     DateTime?
+  // Safety Switch
+  isPublished Boolean  @default(false)
+  // 
+  status      RoundStatus @default(PREPARING)
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -614,7 +624,7 @@ model ProjectProposal {
   requestedAmount    Float?
   projectStartDate   DateTime?
   projectEndDate     DateTime?
-  scoreTotal         Int?
+  scoreTotal         Int       @default(0)
   responsibilityUnit String?
   coverFilePath      String?
 
@@ -674,7 +684,7 @@ model BudgetDonation {
   amount Float
 
   createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  updatedAt DateTime  @default(now()) @updatedAt
   deletedAt DateTime?
 
   budgetRoundId Int

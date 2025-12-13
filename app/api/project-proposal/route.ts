@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
+import { transporter, mailOptions } from '@/app/lib/nodemailer';
 
 // GET: ดึงข้อมูล (เหมือนเดิม)
 export async function GET(request: NextRequest) {
@@ -135,6 +136,74 @@ export async function PUT(request: NextRequest) {
         ...(managerUpdate && { manager: managerUpdate })
       },
     });
+
+    if (status === 'OPEN' && updatedProposal.budgetRoundId) { 
+      
+      const eligibleVoters = await prisma.user.findMany({
+        where: {
+          role: 'ALUMNI',
+          verification: {
+            status: 'APPROVED'
+          },
+          budgetDonations: {
+            some: {
+              budgetRoundId: updatedProposal.budgetRoundId
+            }
+          }
+        },
+        select: { email: true, fullName: true }
+      });
+
+      // สร้างลิงก์ไปยังหน้าโหวต
+      const voteLink = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/user/vote`;
+
+      // สร้าง Array ของ Promise สำหรับการส่งอีเมล
+      const emailPromises = eligibleVoters.map((voter) => {
+        const mailSubject = `📢 เชิญร่วมโหวตโครงการ: ${updatedProposal.projectName}`;
+        
+        const mailHtml = `
+          <div style="font-family: 'Sarabun', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 10px;">
+            <h2 style="color: #F26522;">ขอเชิญร่วมโหวตโครงการ</h2>
+            <p>เรียนคุณ <strong>${voter.fullName}</strong>,</p>
+            
+            <p>โครงการ <strong>"${updatedProposal.projectName}"</strong> ได้ผ่านการพิจารณาและเปิดให้โหวตแล้ว</p>
+            <p>เนื่องจากท่านเป็นผู้สนับสนุนในรอบงบประมาณนี้ ท่านจึงมีสิทธิ์ในการโหวตคัดเลือกโครงการ</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${voteLink}" 
+                 style="background-color: #F26522; color: white; padding: 12px 24px; text-decoration: none; border-radius: 50px; font-weight: bold; display: inline-block;">
+                ไปที่หน้าโหวต
+              </a>
+            </div>
+
+            <p style="font-size: 14px; color: #666;">
+              *กรุณาเข้าสู่ระบบก่อนทำการโหวต
+            </p>
+            <hr style="margin-top: 30px; border: 0; border-top: 1px solid #eee;" />
+            <p style="font-size: 12px; color: #999;">
+              อีเมลฉบับนี้เป็นการแจ้งเตือนอัตโนมัติจากระบบ AlumniConnect
+            </p>
+          </div>
+        `;
+
+        // สั่งส่งอีเมล (คืนค่า Promise กลับไป)
+        return transporter.sendMail({
+          ...mailOptions,
+          to: voter.email,
+          subject: mailSubject,
+          html: mailHtml,
+        });
+      });
+
+      // ✅ สั่งให้ทำงานพร้อมกันทั้งหมด และรอจนเสร็จ (หรือใช้ Promise.allSettled ถ้าไม่อยากให้ error เดียวทำล่มทั้งหมด)
+      try {
+        await Promise.all(emailPromises);
+        console.log(`✅ Sent voting invitation emails to ${eligibleVoters.length} users.`);
+      } catch (emailError) {
+        console.error("❌ Failed to send some emails:", emailError);
+        // ไม่ throw error เพื่อให้การ update status สำเร็จต่อไป
+      }
+    }
 
     return NextResponse.json({ message: 'แก้ไขสำเร็จ', proposal: updatedProposal }, { status: 200 });
 
