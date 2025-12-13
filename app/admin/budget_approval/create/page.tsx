@@ -101,13 +101,8 @@ export default function CreateBudgetProjectPage() {
           const rounds = data.budgetRounds || [];
           const now = new Date();
           
-          // หา active round ที่วันนี้อยู่ระหว่าง startDate และ endDate
-          const active = rounds.find((r: any) => {
-            if (!r.startDate || !r.endDate) return false;
-            const start = new Date(r.startDate);
-            const end = new Date(r.endDate);
-            return now >= start && now <= end;
-          });
+          // หา active round ที่ status เป็น 'OPEN'
+          const active = rounds.find((r: any) => r.status === 'OPEN');
 
           if (active) {
             setBudgetRoundId(active.id);
@@ -189,11 +184,16 @@ export default function CreateBudgetProjectPage() {
   };
 
   // --- Search Logic ---
-  const handleSearchManager = async () => {
-    if (!searchQuery) return;
+ // ฟังก์ชันกลางสำหรับการค้นหา
+  const executeSearch = async (query: string) => {
+    if (!query.trim()) {
+        setSearchResult([]);
+        return;
+    }
+
     setIsSearching(true);
     try {
-      const res = await fetch(`/api/project-manager?q=${searchQuery}`);
+      const res = await fetch(`/api/project-manager?q=${query}`);
       if (res.ok) {
         const data = await res.json();
         setSearchResult(data);
@@ -203,6 +203,32 @@ export default function CreateBudgetProjectPage() {
     } finally {
       setIsSearching(false);
     }
+  };
+
+  // 1. Auto Search: ค้นหาอัตโนมัติเมื่อหยุดพิมพ์ 0.5 วินาที
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery) {
+        executeSearch(searchQuery);
+      } else {
+        setSearchResult([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  // 2. Handle Enter Key: ค้นหาทันทีเมื่อกด Enter
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      executeSearch(searchQuery);
+    }
+  };
+
+  // 3. Manual Click: ปุ่มค้นหา
+  const handleManualSearch = () => {
+    executeSearch(searchQuery);
   };
 
   const handleSelectManager = (manager: ProjectManager) => {
@@ -584,6 +610,7 @@ export default function CreateBudgetProjectPage() {
                       iconPosition="left"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={handleKeyDown}
                       placeholder="พิมพ์ชื่อ หรืออีเมล..."
                       radius="md"
                       className="bg-white"
@@ -591,7 +618,7 @@ export default function CreateBudgetProjectPage() {
                   </div>
                   <PrimaryButton
                     type="button"
-                    onClick={handleSearchManager}
+                    onClick={handleManualSearch}
                     disabled={isSearching}
                     className="mb-0.5"
                     style={{ borderRadius: "8px", width: "auto", minWidth: "100px", height: "40px" }}
