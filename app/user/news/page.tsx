@@ -10,10 +10,7 @@ import { SouvenirSection } from "../souvenir/SouvenirSection";
 
 type ContentCategoryType =
   | "NEWS"
-  | "EVENT"
-  | "ANNOUNCEMENT"
-  | "ACTIVITY"
-  | "GENERAL";
+  | "ACTIVITY";
 
 type BookingOption = "HAVE" | "NOT";
 

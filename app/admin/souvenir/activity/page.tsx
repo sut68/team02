@@ -79,13 +79,25 @@ export default function SouvenirActivityPage() {
         }
 
         // Fetch events
-        const eventsRes = await fetch('/api/content');
-        if (eventsRes.ok) {
-          const eventsData = await eventsRes.json();
-          if (Array.isArray(eventsData)) {
-            setActivities(eventsData);
+        // Fetch activities from content (แทน events)
+          const contentRes = await fetch('/api/content?category=ACTIVITY'); // หรือ EVENT
+          if (contentRes.ok) {
+            const data = await contentRes.json();
+            const contents = data.contents ?? [];
+
+            const mapped: Activity[] = contents.map((c: any) => ({
+              id: c.id,
+              name: c.TitleName || "(ไม่มีชื่อกิจกรรม)",
+              startDate: c.createdAt || new Date().toISOString(),
+              location: null,
+              souvenirItem: null,
+            }));
+
+            setActivities(mapped);
+
+            if (mapped.length > 0) setSelectedActivity(mapped[0]);
           }
-        }
+
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -102,7 +114,7 @@ export default function SouvenirActivityPage() {
       if (!selectedActivity) return;
       
       try {
-        const res = await fetch(`/api/admin/events/${selectedActivity.id}/registrations`);
+        const res = await fetch(`/api/content/${selectedActivity.id}/registrations`);
         if (res.ok) {
           const data = await res.json();
           setRegistrations(data);

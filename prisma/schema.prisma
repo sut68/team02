@@ -68,6 +68,7 @@ enum TransactionStatus {
   SUCCESS
   FAILED
 }
+
 enum PaymentMethodType {
   PROMPTPAY
   CREDIT_CARD
@@ -109,16 +110,16 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  educationRecords   EducationRecord[]
-  verification       Verification?
-  submissions        Submission[]
+  educationRecords EducationRecord[]
+  verification     Verification?
+  submissions      Submission[]
   // eventRegistrations removed (no longer used)
-  donations          Donation[]
-  entitlements       Entitlement[]
-  redemptions        Redemption[]
-  shipments          Shipment[]
-  bookings           Booking[]
-  contents           Content[]
+  donations        Donation[]
+  entitlements     Entitlement[]
+  redemptions      Redemption[]
+  shipments        Shipment[]
+  bookings         Booking[]
+  contents         Content[]
 
   // Budget System Relations
   proposalsAsStaff    ProjectProposal[]   @relation("StaffProposals")
@@ -239,20 +240,19 @@ model SubmissionFile {
   submission Submission? // back relation (optional)
 }
 
-
 // ========================================
 // Donation (Subsystem reference)
 // ========================================
 
 model Donation {
-  id             Int            @id @default(autoincrement())
+  id             Int           @id @default(autoincrement())
   userId         Int
   amount         Float
-  donatedAt      DateTime       @default(now())
+  donatedAt      DateTime      @default(now())
   purpose        String?
-  status         String         @default("completed") // "pending" | "completed" | "failed"
+  status         String        @default("completed") // "pending" | "completed" | "failed"
   souvenirItemId Int?
-  souvenirItem   SouvenirItem?  @relation(fields: [souvenirItemId], references: [id])
+  souvenirItem   SouvenirItem? @relation(fields: [souvenirItemId], references: [id])
 
   user         User          @relation(fields: [userId], references: [id])
   entitlements Entitlement[]
@@ -309,19 +309,20 @@ model StockMovement {
 
 // ใบสิทธิ์รับของของแต่ละคน (จากกิจกรรม หรือการบริจาค)
 model Entitlement {
-  id           Int         @id @default(autoincrement())
-  userId       Int
-  itemId       Int
-  source       EntitlementSource // BOOKING | DONATION
-  donationId   Int? // ถ้ามาจากบริจาค
-  qtyGranted   Int @default(1) // ได้สิทธิ์ทั้งหมดกี่ชิ้น
-  qtyUsed      Int @default(0) // ใช้สิทธิ์ไปแล้วกี่ชิ้น
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  user         User         @relation(fields: [userId], references: [id])
-  item         SouvenirItem @relation(fields: [itemId], references: [id])
-  donation     Donation?    @relation(fields: [donationId], references: [id])
-  redemptions  Redemption[]
+  id          Int               @id @default(autoincrement())
+  userId      Int
+  itemId      Int
+  source      EntitlementSource // BOOKING | DONATION
+  donationId  Int? // ถ้ามาจากบริจาค
+  qtyGranted  Int               @default(1) // ได้สิทธิ์ทั้งหมดกี่ชิ้น
+  qtyUsed     Int               @default(0) // ใช้สิทธิ์ไปแล้วกี่ชิ้น
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  user        User              @relation(fields: [userId], references: [id])
+  item        SouvenirItem      @relation(fields: [itemId], references: [id])
+  donation    Donation?         @relation(fields: [donationId], references: [id])
+  redemptions Redemption[]
+
   @@index([userId, itemId])
 }
 
@@ -416,7 +417,6 @@ enum Option {
   NOT
 }
 
-
 // ========================================
 // Booking & Content Management System
 // ========================================
@@ -477,10 +477,10 @@ model Booking {
   bookingForm  BookingForm?  @relation(fields: [bookingFormId], references: [id])
 
   bookingFormId Int?
-    attendees     Attendee[]
+  attendees     Attendee[]
 
-    // Relation to SouvenirItem (กิจกรรมแจกของที่ระลึก)
-    souvenirItems SouvenirItem[] @relation("BookingToSouvenirItem")
+  // Relation to SouvenirItem (กิจกรรมแจกของที่ระลึก)
+  souvenirItems SouvenirItem[] @relation("BookingToSouvenirItem")
 }
 
 // ผู้เข้าร่วมในแต่ละการจอง
@@ -508,7 +508,7 @@ model CheckinLog {
 // เนื้อหา/ข่าวสาร/กิจกรรม
 model Content {
   id            Int                  @id @default(autoincrement())
-  TitleName         String?
+  TitleName     String?
   Description   String?
   categories    ContentCategoryType?
   Booking       Option?

@@ -5,41 +5,33 @@ import { prisma } from '@/app/lib/prisma';
 export async function GET(request: NextRequest) {
   try {
     const items = await prisma.souvenirItem.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: {
-        booking: true, // include booking/activity details if linked
-        _count: {
-          select: {
-            movements: true,
-            entitlements: true,
-            redemptions: true,
-            shipments: true,
-          },
-        },
+        booking: true,
       },
     });
 
-    // คำนวณสต็อกคงเหลือจริง
     const itemsWithStock = await Promise.all(
       items.map(async (item) => {
-        const movements = await prisma.stockMovement.findMany({
+        const agg = await prisma.stockMovement.aggregate({
           where: { itemId: item.id },
+          _sum: { delta: true },
         });
-        const totalDelta = movements.reduce((sum: number, m) => sum + m.delta, 0);
+
+        const totalDelta = agg._sum.delta ?? 0;
         const currentStock = item.initialStock + totalDelta;
-        return {
-          ...item,
-          currentStock,
-        };
+
+        return { ...item, currentStock };
       })
     );
 
-    return NextResponse.json(itemsWithStock); // Always return an array
+    return NextResponse.json(itemsWithStock, { status: 200 });
   } catch (error) {
-    console.error('Error fetching souvenir items:', error);
-    return NextResponse.json([], { status: 500 }); // Return empty array on error
+    console.error("Error fetching souvenir items:", error);
+    return NextResponse.json([], { status: 500 });
   }
 }
+
 
 // POST - สร้างของที่ระลึกใหม่
 export async function POST(request: NextRequest) {
