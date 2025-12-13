@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
     const items = await prisma.souvenirItem.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
+        booking: true, // include booking/activity details if linked
         _count: {
           select: {
             movements: true,
@@ -24,10 +25,8 @@ export async function GET(request: NextRequest) {
         const movements = await prisma.stockMovement.findMany({
           where: { itemId: item.id },
         });
-        
         const totalDelta = movements.reduce((sum: number, m) => sum + m.delta, 0);
         const currentStock = item.initialStock + totalDelta;
-
         return {
           ...item,
           currentStock,
@@ -35,13 +34,10 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    return NextResponse.json(itemsWithStock);
+    return NextResponse.json(itemsWithStock); // Always return an array
   } catch (error) {
     console.error('Error fetching souvenir items:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch souvenir items' },
-      { status: 500 }
-    );
+    return NextResponse.json([], { status: 500 }); // Return empty array on error
   }
 }
 
@@ -57,9 +53,7 @@ export async function POST(request: NextRequest) {
       imageUrl, 
       unit, 
       initialStock,
-      linkedType,
-      linkedEventId,
-      linkedDonationProjectId,
+      linkedBookingId, // รับ linkedBookingId จาก body
     } = body;
 
     // Validate required fields
@@ -91,6 +85,10 @@ export async function POST(request: NextRequest) {
         imageUrl,
         unit,
         initialStock: initialStock || 0,
+        linkedBookingId: linkedBookingId || null,
+      },
+      include: {
+        booking: true,
       },
     });
 
@@ -106,20 +104,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // เชื่อมโยงกับ Event หรือ Donation
-    if (linkedType === 'event' && linkedEventId) {
-      await prisma.event.update({
-        where: { id: linkedEventId },
-        data: { souvenirItemId: item.id },
-      });
-    } else if (linkedType === 'donation' && linkedDonationProjectId) {
-      // สำหรับโครงการบริจาค เราจะเก็บ mapping ไว้ใน metadata หรือใช้วิธีอื่น
-      // ปัจจุบัน Donation ไม่ได้เชื่อมกับ DonationProject โดยตรง
-      // สามารถอัพเดท Donation ทั้งหมดที่มี purpose ตรงกับโครงการได้
-      // หรือเก็บข้อมูลไว้ใน SouvenirItem.description
-      // แต่ถ้าต้องการใช้งานจริง ควรเพิ่ม projectId ใน Donation model
-      console.log('Donation project linking not implemented - Donation model does not have projectId');
-    }
+    // ไม่เชื่อมโยงกับ Event เพราะไม่มี Event model แล้ว
+    // หากต้องการเชื่อมโยงกับ Donation Project ให้ implement เพิ่มเติมในอนาคต
 
     return NextResponse.json(item, { status: 201 });
   } catch (error) {

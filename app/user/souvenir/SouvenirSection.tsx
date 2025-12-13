@@ -46,6 +46,7 @@ export function SouvenirSection() {
         const items = await res.json();
         if (!Array.isArray(items)) {
           console.error('Souvenir items is not an array:', items);
+          setSouvenirItems([]); // Fallback to empty array
           setLoading(false);
           return;
         }
@@ -84,7 +85,8 @@ export function SouvenirSection() {
           });
         setSouvenirItems(sortedItems);
       } catch (error) {
-        console.error('Error fetching souvenir data:', error);
+        console.error('Failed to fetch souvenir items:', error);
+        setSouvenirItems([]); // Fallback to empty array
       } finally {
         setLoading(false);
       }

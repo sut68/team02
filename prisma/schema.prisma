@@ -197,7 +197,7 @@ model DonationTransaction {
   status TransactionStatus @default(PENDING)
 
   // Omise/Payment Gateway Reference IDs
-  omiseChargeId String @unique // Omise Charge ID (ใช้ในการตรวจสอบ Webhook)
+  //omiseChargeId String @unique // Omise Charge ID (ใช้ในการตรวจสอบ Webhook)
 
   // ข้อมูลผู้บริจาค (ถ้าผู้ใช้ไม่ได้ Login, อาจ null ได้)
   donorName  String? // ชื่อที่ผู้ใช้ระบุในฟอร์ม (ถ้าไม่ Login)
@@ -277,6 +277,10 @@ model SouvenirItem {
 
   initialStock Int     @default(0) // สต็อกเริ่มต้น
   active       Boolean @default(true)
+
+  // ความสัมพันธ์กับกิจกรรม (Booking)
+  linkedBookingId Int? // ถ้ามีจะชี้ไปที่กิจกรรม
+  booking         Booking? @relation("BookingToSouvenirItem", fields: [linkedBookingId], references: [id])
 
   // ความสัมพันธ์ฝั่งของที่ระลึก
   movements    StockMovement[]
@@ -473,7 +477,10 @@ model Booking {
   bookingForm  BookingForm?  @relation(fields: [bookingFormId], references: [id])
 
   bookingFormId Int?
-  attendees     Attendee[]
+    attendees     Attendee[]
+
+    // Relation to SouvenirItem (กิจกรรมแจกของที่ระลึก)
+    souvenirItems SouvenirItem[] @relation("BookingToSouvenirItem")
 }
 
 // ผู้เข้าร่วมในแต่ละการจอง
@@ -768,7 +775,6 @@ model TopicEditHistory {
   @@index([topic_id])
 }
 
-// Audit Log สำหรับการจัดการเนื้อหา
 model ContentManagementLog {
   id         Int                 @id @default(autoincrement())
   targettype ContentTargetType

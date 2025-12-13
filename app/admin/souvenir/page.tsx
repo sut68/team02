@@ -89,8 +89,12 @@ export default function SouvenirMenuPage() {
       </div>
       {/* Carousel Section - Full Width like user page */}
       <div className={`transition-all duration-300 ${showCarousel ? 'opacity-100 scale-100' : 'opacity-0 scale-95 h-0 overflow-hidden'}`}>
-        {showCarousel === "activity" && <AdminSouvenirCarousel category="กิจกรรม" onCardClick={handleCardClick} />}
-        {showCarousel === "donation" && <AdminSouvenirCarousel category="บริจาค" onCardClick={handleCardClick} />}
+        {showCarousel && (
+          <AdminSouvenirCarousel
+            category={showCarousel}
+            onCardClick={handleCardClick}
+          />
+        )}
       </div>
       {/* Detail Form Section */}
       <div ref={detailRef} className={`transition-all duration-300 ${showDetail ? 'opacity-100 scale-100' : 'opacity-0 scale-95 h-0 overflow-hidden'}`}>
