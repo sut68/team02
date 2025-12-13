@@ -155,6 +155,7 @@ export default function SouvenirDetailPage() {
                   alt={formData.name}
                   fill
                   className="object-contain p-8"
+                  sizes="(max-width: 640px) 100vw, 400px"
                 />
               </div>
               <button className="flex items-center gap-2 px-4 py-2 border-2 border-orange-500 text-orange-500 rounded-lg hover:bg-orange-50 transition font-semibold">

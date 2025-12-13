@@ -5,6 +5,7 @@ import Link from 'next/link';
 import React from 'react';
 import { PrimaryButton } from './../../components/ui/Button';
 import { Card, CardContent, CardHeader } from './../../components/ui/Card';
+import DonationPage from '@/app/user/donation/donate';
 
 // สมมติว่าคุณมี Hook สำหรับตรวจสอบสถานะ Admin (ต้องทำการ import จริงในไฟล์)
 // import { useAdminCheck } from '...'; 
@@ -16,12 +17,12 @@ const Tag = ({ text }: { text: string }) => (
 );
 
 export default function CentralFundDonationPage() {
-    const DONATION_URL = '/user/donation/form'; 
-    
+    const DONATION_URL = '/user/donation/form';
+
     // 💡 สมมติ: ดึงสถานะ Admin มาจาก Context/Hook (เปลี่ยนตามการใช้งานจริงของคุณ)
     // const { isAdmin, loading } = useAdminCheck();
     const isAdmin = true; // <-- เปลี่ยนเป็น false หรือใช้ hook จริง เมื่อใช้งาน
-    
+
     const ADD_PROJECT_URL = '/admin/donation/create'; // URL สำหรับหน้าสร้างโครงการ
 
     return (
@@ -29,13 +30,13 @@ export default function CentralFundDonationPage() {
 
             {/* 3. ส่วน Content (การ์ดเดียวสำหรับกองทุนกลาง) */}
             <div className="container mx-auto max-w-8xl p-4 md:p-8 z-10 relative">
-                
+
                 {/* 💡 แก้ไข: ใช้ Flexbox จัดวางหัวข้อและปุ่ม */}
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-3xl md:text-4xl font-semibold text-gray-800">
                         การระดมทุน
                     </h2>
-                    
+
                     {/* 💡 ปุ่ม "เพิ่มโครงการ" (แสดงเฉพาะ Admin) */}
                     {isAdmin && (
                         <Link href={ADD_PROJECT_URL}>
@@ -63,8 +64,8 @@ export default function CentralFundDonationPage() {
                         </div>
 
                         {/* เนื้อหา (p-5 grow) - จัดโครงสร้างใหม่ให้แสดงรายละเอียดทางการเงินและปุ่ม */}
-                        <div className="p-5 grow flex flex-col justify-between"> 
-                            
+                        <div className="p-5 grow flex flex-col justify-between">
+
                             {/* ส่วนบน: ชื่อและคำอธิบาย */}
                             <div>
                                 <CardHeader className="mb-2! text-lg! md:text-xl! font-semibold group-hover:text-orange-600 transition">
@@ -98,6 +99,10 @@ export default function CentralFundDonationPage() {
                     </Card>
                 </Link>
 
+
+            </div>
+            <div id="donation" className="scroll-mt-28">
+                <DonationPage />
             </div>
         </div>
     );

@@ -68,6 +68,7 @@ enum TransactionStatus {
   SUCCESS
   FAILED
 }
+
 enum PaymentMethodType {
   PROMPTPAY
   CREDIT_CARD
@@ -109,16 +110,16 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  educationRecords   EducationRecord[]
-  verification       Verification?
-  submissions        Submission[]
+  educationRecords EducationRecord[]
+  verification     Verification?
+  submissions      Submission[]
   // eventRegistrations removed (no longer used)
-  donations          Donation[]
-  entitlements       Entitlement[]
-  redemptions        Redemption[]
-  shipments          Shipment[]
-  bookings           Booking[]
-  contents           Content[]
+  donations        Donation[]
+  entitlements     Entitlement[]
+  redemptions      Redemption[]
+  shipments        Shipment[]
+  bookings         Booking[]
+  contents         Content[]
 
   // Budget System Relations
   proposalsAsStaff    ProjectProposal[]   @relation("StaffProposals")
@@ -197,7 +198,7 @@ model DonationTransaction {
   status TransactionStatus @default(PENDING)
 
   // Omise/Payment Gateway Reference IDs
-  omiseChargeId String @unique // Omise Charge ID (ใช้ในการตรวจสอบ Webhook)
+  //omiseChargeId String @unique // Omise Charge ID (ใช้ในการตรวจสอบ Webhook)
 
   // ข้อมูลผู้บริจาค (ถ้าผู้ใช้ไม่ได้ Login, อาจ null ได้)
   donorName  String? // ชื่อที่ผู้ใช้ระบุในฟอร์ม (ถ้าไม่ Login)
@@ -239,20 +240,19 @@ model SubmissionFile {
   submission Submission? // back relation (optional)
 }
 
-
 // ========================================
 // Donation (Subsystem reference)
 // ========================================
 
 model Donation {
-  id             Int            @id @default(autoincrement())
+  id             Int           @id @default(autoincrement())
   userId         Int
   amount         Float
-  donatedAt      DateTime       @default(now())
+  donatedAt      DateTime      @default(now())
   purpose        String?
-  status         String         @default("completed") // "pending" | "completed" | "failed"
+  status         String        @default("completed") // "pending" | "completed" | "failed"
   souvenirItemId Int?
-  souvenirItem   SouvenirItem?  @relation(fields: [souvenirItemId], references: [id])
+  souvenirItem   SouvenirItem? @relation(fields: [souvenirItemId], references: [id])
 
   user         User          @relation(fields: [userId], references: [id])
   entitlements Entitlement[]
@@ -277,6 +277,10 @@ model SouvenirItem {
 
   initialStock Int     @default(0) // สต็อกเริ่มต้น
   active       Boolean @default(true)
+
+  // ความสัมพันธ์กับกิจกรรม (Booking)
+  linkedBookingId Int? // ถ้ามีจะชี้ไปที่กิจกรรม
+  booking         Booking? @relation("BookingToSouvenirItem", fields: [linkedBookingId], references: [id])
 
   // ความสัมพันธ์ฝั่งของที่ระลึก
   movements    StockMovement[]
@@ -305,19 +309,20 @@ model StockMovement {
 
 // ใบสิทธิ์รับของของแต่ละคน (จากกิจกรรม หรือการบริจาค)
 model Entitlement {
-  id           Int         @id @default(autoincrement())
-  userId       Int
-  itemId       Int
-  source       EntitlementSource // BOOKING | DONATION
-  donationId   Int? // ถ้ามาจากบริจาค
-  qtyGranted   Int @default(1) // ได้สิทธิ์ทั้งหมดกี่ชิ้น
-  qtyUsed      Int @default(0) // ใช้สิทธิ์ไปแล้วกี่ชิ้น
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  user         User         @relation(fields: [userId], references: [id])
-  item         SouvenirItem @relation(fields: [itemId], references: [id])
-  donation     Donation?    @relation(fields: [donationId], references: [id])
-  redemptions  Redemption[]
+  id          Int               @id @default(autoincrement())
+  userId      Int
+  itemId      Int
+  source      EntitlementSource // BOOKING | DONATION
+  donationId  Int? // ถ้ามาจากบริจาค
+  qtyGranted  Int               @default(1) // ได้สิทธิ์ทั้งหมดกี่ชิ้น
+  qtyUsed     Int               @default(0) // ใช้สิทธิ์ไปแล้วกี่ชิ้น
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  user        User              @relation(fields: [userId], references: [id])
+  item        SouvenirItem      @relation(fields: [itemId], references: [id])
+  donation    Donation?         @relation(fields: [donationId], references: [id])
+  redemptions Redemption[]
+
   @@index([userId, itemId])
 }
 
@@ -404,17 +409,13 @@ enum PriceMode {
 
 enum ContentCategoryType {
   NEWS
-  EVENT
-  ANNOUNCEMENT
   ACTIVITY
-  GENERAL
 }
 
 enum Option {
   HAVE
   NOT
 }
-
 
 // ========================================
 // Booking & Content Management System
@@ -477,6 +478,9 @@ model Booking {
 
   bookingFormId Int?
   attendees     Attendee[]
+
+  // Relation to SouvenirItem (กิจกรรมแจกของที่ระลึก)
+  souvenirItems SouvenirItem[] @relation("BookingToSouvenirItem")
 }
 
 // ผู้เข้าร่วมในแต่ละการจอง
@@ -504,7 +508,7 @@ model CheckinLog {
 // เนื้อหา/ข่าวสาร/กิจกรรม
 model Content {
   id            Int                  @id @default(autoincrement())
-  TitleName         String?
+  TitleName     String?
   Description   String?
   categories    ContentCategoryType?
   Booking       Option?
@@ -771,7 +775,6 @@ model TopicEditHistory {
   @@index([topic_id])
 }
 
-// Audit Log สำหรับการจัดการเนื้อหา
 model ContentManagementLog {
   id         Int                 @id @default(autoincrement())
   targettype ContentTargetType
