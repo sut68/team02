@@ -63,6 +63,11 @@ enum ProjectStatus {
   COMPLETED
 }
 
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
 enum PaymentMethodType {
   PROMPTPAY
   CREDIT_CARD
@@ -108,7 +113,7 @@ model User {
   verification       Verification?
   submissions        Submission[]
   eventRegistrations EventRegistration[]
-  donations          Donation[]
+  donations          DonationProject[]
   entitlements       Entitlement[]
   redemptions        Redemption[]
   shipments          Shipment[]
@@ -158,28 +163,6 @@ model Verification {
   // Foreign Key (One-to-One)
   userId Int  @unique
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-// 💡 NEW MODEL: โครงการระดมทุน (DonationProject)
-model DonationProject {
-  id            Int      @id @default(autoincrement())
-  title         String
-  description   String
-  goalAmount    Float
-  currentAmount Float    @default(0)
-  startDate     DateTime
-  endDate       DateTime
-  ownerName     String
-  contact       String
-
-  // status (ใช้ Enum ใหม่)
-  status    ProjectStatus @default(OPEN)
-  posterUrl String?
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-
-  // Relations
-  transactions DonationTransaction[] // ความสัมพันธ์ 1-to-Many กับ Transaction
 }
 
 
@@ -240,26 +223,6 @@ model EventRegistration {
   @@unique([eventId, userId])
 }
 
-// ========================================
-// Donation (Subsystem reference)
-// ========================================
-
-model Donation {
-  id             Int            @id @default(autoincrement())
-  userId         Int
-  amount         Float
-  donatedAt      DateTime       @default(now())
-  purpose        String?
-  status         String         @default("completed") // "pending" | "completed" | "failed"
-  souvenirItemId Int?
-  souvenirItem   SouvenirItem?  @relation(fields: [souvenirItemId], references: [id])
-
-  user         User          @relation(fields: [userId], references: [id])
-  entitlements Entitlement[]
-  shipments    Shipment[]
-
-  @@map("Donation")
-}
 
 // ========================================
 // Souvenir Subsystem
@@ -284,7 +247,7 @@ model SouvenirItem {
   redemptions  Redemption[]
   shipments    Shipment[]
   events       Event[]
-  donations    Donation[]
+  donations    DonationProject[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -324,7 +287,7 @@ model Entitlement {
   item              SouvenirItem       @relation(fields: [itemId], references: [id])
   event             Event?             @relation(fields: [eventId], references: [id])
   eventRegistration EventRegistration? @relation(fields: [eventRegistrationId], references: [id])
-  donation          Donation?          @relation(fields: [donationId], references: [id])
+  donation          DonationProject?          @relation(fields: [donationId], references: [id])
 
   redemptions Redemption[]
 
@@ -349,7 +312,7 @@ model Redemption {
 // การจัดส่งของที่ระลึก (สำหรับสายบริจาค/ส่งถึงบ้าน)
 model Shipment {
   id         Int @id @default(autoincrement())
-  donationId Int // มาจากการบริจาคอันไหน
+  donationId Int @unique// มาจากการบริจาคอันไหน
   userId     Int // ผู้รับ (เจ้าของสิทธิ์)
   itemId     Int
   qty        Int @default(1)
@@ -368,7 +331,7 @@ model Shipment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  donation Donation     @relation(fields: [donationId], references: [id])
+  donation DonationProject     @relation(fields: [donationId], references: [id])
   user     User         @relation(fields: [userId], references: [id])
   item     SouvenirItem @relation(fields: [itemId], references: [id])
 }
@@ -482,7 +445,7 @@ model Booking {
   user         User?         @relation(fields: [Userid], references: [id])
   content      Content?      @relation(fields: [ContentID], references: [id])
   bookingField BookingField? @relation(fields: [BookingFieldID], references: [id])
-  payment      Payment?      @relation(fields: [PaymentID], references: [id])
+  payment      PaymentRecord?      @relation(fields: [PaymentID], references: [id])
   bookingForm  BookingForm?  @relation(fields: [bookingFormId], references: [id])
 
   bookingFormId Int?
@@ -540,21 +503,6 @@ model PictureContent {
   createdAt DateTime @default(now())
 
   content Content @relation(fields: [ContentID], references: [id], onDelete: Cascade)
-}
-
-// การชำระเงิน
-model Payment {
-  id            Int               @id @default(autoincrement())
-  amount        Float
-  paymentDate   DateTime          @default(now())
-  paymentMethod String? // เช่น "credit_card", "bank_transfer", "qr_code"
-  status        TransactionStatus @default(PENDING)
-  referenceNo   String? // เลขที่อ้างอิง/slip
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  booking Booking?
 }
 
 // ========================================
@@ -802,6 +750,70 @@ model ContentManagementLog {
 // Donation Project & Payment System
 // ========================================
 
+model DonationProject {
+  id            Int      @id @default(autoincrement())
+  title         String
+  description   String
+  goalAmount    Float
+  currentAmount Float    @default(0)
+  startDate     DateTime
+  endDate       DateTime
+  ownerName     String
+  contact       String
+
+  posterUrl String?
+  // status
+  status    ProjectStatus @default(OPEN)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  // Relations
+  transactions DonationTransaction[] // ความสัมพันธ์ 1-to-Many กับ transaction
+  // สำหรับ User (One-to-Many)
+  userId Int? // Foreign Key
+  user   User? @relation(fields: [userId], references: [id])
+
+  // สำหรับ SouvenirItem (สมมติว่าเป็น Foreign Key)
+  souvenirItemId Int? // Foreign Key
+  souvenirItem   SouvenirItem? @relation(fields: [souvenirItemId], references: [id])
+
+  // สำหรับ Entitlement
+  entitlement Entitlement[] // ถ้า DonationProject มีหลาย Entitlement
+
+  // สำหรับ Shipment (สมมติเป็น One-to-One)
+  shipment Shipment?
+}
+
+model DonationTransaction {
+  id Int @id @default(autoincrement())
+
+  amount Float
+
+  // สถานะการทำธุรกรรม (Pending, Success, Failed)
+  status TransactionStatus @default(PENDING)
+
+  // Omise/Payment Gateway Reference IDs
+  omiseChargeId String? @unique // Omise Charge ID (ใช้ในการตรวจสอบ Webhook)
+
+  // ข้อมูลผู้บริจาค (ถ้าผู้ใช้ไม่ได้ Login, อาจ null ได้)
+  donorName  String? // ชื่อที่ผู้ใช้ระบุในฟอร์ม (ถ้าไม่ Login)
+  donorEmail String?
+  isPublic   Boolean @default(true) // แสดงชื่อผู้บริจาคสาธารณะหรือไม่
+
+  // ความสัมพันธ์กับ User (ถ้าบริจาคโดย Login)
+  userId Int?
+  user   User? @relation(fields: [userId], references: [id])
+
+  // ความสัมพันธ์กับ Project
+  projectId Int
+  donation   DonationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  paymentRecords PaymentRecord[]
+}
+
 // วิธีการชำระเงิน
 model PaymentMethodRecord {
   id            Int               @id @default(autoincrement())
@@ -839,40 +851,8 @@ model PaymentRecord {
   transaction           DonationTransaction? @relation(fields: [donationTransactionId], references: [id])
   donationTransactionId Int?
 
+  bookings Booking[]
+
   @@index([paymentStatus])
-  @@index([createdAt])
-}
-
-// ธุรกรรมการบริจาค
-model DonationTransaction {
-  id                 Int                 @id @default(autoincrement())
-  
-  amount             Float
-  status             TransactionStatus   @default(PENDING)
-  
-  message            String?             @db.Text
-  isPublic           Boolean             @default(true)
-  
-  // ข้อมูลผู้บริจาค (สำหรับผู้ไม่ได้ Login)
-  donorName          String?
-  donorEmail         String?
-  donorPhone         String?
-  
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-
-  // Relations
-  userId             Int?
-  user               User?               @relation(fields: [userId], references: [id])
-  
-  projectId          Int
-  project            DonationProject     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  paymentId          Int?                @unique
-  paymentRecord      PaymentRecord?      @relation(fields: [paymentId], references: [id])
-  
-  @@index([userId])
-  @@index([projectId])
-  @@index([status])
   @@index([createdAt])
 }
