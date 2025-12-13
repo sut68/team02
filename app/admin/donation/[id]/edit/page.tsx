@@ -1,15 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'; // 💡 เพิ่ม useMemo
-import { useRouter } from 'next/navigation'; 
+import { useState, useEffect, useCallback,  } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { useForm, SubmitHandler } from 'react-hook-form'; 
-import { UploadCloud, Trash2 } from 'lucide-react'; 
-import { Card } from '@/app/components/ui/Card'; 
-import { PrimaryButton, CancelButton } from '@/app/components/ui/Button'; 
+import { useForm, SubmitHandler } from 'react-hook-form';
+import { UploadCloud, Trash2 } from 'lucide-react';
+import { Card } from '@/app/components/ui/Card';
+import { PrimaryButton, CancelButton } from '@/app/components/ui/Button';
 
 // --------------------------------------------------------------------------
-// 💡 Interfaces/Types
+//  Interfaces/Types
 // --------------------------------------------------------------------------
 interface ProjectData {
   id: number;
@@ -20,7 +20,7 @@ interface ProjectData {
   endDate: string;
   status: string;
   posterUrl: string | null;
-  ownerName: string; // เพิ่มฟิลด์ที่จำเป็นอื่นๆ ที่ต้องการแก้ไข
+  ownerName: string; 
 }
 
 interface EditFormData extends Omit<ProjectData, 'id' | 'goalAmount' | 'posterUrl' | 'ownerName'> {
@@ -29,64 +29,73 @@ interface EditFormData extends Omit<ProjectData, 'id' | 'goalAmount' | 'posterUr
   posterImage: FileList | null; // สำหรับรูปภาพใหม่
 }
 
-type Params = {
-  id: string;
-};
 
 // --------------------------------------------------------------------------
 // 💡 Component หลัก: หน้าแก้ไขโครงการ
 // --------------------------------------------------------------------------
-export default function EditProjectPage({ params }: { params: any }) { // changed type to any to allow Promise
+export default function EditProjectPage({ params }: { params: any }) { 
   const router = useRouter();
-  
-  // 💡 (FIX 1) เปลี่ยน projectId เป็น State ที่เริ่มต้นเป็น null
+
   const [projectId, setProjectId] = useState<number | null>(null);
 
   const [initialData, setInitialData] = useState<ProjectData | null>(null);
-  // 💡 (FIX) Loading เริ่มต้นเป็น true จนกว่า ID จะถูกกำหนด
-  const [loading, setLoading] = useState(true); 
+  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const { register, handleSubmit, reset, formState: { errors }, watch } = useForm<EditFormData>();
   const [currentPosterUrl, setCurrentPosterUrl] = useState<string | null>(null);
 
-  const { register, handleSubmit, reset, formState: { errors }, watch } = useForm<EditFormData>();
-
-  // ดูการเปลี่ยนแปลงของไฟล์รูปภาพ
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const watchedImage = watch("posterImage");
-  const imagePreview = watchedImage && watchedImage.length > 0 ? URL.createObjectURL(watchedImage[0]) : null;
 
-  // 1. ดึงข้อมูลโครงการเดิมมาแสดง
+  // เมื่อไฟล์รูปภาพถูกเลือก
+  useEffect(() => {
+    let objectUrl: string | null = null;
+
+    if (watchedImage && watchedImage.length > 0) {
+      const file = watchedImage[0];
+
+      objectUrl = URL.createObjectURL(file);
+      setImagePreview(objectUrl);
+    } else {
+      setImagePreview(null);
+    }
+
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [watchedImage,]);
+
+  // ดึงข้อมูลโครงการเดิมมาแสดง
   const fetchAndSetData = useCallback(async (id: number) => {
     setLoading(true);
     setError(null);
 
     async function fetchProjectData() {
       try {
-        // <-- changed to use admin API route
-        const response = await fetch(`/api/admin/projects/${id}`);
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `ไม่พบโครงการ ID ${id}`);
-        }
-        
-        const data: ProjectData = await response.json();
-        
-        // 💡 แปลงวันที่ให้อยู่ในรูปแบบ 'YYYY-MM-DD' สำหรับ input type="date"
-        const formatISODate = (iso: string) => iso ? new Date(iso).toISOString().split('T')[0] : '';
-        
-        setInitialData(data);
-        console.log(data.posterUrl)
-        setCurrentPosterUrl(data.posterUrl || null);
+        const res = await fetch(`/api/donation-project/${id}`, {
+          method: "GET",
+          cache: "no-store",
+        });
 
-        // 💡 กำหนดค่าเริ่มต้นให้กับ Form
+        const data = await res.json();
+        const p = data.project;
+
+        setInitialData(p);
+        setCurrentPosterUrl(p.posterUrl || null);
+
+        const formatISODate = (iso: string) => iso ? new Date(iso).toISOString().split('T')[0] : '';
+
         reset({
-          title: data.title,
-          description: data.description,
-          goalAmount: data.goalAmount,
-          startDate: formatISODate(data.startDate),
-          endDate: formatISODate(data.endDate),
-          status: data.status,
+          title: p.title,
+          description: p.description,
+          goalAmount: p.goalAmount,
+          startDate: formatISODate(p.startDate),
+          endDate: formatISODate(p.endDate),
+          status: p.status,
         });
 
       } catch (err: any) {
@@ -97,12 +106,9 @@ export default function EditProjectPage({ params }: { params: any }) { // change
     }
     fetchProjectData();
 
-  }, [reset]); // 💡 reset เป็น dependency ที่ปลอดภัย
+  }, [reset]);
 
-
-  // 💡 (FIX 2) useEffect ที่จัดการ ID และเรียก fetchAndSetData
   useEffect(() => {
-    // params might be a Promise in Next.js 16; resolve it safely
     Promise.resolve(params)
       .then((resolved: any) => {
         const routeIdString = typeof resolved?.id === 'string' ? resolved.id : String(resolved?.id || '');
@@ -121,26 +127,18 @@ export default function EditProjectPage({ params }: { params: any }) { // change
         setError(err?.message || 'ไม่สามารถอ่าน params ได้');
         setLoading(false);
       });
+  }, [params, fetchAndSetData]);
 
-    // Cleanup URL
-    return () => {
-      if (imagePreview) URL.revokeObjectURL(imagePreview);
-    };
-  }, [params, fetchAndSetData, imagePreview]); // use params (not params.id)
-
-
-  // 2. ฟังก์ชันอัปโหลดโปสเตอร์ใหม่ (ใช้ Logic เดิม)
   const uploadPoster = async (file: File): Promise<string> => {
     const uploadFormData = new window.FormData();
     uploadFormData.append('file', file);
-    
-    const uploadResponse = await fetch('/api/admin/upload-poster', {
+
+    const uploadResponse = await fetch('/api/donation-project/upload-poster', {
       method: 'POST',
       body: uploadFormData,
     });
 
     if (!uploadResponse.ok) {
-      // 💡 (FIX) ปรับปรุง Error Handling ให้รวม Response Status
       const contentType = uploadResponse.headers.get('content-type');
       let errorMsg = `HTTP Error: ${uploadResponse.status}`;
 
@@ -148,31 +146,27 @@ export default function EditProjectPage({ params }: { params: any }) { // change
         const errorData = await uploadResponse.json();
         errorMsg = errorData.message || errorMsg;
       }
-      
+
       throw new Error(errorMsg);
     }
-    
     const data = await uploadResponse.json();
-    return data.url; // คืนค่า URL ใหม่
+
+    return data.url; 
   };
 
-
-  // 3. Submit ฟอร์ม (PATCH)
   const onSubmit: SubmitHandler<EditFormData> = async (data) => {
-    if (!projectId) return; // ป้องกันการ Submit หาก ID ผิดพลาด
-    
+    if (!projectId) return;
     setIsSubmitting(true);
     setError(null);
 
-    let updatedPosterUrl = currentPosterUrl; // ใช้ URL เดิมเป็นค่าเริ่มต้น
+    let updatedPosterUrl = currentPosterUrl;
 
     try {
-      // 3.1 ตรวจสอบและอัปโหลดรูปภาพใหม่
       if (data.posterImage && data.posterImage.length > 0) {
         updatedPosterUrl = await uploadPoster(data.posterImage[0]);
+        console.log("updatedPosterUrl", updatedPosterUrl);
       }
-      
-      // 3.2 สร้าง Payload สำหรับ API PATCH
+
       const apiData = {
         title: data.title,
         description: data.description,
@@ -184,17 +178,16 @@ export default function EditProjectPage({ params }: { params: any }) { // change
         // ส่งค่า ownerName/contact ที่มีอยู่จริง แทนการใช้ String constructor
         ownerName: initialData?.ownerName ?? '',
       };
-      
-      // 3.3 เรียกใช้ API PATCH /api/admin/projects/[id]  <-- updated endpoint
-      const response = await fetch(`/api/admin/projects/${projectId}`, { 
-        method: 'PATCH',
+
+      const response = await fetch(`/api/donation-project/${projectId}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(apiData), 
+        body: JSON.stringify(apiData),
       });
 
       if (response.ok) {
         alert('การแก้ไขโครงการสำเร็จแล้ว!');
-        router.push('/admin/donation/projects'); 
+        router.push('/admin/donation/projects');
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || `ไม่สามารถแก้ไขโครงการได้`);
@@ -206,21 +199,19 @@ export default function EditProjectPage({ params }: { params: any }) { // change
     }
   };
 
-  // 4. Delete โครงการ
   const handleDelete = async () => {
     if (!projectId) return;
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบโครงการนี้?')) return;
-    
+
     setIsSubmitting(true);
     try {
-      // <-- updated endpoint to admin route
-      const response = await fetch(`/api/admin/projects/${projectId}`, {
+      const response = await fetch(`/api/donation-project/${projectId}`, {
         method: 'DELETE',
       });
-      
+
       if (response.ok) {
         alert('โครงการถูกลบเรียบร้อยแล้ว');
-        router.push('/admin/projects');
+        router.push('/admin/donation/projects');
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || 'ไม่สามารถลบโครงการได้');
@@ -251,18 +242,22 @@ export default function EditProjectPage({ params }: { params: any }) { // change
     );
   }
 
+  function resetField(arg0: string, arg1: { defaultValue: null; }) {
+    throw new Error('Function not implemented.');
+  }
+
   // ----------------------------------------------------
   // Render Form
   // ----------------------------------------------------
   return (
     <div className="flex justify-center items-start min-h-screen bg-gray-50 p-4 pt-8">
       <Card className="w-full max-w-4xl p-8 shadow-lg rounded-xl bg-white">
-        
+
         <div className="flex justify-between items-center mb-8 border-b pb-4">
           <h1 className="text-3xl font-bold text-gray-800">
             แก้ไขโครงการ: {initialData?.title}
           </h1>
-          <button 
+          <button
             onClick={handleDelete}
             disabled={isSubmitting}
             className="flex items-center text-red-600 hover:text-red-700 transition space-x-2 disabled:opacity-50"
@@ -274,7 +269,7 @@ export default function EditProjectPage({ params }: { params: any }) { // change
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          
+
           {/* ชื่อโครงการ / เป้าหมาย (Grid) */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -295,10 +290,10 @@ export default function EditProjectPage({ params }: { params: any }) { // change
                 type="number"
                 id="goalAmount"
                 step="any"
-                {...register('goalAmount', { 
-                  required: 'กรุณาระบุเป้าหมาย', 
+                {...register('goalAmount', {
+                  required: 'กรุณาระบุเป้าหมาย',
                   min: { value: 0.01, message: 'เป้าหมายต้องมากกว่า 0' },
-                  valueAsNumber: true 
+                  valueAsNumber: true
                 })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-[#F26522] focus:border-[#F26522] focus:outline-none"
                 placeholder="จำนวนเงินเป้าหมาย"
@@ -330,7 +325,7 @@ export default function EditProjectPage({ params }: { params: any }) { // change
               {errors.endDate && <p className="text-red-500 text-xs mt-1">{errors.endDate.message}</p>}
             </div>
           </div>
-          
+
           {/* สถานะ (Dropdown) */}
           <div>
             <label htmlFor="status" className="block text-gray-700 text-sm font-semibold mb-2">สถานะ</label>
@@ -363,17 +358,19 @@ export default function EditProjectPage({ params }: { params: any }) { // change
           <div className="border border-gray-200 p-4 rounded-lg bg-gray-50">
             <h3 className="text-base font-semibold mb-3 text-gray-800">โปสเตอร์โครงการ</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-start">
-              
+
               {/* 1. รูปภาพปัจจุบัน / Preview */}
               <div className="sm:col-span-1">
                 {currentPosterUrl || imagePreview ? (
                   <div className="relative w-full h-48 border rounded-lg overflow-hidden shadow-sm">
-                    <Image 
-                      src={imagePreview || currentPosterUrl || '#'} 
-                      alt="Poster Preview" 
-                      layout="fill"
-                      objectFit="cover" 
-                      className="object-contain"
+                    <Image
+                      key={imagePreview || currentPosterUrl || 'default'}
+                      src={imagePreview || currentPosterUrl || '#'}
+                      alt="Poster Preview"
+                      fill
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      style={{ objectFit: "cover" }}
+                      loading="eager"
                     />
                   </div>
                 ) : (
@@ -381,11 +378,10 @@ export default function EditProjectPage({ params }: { params: any }) { // change
                     ไม่มีโปสเตอร์
                   </div>
                 )}
-                {/* 💡 แสดง URL เดิมที่ใช้อยู่ */}
+                {/*  แสดง URL เดิมที่ใช้อยู่ */}
                 {currentPosterUrl && <p className="text-xs text-gray-500 mt-2 truncate">URL: {currentPosterUrl}</p>}
-
               </div>
-              
+
               {/* 2. ปุ่มอัปโหลด */}
               <div className="sm:col-span-2">
                 <p className="text-sm text-gray-700 mb-2">อัปโหลดรูปภาพใหม่เพื่อแทนที่</p>
@@ -395,26 +391,40 @@ export default function EditProjectPage({ params }: { params: any }) { // change
                 >
                   <UploadCloud className="w-10 h-10 text-gray-400 mb-2" />
                   <p className="text-gray-500 text-sm">คลิกเพื่ออัปโหลด (JPEG, PNG, GIF)</p>
-                  
+
                   <input
                     type="file"
                     id="posterImage"
-                    {...register('posterImage')}
+                    {...register('posterImage', {
+                      validate: (value) => {
+                        if (value && value.length > 0) {
+                          const file = value[0];
+                          const fileType = file.type;
+                          const validImageTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                          if (!validImageTypes.includes(fileType)) {
+                            return 'กรุณาอัปโหลดไฟล์รูปภาพ (JPEG, PNG, GIF) เท่านั้น';
+                          }
+                        }
+                        return true;
+                      },
+                    })}
                     accept="image/jpeg,image/png,image/gif"
-                    className="hidden" 
+                    className="hidden"
                   />
                 </div>
                 {errors.posterImage && <p className="text-red-500 text-xs mt-1">{errors.posterImage.message}</p>}
-                
-                {/* 💡 ปุ่มลบรูปภาพ (ถ้ามีรูปภาพอยู่) */}
+
+                {/* ปุ่มลบรูปภาพ (ถ้ามีรูปภาพอยู่) */}
                 {currentPosterUrl && (
-                    <button
-                        type="button"
-                        onClick={() => setCurrentPosterUrl(null)}
-                        className="mt-2 text-red-500 text-xs hover:underline"
-                    >
-                        ลบโปสเตอร์ปัจจุบัน
-                    </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentPosterUrl(null);
+                    }}
+                    className="mt-2 text-red-500 text-xs hover:underline"
+                  >
+                    ลบโปสเตอร์ปัจจุบัน
+                  </button>
                 )}
               </div>
             </div>

@@ -27,10 +27,10 @@ interface FormData {
 // --------------------------------------------------------------------------
 export default function CreateProjectPage() {
   const router = useRouter();
-  const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm<FormData>();
+  const { register, handleSubmit, formState: { errors }, watch } = useForm<FormData>();
   const [loading, setLoading] = useState(false);
+
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  
   const watchedImage = watch("posterImage");
   
   // 💡 State สำหรับเก็บ File Object ที่พร้อมอัปโหลด
@@ -47,6 +47,7 @@ export default function CreateProjectPage() {
       
       objectUrl = URL.createObjectURL(file);
       setImagePreview(objectUrl);
+      console.log("Generated object URL for preview:", objectUrl); 
     } else {
       setFileToUpload(null);
       setImagePreview(null);
@@ -60,17 +61,13 @@ export default function CreateProjectPage() {
   }, [watchedImage]);
 
 
-  // 💡 ฟังก์ชันแยก: อัปโหลดรูปภาพไปยัง Backend และคืนค่า URL
   const uploadPoster = async (file: File): Promise<string> => {
     const uploadFormData = new window.FormData();
     uploadFormData.append('file', file);
     
-    // 💡 (TODO: เปลี่ยนเป็น API Route สำหรับอัปโหลดไฟล์จริง)
-    const uploadResponse = await fetch('/api/admin/upload-poster', {
+    const uploadResponse = await fetch('/api/donation-project/upload-poster', {
       method: 'POST',
-      body: uploadFormData, // ส่ง FormData (ไม่ใช่ JSON)
-      // 💡 ไม่ต้องใส่ Header 'Content-Type': 'application/json' 
-      //    เพราะ fetch จะกำหนด 'Content-Type': 'multipart/form-data' ให้เอง
+      body: uploadFormData, 
     });
 
     if (!uploadResponse.ok) {
@@ -110,7 +107,7 @@ export default function CreateProjectPage() {
         status: data.status,
       };
       
-      const response = await fetch('/api/admin/projects', { 
+      const response = await fetch('/api/donation-project', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(apiData), 
