@@ -57,9 +57,7 @@ export async function POST(request: NextRequest) {
       imageUrl, 
       unit, 
       initialStock,
-      linkedType,
-      linkedEventId,
-      linkedDonationProjectId,
+      linkedBookingId, // ใช้ field ที่ schema รองรับเท่านั้น
     } = body;
 
     // Validate required fields
@@ -91,6 +89,7 @@ export async function POST(request: NextRequest) {
         imageUrl,
         unit,
         initialStock: initialStock || 0,
+        linkedBookingId: linkedBookingId || null,
       },
     });
 
@@ -106,20 +105,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // เชื่อมโยงกับ Event หรือ Donation
-    if (linkedType === 'event' && linkedEventId) {
-      await prisma.event.update({
-        where: { id: linkedEventId },
-        data: { souvenirItemId: item.id },
-      });
-    } else if (linkedType === 'donation' && linkedDonationProjectId) {
-      // สำหรับโครงการบริจาค เราจะเก็บ mapping ไว้ใน metadata หรือใช้วิธีอื่น
-      // ปัจจุบัน Donation ไม่ได้เชื่อมกับ DonationProject โดยตรง
-      // สามารถอัพเดท Donation ทั้งหมดที่มี purpose ตรงกับโครงการได้
-      // หรือเก็บข้อมูลไว้ใน SouvenirItem.description
-      // แต่ถ้าต้องการใช้งานจริง ควรเพิ่ม projectId ใน Donation model
-      console.log('Donation project linking not implemented - Donation model does not have projectId');
-    }
+    // ไม่เชื่อมโยงกับ Event หรือ Donation แบบ hardcode อีกต่อไป ใช้ schema-driven เท่านั้น
 
     return NextResponse.json(item, { status: 201 });
   } catch (error) {
