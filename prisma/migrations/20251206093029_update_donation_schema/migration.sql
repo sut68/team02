@@ -1,5 +1,10 @@
+<<<<<<< HEAD:prisma/migrations/20251206093029_update_donation_schema/migration.sql
 /*
   Warnings:
+=======
+-- CreateEnum
+--CREATE TYPE "ProjectStatus" AS ENUM ('OPEN', 'CLOSED', 'COMPLETED');
+>>>>>>> 7b40a5ae0e79c535e3059cc27c5e3b6fe2f7ce1a:prisma/migrations/20251205101103_add_donation_project_payment_system/migration.sql
 
   - You are about to drop the column `omiseChargeId` on the `DonationTransaction` table. All the data in the column will be lost.
   - A unique constraint covering the columns `[paymentId]` on the table `DonationTransaction` will be added. If there are existing duplicate values, this will fail.
@@ -11,6 +16,7 @@ CREATE TYPE "PaymentMethodType" AS ENUM ('PROMPTPAY', 'CREDIT_CARD', 'BANK_TRANS
 -- CreateEnum
 CREATE TYPE "PaymentStatusType" AS ENUM ('CONFIRMED', 'CANCELLED', 'REFUNDED');
 
+<<<<<<< HEAD:prisma/migrations/20251206093029_update_donation_schema/migration.sql
 -- DropIndex
 DROP INDEX "DonationTransaction_omiseChargeId_key";
 
@@ -20,7 +26,23 @@ ADD COLUMN     "donorPhone" TEXT,
 ADD COLUMN     "isPublic" BOOLEAN NOT NULL DEFAULT true,
 ADD COLUMN     "message" TEXT,
 ADD COLUMN     "paymentId" INTEGER;
+=======
+-- CreateTable
+-- CREATE TABLE "DonationProject" (
+--     "id" SERIAL NOT NULL,
+--     "title" TEXT NOT NULL,
+--     "description" TEXT,
+--     "goalAmount" DOUBLE PRECISION NOT NULL,
+--     "currentAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
+--     "startDate" TIMESTAMP(3) NOT NULL,
+--     "endDate" TIMESTAMP(3) NOT NULL,
+--     "status" "ProjectStatus" NOT NULL DEFAULT 'OPEN',
+--     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+--     "updatedAt" TIMESTAMP(3) NOT NULL,
+>>>>>>> 7b40a5ae0e79c535e3059cc27c5e3b6fe2f7ce1a:prisma/migrations/20251205101103_add_donation_project_payment_system/migration.sql
 
+--     CONSTRAINT "DonationProject_pkey" PRIMARY KEY ("id")
+-- );
 -- CreateTable
 CREATE TABLE "PaymentMethodRecord" (
     "id" SERIAL NOT NULL,
@@ -48,9 +70,28 @@ CREATE TABLE "PaymentRecord" (
 
     CONSTRAINT "PaymentRecord_pkey" PRIMARY KEY ("id")
 );
+<<<<<<< HEAD:prisma/migrations/20251206093029_update_donation_schema/migration.sql
 
 -- CreateIndex
 CREATE UNIQUE INDEX "PaymentRecord_paymentRefId_key" ON "PaymentRecord"("paymentRefId");
+=======
+DROP TABLE IF EXISTS "DonationTransaction";
+--CreateTable
+CREATE TABLE "DonationTransaction" (
+    "id" SERIAL NOT NULL,
+    "amount" DOUBLE PRECISION NOT NULL,
+    "status" "TransactionStatus" NOT NULL DEFAULT 'PENDING',
+    "message" TEXT,
+    "isPublic" BOOLEAN NOT NULL DEFAULT true,
+    "donorName" TEXT,
+    "donorEmail" TEXT,
+    "donorPhone" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "userId" INTEGER,
+    "projectId" INTEGER NOT NULL,
+    "paymentId" INTEGER,
+>>>>>>> 7b40a5ae0e79c535e3059cc27c5e3b6fe2f7ce1a:prisma/migrations/20251205101103_add_donation_project_payment_system/migration.sql
 
 -- CreateIndex
 CREATE INDEX "PaymentRecord_paymentStatus_idx" ON "PaymentRecord"("paymentStatus");

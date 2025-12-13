@@ -1,52 +1,4 @@
-"use client"
-
-import Image from 'next/image';
-import { 
-  ChevronDown 
-} from 'lucide-react';
-import { 
-  PieChart, 
-  Pie, 
-  Cell, 
-  ResponsiveContainer, 
-  Tooltip 
-} from 'recharts';
-
-// ใช้ Button เดิมที่คุณมี
-import { Button } from "@/components/ui/button";
-
-// --- Mock Data ---
-const chartData = [
-  { name: 'งบประมาณโครงการผ่านการพิจารณา', value: 50, color: '#F97316' }, // Orange-500
-  { name: 'เงินบริจาคโครงการต่างๆ', value: 25, color: '#52525B' }, // Zinc-600 (ปรับให้เข้มขึ้นนิดนึงเพื่อให้ text ขาวอ่านง่าย)
-  { name: 'ใช้จ่ายสำหรับจัดการแพลตฟอร์ม', value: 25, color: '#D4D4D8' }, // Zinc-300
-];
-
-const projects = [
-  {
-    id: 1,
-    title: "รายงานงบประมาณโครงการทุนการศึกษา 1/2568",
-    image: "/budget/22-01.jpg",
-  },
-  {
-    id: 2,
-    title: "รายงานงบประมาณโครงการพัฒนาทักษะวิชาชีพ",
-    image: "/budget/22-01.jpg",
-  },
-  {
-    id: 3,
-    title: "รายงานงบประมาณโครงการพัฒนาทักษะวิชาชีพ (เพิ่มเติม)",
-    image: "/budget/22-01.jpg",
-  },
-];
-
-// --- ฟังก์ชันจัด Style ตัวเลขบนกราฟ ---
-const RADIAN = Math.PI / 180;
-const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
+export default function UserBudgetPage() {
   return (
     <text 
       x={x} 
@@ -66,7 +18,7 @@ export default function BudgetReportPage() {
     <div className="min-h-screen bg-white font-sans text-slate-900">
       
       {/* --- Hero Section --- */}
-      <section className="relative h-80 md:h-80 w-full overflow-hidden">
+      <section className="relative h-80 md:h-100 w-full overflow-hidden">
         <div className="absolute inset-0">
           <Image 
             src="/budget/22-01.jpg" 
@@ -198,6 +150,9 @@ export default function BudgetReportPage() {
         </div>
 
       </main>
+    <div className="p-8">
+      <h1 className="text-2xl font-bold">งบประมาณ</h1>
+      <p className="text-gray-600 mt-2">หน้านี้อยู่ระหว่างการพัฒนา</p>
     </div>
   );
 }

@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { useForm, SubmitHandler } from 'react-hook-form'; 
+import { useForm, SubmitHandler } from 'react-hook-form'; // npm install react-hook-form lucide-react
 import { Card } from './../../../components/ui/Card'; 
 import { PrimaryButton, CancelButton } from './../../../components/ui/Button'; 
 import { UploadCloud } from 'lucide-react'; 
@@ -13,13 +13,11 @@ import { UploadCloud } from 'lucide-react';
 // --------------------------------------------------------------------------
 interface FormData {
   projectName: string;
-  fundType: string; 
-  targetAmount: number;
-  status: string; 
+  fundType: string; // ประเภททุน (e.g., "ทุนการศึกษา", "ทุนวิจัย")
+  targetAmount: number; // เป้าหมาย (จำนวนเงิน)
+  status: string; // สถานะ (e.g., "เปิดรับ", "ปิดรับ", "รออนุมัติ")
   description: string;
-  startDate: string;
-  endDate: string;
-  posterImage: FileList | null;
+  posterImage: FileList | null; // สำหรับไฟล์รูปภาพ
 }
 
 // --------------------------------------------------------------------------
@@ -32,15 +30,10 @@ export default function CreateProjectPage() {
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const watchedImage = watch("posterImage");
-  
-  // 💡 State สำหรับเก็บ File Object ที่พร้อมอัปโหลด
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
-  
-
   // เมื่อไฟล์รูปภาพถูกเลือก
-  useEffect(() => {
+  React.useEffect(() => {
     let objectUrl: string | null = null;
-    
     if (watchedImage && watchedImage.length > 0) {
       const file = watchedImage[0];
       setFileToUpload(file);
@@ -49,13 +42,12 @@ export default function CreateProjectPage() {
       setImagePreview(objectUrl);
       console.log("Generated object URL for preview:", objectUrl); 
     } else {
-      setFileToUpload(null);
       setImagePreview(null);
     }
-    
+    // Clean up object URL when component unmounts or image changes
     return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
       }
     };
   }, [watchedImage]);
@@ -83,8 +75,20 @@ export default function CreateProjectPage() {
   // 💡 Submit ฟอร์ม
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     setLoading(true);
-
+    // console.log("Form Data:", data);
     let posterUrl: string | null = null;
+
+    // 💡 ตัวอย่างการส่งข้อมูลไปยัง API
+    const formData = new FormData();
+    formData.append('projectName', data.projectName);
+    formData.append('fundType', data.fundType);
+    formData.append('targetAmount', data.targetAmount.toString());
+    formData.append('status', data.status);
+    formData.append('description', data.description);
+    if (data.posterImage && data.posterImage.length > 0) {
+      formData.append('posterImage', data.posterImage[0]);
+    }
+
 
     try {
       // 1. **อัปโหลดรูปภาพก่อน**
@@ -99,8 +103,8 @@ export default function CreateProjectPage() {
         title: data.projectName,
         description: data.description,
         goalAmount: data.targetAmount,
-        startDate: data.startDate,
-        endDate: data.endDate,
+        // startDate: data.startDate,
+        // endDate: data.endDate,
         ownerName: "Admin User", 
         contact: "contact@engisut.ac.th",
         posterUrl: posterUrl, // 💡 ใช้ URL จริงที่ได้จากการอัปโหลด
@@ -109,36 +113,26 @@ export default function CreateProjectPage() {
       
       const response = await fetch('/api/donation-project', { 
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(apiData), 
+        body: formData, // ใช้ formData สำหรับส่งไฟล์
       });
 
       if (response.ok) {
         alert('โครงการถูกสร้างสำเร็จแล้ว!');
-        router.push('/admin/donation'); 
+        router.push('/admin/projects'); // ไปหน้าแสดงรายการโครงการ
       } else {
-        const contentType = response.headers.get('content-type');
-        let errorText = `ข้อผิดพลาดสถานะ ${response.status}`;
-        
-        if (contentType?.includes('application/json')) {
-            const errorData = await response.json();
-            errorText = errorData.error || `ข้อผิดพลาดจากเซิร์ฟเวอร์ (สถานะ ${response.status})`;
-        } else {
-            errorText = `ไม่พบ API Endpoint หรือเกิดข้อผิดพลาดภายใน (404/500)`;
-        }
-        
-        throw new Error(errorText); // โยน Error เพื่อเข้าสู่ Catch Block
+        const errorData = await response.json();
+        alert(`เกิดข้อผิดพลาด: ${errorData.message || 'ไม่สามารถสร้างโครงการได้'}`);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error submitting form:', error);
-      alert(`เกิดข้อผิดพลาด: ${error.message}`);
+      alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex justify-center items-start min-h-screen bg-white p-4 pt-20">
+    <div className="flex justify-center items-start min-h-screen bg-white p-4 pt-20"> {/* เพิ่ม pt-20 เพื่อให้ไม่ชน Navbar */}
       <Card className="w-full max-w-3xl p-8 shadow-lg rounded-xl bg-white">
         <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">
           สร้างโครงการใหม่
@@ -187,44 +181,14 @@ export default function CreateProjectPage() {
             <input
               type="number"
               id="targetAmount"
-              step="any"
               {...register('targetAmount', { 
                 required: 'กรุณาระบุเป้าหมาย', 
-                min: { value: 0.01, message: 'เป้าหมายต้องมากกว่า 0' },
-                valueAsNumber: true 
+                min: { value: 0, message: 'เป้าหมายต้องมากกว่า 0' }
               })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-[#F26522] focus:border-[#F26522] focus:outline-none"
               placeholder="เช่น 1000000"
             />
             {errors.targetAmount && <p className="text-red-500 text-xs mt-1">{errors.targetAmount.message}</p>}
-          </div>
-          
-          {/* วันที่เริ่มต้น/สิ้นสุด */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="startDate" className="block text-gray-700 text-sm font-semibold mb-2">
-                วันที่เริ่มต้น
-              </label>
-              <input
-                type="date"
-                id="startDate"
-                {...register('startDate', { required: 'กรุณาระบุวันที่เริ่มต้น' })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-[#F26522] focus:border-[#F26522] focus:outline-none bg-white"
-              />
-              {errors.startDate && <p className="text-red-500 text-xs mt-1">{errors.startDate.message}</p>}
-            </div>
-            <div>
-              <label htmlFor="endDate" className="block text-gray-700 text-sm font-semibold mb-2">
-                วันที่สิ้นสุด
-              </label>
-              <input
-                type="date"
-                id="endDate"
-                {...register('endDate', { required: 'กรุณาระบุวันที่สิ้นสุด' })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-[#F26522] focus:border-[#F26522] focus:outline-none bg-white"
-              />
-              {errors.endDate && <p className="text-red-500 text-xs mt-1">{errors.endDate.message}</p>}
-            </div>
           </div>
 
           {/* สถานะ (Dropdown) */}
@@ -237,9 +201,10 @@ export default function CreateProjectPage() {
               {...register('status', { required: 'กรุณาเลือกสถานะ' })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-[#F26522] focus:border-[#F26522] focus:outline-none bg-white"
             >
-              <option value="OPEN">เปิดรับ</option>
-              <option value="CLOSED">ปิดรับ</option>
-              <option value="COMPLETED">สำเร็จ</option>
+              <option value="">เลือกสถานะ</option>
+              <option value="เปิดรับ">เปิดรับ</option>
+              <option value="ปิดรับ">ปิดรับ</option>
+              <option value="รออนุมัติ">รออนุมัติ</option>
             </select>
             {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status.message}</p>}
           </div>
@@ -282,6 +247,7 @@ export default function CreateProjectPage() {
                 type="file"
                 id="posterImage"
                 {...register('posterImage', {
+                  // required: 'กรุณาอัปโหลดโปสเตอร์', // อาจจะบังคับหรือไม่ก็ได้
                   validate: (value) => {
                     if (value && value.length > 0) {
                       const file = value[0];
@@ -295,7 +261,7 @@ export default function CreateProjectPage() {
                   },
                 })}
                 accept="image/jpeg,image/png,image/gif"
-                className="hidden" 
+                className="hidden" // ซ่อน input จริง
               />
             </div>
             {errors.posterImage && <p className="text-red-500 text-xs mt-1">{errors.posterImage.message}</p>}

@@ -2,17 +2,26 @@
 
 'use client';
 
-import { useState, ChangeEvent } from 'react';
+import { useState,useEffect ,ChangeEvent } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardHeader, CardContent } from '../../../components/ui/Card';
 import { PrimaryButton, CancelButton } from '../../../components/ui/Button';
 import {
-  Calendar,
   Image as ImageIcon,
   Text,
   CheckCircle2,
 } from 'lucide-react';
+
+type ContentCategoryType =
+  | 'NEWS'
+  | 'EVENT'
+  | 'ANNOUNCEMENT'
+  | 'ACTIVITY'
+  | 'GENERAL';
+
+type Option = 'HAVE' | 'NOT';
 
 type PostData = {
   title: string;
@@ -20,20 +29,38 @@ type PostData = {
   body: string;
   coverImageUrl: string;   // รูปหลัก
   extraImages: string[];   // รูปประกอบหลายรูป
+  categories: ContentCategoryType;
+  Booking: Option;
 };
 
 export default function EditPostPage() {
+  const searchParams = useSearchParams();
+  const bookingFormId = searchParams.get('bookingFormId');
+  const router = useRouter();
+  const currentUserId = 1;
+  const bookingFormIdFromQuery = searchParams.get('bookingFormId');
   const [postData, setPostData] = useState<PostData>({
     title: '',
     date: '',
     body: '',
     coverImageUrl: '',
     extraImages: [],
+    categories: 'NEWS', // default
+    Booking: 'NOT',     // ยังไม่ต้องลงทะเบียน
   });
 
   const [isBookingConfigured, setIsBookingConfigured] = useState(false);
+  useEffect(() => {
+    if (bookingFormId) {
+      setPostData((prev) => ({
+        ...prev,
+        Booking: 'HAVE',   // ถ้ามี bookingForm แสดงว่าต้องลงทะเบียนแน่นอน
+      }));
+      setIsBookingConfigured(true); // ให้โชว์ไอคอนติ๊กถูก
+    }
+  }, [bookingFormId]);
 
-  // สำหรับ text field
+  // สำหรับ text field (ตามโครงเดิม)
   const handleFieldChange = (field: 'title' | 'date' | 'body', value: string) => {
     setPostData((prev) => ({
       ...prev,
@@ -41,43 +68,108 @@ export default function EditPostPage() {
     }));
   };
 
-  // รูปหลัก (กล่องใหญ่ตรงกลาง)
-  const handleMainImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    const file = e.target.files[0];
-
-    // ใช้ object URL สำหรับ preview
-    const imageUrl = URL.createObjectURL(file);
-
+  // เปลี่ยนหมวดหมู่
+  const handleCategoryChange = (value: ContentCategoryType) => {
     setPostData((prev) => ({
       ...prev,
-      coverImageUrl: imageUrl,
-      // ถ้าไม่มี extraImages เลย ก็ใส่รูปนี้เป็นรูปแรกใน extraImages ด้วย
-      extraImages: prev.extraImages.length ? prev.extraImages : [imageUrl],
+      categories: value,
     }));
   };
 
-  // รูปหลายรูป (เพิ่มลงในโพสต์ของคุณ)
-  const handleExtraImagesUpload = (e: ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
+  // เปลี่ยน Booking option
+  const handleBookingChange = (value: Option) => {
+    setPostData((prev) => ({
+      ...prev,
+      Booking: value,
+    }));
+  };
+  const [mainImageFile, setMainImageFile] = useState<File | null>(null);
+  const [extraImageFiles, setExtraImageFiles] = useState<File[]>([]);
 
-    const files = Array.from(e.target.files);
-    const newUrls = files.map((file) => URL.createObjectURL(file));
+  // รูปหลัก (กล่องใหญ่ตรงกลาง)
+  const handleMainImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+  if (!e.target.files || e.target.files.length === 0) return;
 
-    setPostData((prev) => {
-      const combined = [...prev.extraImages, ...newUrls];
-      return {
-        ...prev,
-        extraImages: combined,
-        // ถ้ายังไม่มี cover ให้เอารูปแรกที่อัปโหลดรอบนี้เป็น cover
-        coverImageUrl: prev.coverImageUrl || newUrls[0],
-      };
+  const file = e.target.files[0];
+  setMainImageFile(file);
+
+  const url = URL.createObjectURL(file);
+
+  setPostData((prev) => ({
+    ...prev,
+    coverImageUrl: url,
+    extraImages: prev.extraImages.length ? prev.extraImages : [url],
+  }));
+
+  // ถ้าไม่มีภาพอื่น ให้เพิ่มเข้า extraImageFiles ด้วย
+  setExtraImageFiles((prev) => (prev.length ? prev : [file]));
+};
+
+
+
+ const handleExtraImagesUpload = (e: ChangeEvent<HTMLInputElement>) => {
+  if (!e.target.files || e.target.files.length === 0) return;
+
+  const files = Array.from(e.target.files);
+
+  setExtraImageFiles((prev) => [...prev, ...files]);
+
+  const urls = files.map((f) => URL.createObjectURL(f));
+
+  setPostData((prev) => ({
+    ...prev,
+    extraImages: [...prev.extraImages, ...urls],
+    coverImageUrl: prev.coverImageUrl || urls[0],
+  }));
+};
+
+
+  const handlePublish = async () => {
+  
+
+  const formData = new FormData();
+  formData.append("title", postData.title); 
+  formData.append("description", postData.body);
+  formData.append("categories", postData.categories);
+  formData.append("booking", postData.Booking);
+  formData.append("userId", String(currentUserId));
+  formData.append("bookingFormId", String(bookingFormIdFromQuery));
+
+  // รูปหลายรูป
+  extraImageFiles.forEach((file) => {
+    formData.append("pictures", file); 
+  });
+  if (bookingFormIdFromQuery) {
+    formData.append("bookingFormId", String(bookingFormIdFromQuery));
+  }
+
+  // ถ้าภาพหลักไม่อยู่ใน extra ให้เพิ่ม
+  if (mainImageFile && !extraImageFiles.includes(mainImageFile)) {
+    formData.append("pictures", mainImageFile);
+  }
+
+  try {
+    const res = await fetch("/api/content", {
+      method: "POST",
+      body: formData, // ❌ ห้ามใส่ Content-Type
     });
-  };
 
-  const handlePublish = () => {
-    alert('เผยแพร่โพสต์...');
-  };
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert("❌ สร้างเนื้อหาไม่สำเร็จ: " + data.error);
+      return;
+    }
+
+    alert("🎉 เผยแพร่โพสต์สำเร็จ!");
+    router.push("/admin/news");
+
+  } catch (err) {
+    console.error(err);
+    alert("เกิดข้อผิดพลาดขณะเผยแพร่โพสต์");
+  }
+};
+
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-10">
@@ -88,12 +180,12 @@ export default function EditPostPage() {
         </h1>
         <div className="flex gap-3">
           <CancelButton
-            className="hidden md:inline-flex"
             onClick={() => history.back()}
+            className="w-32"
           >
             ย้อนกลับ
           </CancelButton>
-          <PrimaryButton onClick={handlePublish}>โพสต์</PrimaryButton>
+          <PrimaryButton onClick={handlePublish} className="w-32">โพสต์</PrimaryButton>
         </div>
       </header>
 
@@ -104,22 +196,31 @@ export default function EditPostPage() {
           <div className="sticky top-6 space-y-4">
             <Card>
               <CardContent className="p-6 space-y-6">
-                {/* หมวดหมู่ */}
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gray-200" />
-                  <div>
+                {/* หมวดหมู่ (แก้จาก text เป็น select แต่ layout เดิม) */}
+                <div className="space-y-1">
                     <p className="text-xs text-gray-400">หมวดหมู่</p>
-                    <p className="text-sm font-semibold text-gray-700">
-                      ส่วนกิจกรรมนักศึกษา
-                    </p>
+                    <select
+                      value={postData.categories}
+                      onChange={(e) =>
+                        handleCategoryChange(
+                          e.target.value as ContentCategoryType
+                        )
+                      }
+                      className="mt-1 w-full border border-gray-300 rounded-lg p-2 text-sm"
+                    >
+                      <option value="NEWS">NEWS – ข่าวสาร</option>
+                      <option value="EVENT">EVENT – กิจกรรม</option>
+                      <option value="ANNOUNCEMENT">
+                        ANNOUNCEMENT – ประกาศ
+                      </option>
+                      <option value="GENERAL">GENERAL – ทั่วไป</option>
+                    </select>
                   </div>
-                </div>
 
                 {/* วันที่เผยแพร่ */}
                 <div>
                   <p className="text-xs text-gray-400 mb-1">วันที่เผยแพร่</p>
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-gray-500" />
                     <input
                       type="date"
                       value={postData.date}
@@ -142,15 +243,43 @@ export default function EditPostPage() {
                     )}
                   </div>
 
-                  <Link href="/admin/booking" passHref>
-                    <button
-                      type="button"
-                      className="w-full rounded-full bg-gray-300 py-2 text-sm font-medium text-gray-800 hover:bg-gray-400 transition"
-                      onClick={() => setIsBookingConfigured(true)}
-                    >
-                      กรอกข้อมูล
-                    </button>
-                  </Link>
+                  {/* เลือก Booking = HAVE / NOT */}
+                  <div className="flex flex-col gap-1 text-sm mb-3">
+                    <label className="inline-flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="booking_option"
+                        value="NOT"
+                        checked={postData.Booking === 'NOT'}
+                        onChange={() => handleBookingChange('NOT')}
+                        disabled={!!bookingFormId}  // 👈 ถ้ามีฟอร์มแล้ว ไม่ให้เปลี่ยนกลับเป็น NOT
+                      />
+                      <span className={bookingFormId ? 'text-gray-400 line-through' : ''}>ไม่ต้องลงทะเบียน</span>
+                    </label>
+                    <label className="inline-flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="booking_option"
+                        value="HAVE"
+                        checked={postData.Booking === 'HAVE'}
+                        onChange={() => handleBookingChange('HAVE')}
+                      />
+                      <span>ต้องลงทะเบียน</span>
+                    </label>
+                  </div>
+
+                  {/* ปุ่มไปหน้า booking แสดงเฉพาะตอนเลือก HAVE */}
+                  {postData.Booking === 'HAVE' && (
+                    <Link href="/admin/booking" passHref>
+                      <button
+                        type="button"
+                        className="w-full rounded-full text-sm appearance-none cursor-pointer bg-gray-100 text-gray-700 border border-gray-300"
+                        onClick={() => setIsBookingConfigured(true)}
+                      >
+                        กรอกข้อมูล
+                      </button>
+                    </Link>
+                  )}
                 </div>
 
                 {/* เพิ่มลงในโพสต์ของคุณ = รูปหลายรูป */}

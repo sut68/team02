@@ -68,7 +68,7 @@ export default function Navbar() {
       await fetch('/api/auth/logout', { method: 'POST' });
       setUser(null);
       router.push('/auth/login');
-      window.location.href = '/auth/login'; // Force reload
+      window.location.href = '/auth/login'; 
     } catch (error) {
       // Silent error
     }
@@ -124,7 +124,7 @@ export default function Navbar() {
               </div>
             </div>
 
-            <Link href="/forum" className="hover:text-gray-900">รับสมัครงาน</Link>
+            <Link href="/user/job" className="hover:text-gray-900">รับสมัครงาน</Link>
 
             <div className="relative group">
               <span className="flex items-center hover:text-[#F26522] transition-colors duration-200 cursor-pointer">
@@ -136,7 +136,7 @@ export default function Navbar() {
               </div>
             </div>
 
-            <Link href="/user/budget" className="hover:text-gray-900">รายงานงบประมาณ</Link>
+            <Link href="/budget" className="hover:text-gray-900">รายงานงบประมาณ</Link>
             <Link href="/user/talk" className="hover:text-gray-900">กระดานสนทนา</Link>
           </>
         )}

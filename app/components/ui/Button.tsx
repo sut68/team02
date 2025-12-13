@@ -5,15 +5,15 @@ const base =
   "rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center";
 
 
-export function PrimaryButton  ({
+export function PrimaryButton  ({
   children,
-  className,
+  className, // <--- รับ className เข้ามา
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
-      // แก้ไข: เพิ่มช่องว่างหลัง ${base}
-      className={`${base} px-8 py-1 bg-[#F26522] text-white hover:bg-[#FB793C] `}
+      // ✅ แก้ไข: นำ className ที่รับมาจากภายนอกมาต่อท้าย
+      className={`${base} px-8 py-1 bg-[#F26522] text-white hover:bg-[#FB793C] ${className}`}
       {...props}
     >
       {children}
@@ -21,19 +21,18 @@ export function PrimaryButton  ({
   );
 };
 
-export function CancelButton  ({
+export function CancelButton  ({
   children,
-  className,
+  className, // <--- รับ className เข้ามา
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement>)  {
+}: React.ButtonHTMLAttributes<HTMLButtonElement>)  {
   return (
     <button
-      // ใน OutlineButton โค้ดเดิมคุณทำถูกต้องแล้ว
-      className={`${base} px-8 py-1 bg-[#6D6E70] text-white hover:bg-[#4A4B4C] `}
+      // ✅ แก้ไข: นำ className ที่รับมาจากภายนอกมาต่อท้าย
+      className={`${base} px-8 py-1 bg-[#6D6E70] text-white hover:bg-[#4A4B4C] ${className}`}
       {...props}
     >
       {children}
     </button>
   );
 };
-

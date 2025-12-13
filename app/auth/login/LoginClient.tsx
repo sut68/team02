@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 const LoginClient: React.FC = () => {
   const router = useRouter();
@@ -75,7 +76,7 @@ const LoginClient: React.FC = () => {
         <div
           className="absolute left-0 top-0 bottom-0 w-full md:w-4/5 bg-cover bg-center object-fit"
           style={{
-            backgroundImage: "url('/auth_photo/Login.jpg')",
+            backgroundImage: "url('/25ver1.jpg')",
           }}
         />
 
@@ -86,7 +87,7 @@ const LoginClient: React.FC = () => {
               ยินดีต้อนรับกลับมา :)
             </h1>
             <p className="text-gray-600 text-center text-sm mb-8">
-              สานต่อความสุขเพื่อนจากนำมาและก้าวไปข้างหน้าร่วมกัน<br />
+              สานต่อความผูกพันจากวันวานและก้าวไปข้างหน้าร่วมกัน<br />
               กรุณาเข้าสู่ระบบด้วยอีเมลและรหัสผ่านของคุณ
             </p>
 
@@ -136,9 +137,9 @@ const LoginClient: React.FC = () => {
                   </button>
                 </div>
                 <div className="text-right mt-2">
-                  <a href="#" className="text-sm text-orange-500 hover:underline">
+                  <Link href="/auth/forgot-password" className="text-sm text-orange-500 hover:underline">
                     ลืมรหัสผ่าน?
-                  </a>
+                  </Link>
                 </div>
               </div>
 

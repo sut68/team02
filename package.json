@@ -30,8 +30,11 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-hook-form": "^7.66.1",
+<<<<<<< HEAD
     "react-icons": "^5.5.0",
     "recharts": "^3.5.1",
+=======
+>>>>>>> 7b40a5ae0e79c535e3059cc27c5e3b6fe2f7ce1a
     "resend": "^6.4.2",
     "tailwind-merge": "^3.4.0"
   },
