@@ -34,7 +34,7 @@ export default function SouvenirDetailPage() {
     <main className="min-h-screen bg-white py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Page Title */}
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">
+        <h1 className="text-3xl font-medium text-gray-700 mb-8">
           {formData.name}
         </h1>
 

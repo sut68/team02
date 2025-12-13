@@ -49,7 +49,18 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { sku, name, description, category, imageUrl, unit, initialStock } = body;
+    const { 
+      sku, 
+      name, 
+      description, 
+      category, 
+      imageUrl, 
+      unit, 
+      initialStock,
+      linkedType,
+      linkedEventId,
+      linkedDonationProjectId,
+    } = body;
 
     // Validate required fields
     if (!sku || !name) {
@@ -93,6 +104,21 @@ export async function POST(request: NextRequest) {
           refType: 'Initial',
         },
       });
+    }
+
+    // เชื่อมโยงกับ Event หรือ Donation
+    if (linkedType === 'event' && linkedEventId) {
+      await prisma.event.update({
+        where: { id: linkedEventId },
+        data: { souvenirItemId: item.id },
+      });
+    } else if (linkedType === 'donation' && linkedDonationProjectId) {
+      // สำหรับโครงการบริจาค เราจะเก็บ mapping ไว้ใน metadata หรือใช้วิธีอื่น
+      // ปัจจุบัน Donation ไม่ได้เชื่อมกับ DonationProject โดยตรง
+      // สามารถอัพเดท Donation ทั้งหมดที่มี purpose ตรงกับโครงการได้
+      // หรือเก็บข้อมูลไว้ใน SouvenirItem.description
+      // แต่ถ้าต้องการใช้งานจริง ควรเพิ่ม projectId ใน Donation model
+      console.log('Donation project linking not implemented - Donation model does not have projectId');
     }
 
     return NextResponse.json(item, { status: 201 });
