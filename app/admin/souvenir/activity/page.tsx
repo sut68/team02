@@ -42,6 +42,7 @@ export default function SouvenirActivityPage() {
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'remaining' | 'registered' | 'claimed'>('all');
+  const [cardWidth, setCardWidth] = useState(90);
   
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const trackRef = React.useRef<HTMLDivElement>(null);
@@ -112,36 +113,50 @@ export default function SouvenirActivityPage() {
   };
 
   const handleNextActivity = () => {
-    stepBy(cardWidthRef.current || 0);
+    setCurrentActivityIndex((prev) => {
+      const next = prev + 1;
+      return next >= activities.length ? 0 : next;
+    });
   };
 
   const handlePrevActivity = () => {
-    stepBy(-(cardWidthRef.current || 0));
+    setCurrentActivityIndex((prev) => {
+      const previous = prev - 1;
+      return previous < 0 ? activities.length - 1 : previous;
+    });
   };
 
   const loopItems = React.useMemo(() => {
-    // Create more duplicates for truly seamless infinite loop
     const items = [...souvenirItems, ...souvenirItems, ...souvenirItems, ...souvenirItems];
     return items;
   }, [souvenirItems]);
-
-  // Measure widths for seamless loop
   React.useEffect(() => {
     const measure = () => {
       const track = trackRef.current;
       const container = scrollContainerRef.current;
       if (!track || !container) return;
+      
+      track.offsetHeight;
+      
       const fullWidth = track.scrollWidth;
-      loopWidthRef.current = fullWidth / 4; // Divided by 4 since we have 4x duplicates
+      loopWidthRef.current = fullWidth / 4;
       const cols = window.innerWidth >= 768 ? 3 : 1;
       cardWidthRef.current = container.clientWidth / cols;
+      
+      // Update card width for activity carousel (including gap)
+      if (window.innerWidth >= 1024) {
+        setCardWidth(33.333); // lg: full width divided by 3
+      } else if (window.innerWidth >= 768) {
+        setCardWidth(33.333); // md: full width divided by 3
+      } else {
+        setCardWidth(100); // mobile: full width
+      }
     };
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
   }, []);
 
-  // Auto-scroll animation
   React.useEffect(() => {
     if (isPaused) return;
     let lastTime = performance.now();
@@ -219,6 +234,7 @@ export default function SouvenirActivityPage() {
                       {item.name}
                     </h3>
                     <p className="text-orange-500 font-semibold mb-3 text-sm">
+                    {item.category || 'กิจกรรม'}
                       {item.category || 'กิจกรรม'}
                     </p>
                     <p className="text-gray-600 text-sm leading-relaxed mb-3">
@@ -260,15 +276,20 @@ export default function SouvenirActivityPage() {
             {/* Arrow Left */}
             <button
               onClick={handlePrevActivity}
-              className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-3 shadow-lg hover:bg-gray-100 transition-all"
+              className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
               aria-label="Previous activity"
             >
               <ChevronLeft className="w-6 h-6 text-gray-700" />
             </button>
 
-            {/* Activity Cards */}
-            <div className="overflow-visible px-2">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Activity Cards Container - Carousel */}
+            <div className="overflow-hidden px-2 py-4">
+              <div 
+                className="flex gap-6 transition-transform duration-500 ease-in-out"
+                style={{ 
+                  transform: `translateX(calc(-${currentActivityIndex * cardWidth}vw - ${currentActivityIndex * 24}px))` 
+                }}
+              >
                 {activities.map((activity, index) => (
                   <div
                     key={activity.id}
@@ -276,13 +297,13 @@ export default function SouvenirActivityPage() {
                       setSelectedActivity(activity);
                       setCurrentActivityIndex(index);
                     }}
-                    className={`bg-white rounded-xl transition-all duration-300 cursor-pointer min-h-[300px] flex items-center ${
+                    className={`shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)] bg-white rounded-xl transition-all duration-300 cursor-pointer ${
                       selectedActivity?.id === activity.id
                         ? "shadow-xl"
                         : "shadow-md hover:shadow-lg"
                     }`}
                   >
-                    <div className="p-10 text-center w-full">
+                    <div className="p-10 text-center min-h-[300px] flex flex-col items-center justify-center">
                       <h3 className="text-lg font-medium mb-3 text-orange-500">
                         {activity.name}
                       </h3>
@@ -299,7 +320,7 @@ export default function SouvenirActivityPage() {
             {/* Arrow Right */}
             <button
               onClick={handleNextActivity}
-              className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-3 shadow-lg hover:bg-gray-100 transition-all"
+              className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
               aria-label="Next activity"
             >
               <ChevronRight className="w-6 h-6 text-gray-700" />
