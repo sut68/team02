@@ -45,6 +45,13 @@ export function SouvenirSection() {
         const eventsRes = await fetch('/api/admin/events');
         const events = await eventsRes.json();
 
+        // ตรวจสอบว่า events เป็น array หรือไม่
+        if (!Array.isArray(events)) {
+          console.error('Events is not an array:', events);
+          setLoading(false);
+          return;
+        }
+
         // กรองเฉพาะ events ที่มี souvenirItem และสร้าง map
         const itemsMap = new Map<number, any>();
         

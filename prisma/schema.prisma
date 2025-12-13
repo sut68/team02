@@ -243,16 +243,18 @@ model SubmissionFile {
 // ========================================
 
 model Event {
-  id           Int       @id @default(autoincrement())
-  name         String
-  description  String?
-  startDate    DateTime
-  endDate      DateTime?
-  location     String?
-  maxAttendees Int?
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id             Int            @id @default(autoincrement())
+  name           String
+  description    String?
+  startDate      DateTime
+  endDate        DateTime?
+  location       String?
+  maxAttendees   Int?
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  souvenirItemId Int?
+  souvenirItem   SouvenirItem?  @relation(fields: [souvenirItemId], references: [id])
 
   registrations EventRegistration[]
   entitlements  Entitlement[]
@@ -313,6 +315,7 @@ model SouvenirItem {
   entitlements Entitlement[]
   redemptions  Redemption[]
   shipments    Shipment[]
+  events       Event[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
