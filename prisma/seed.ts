@@ -14,103 +14,98 @@ async function main() {
   const userData = [
     {
       email: 'admin@sut-eng.ac.th',
-      name: 'เจ้าหน้าที่ระบบ ศิษย์เก่า',
+      fullName: 'เจ้าหน้าที่ระบบ ศิษย์เก่า',
       phone: '0891112233',
-      addressLine: '111 อาคารวิศวกรรมศาสตร์ มทส.',
+      address: '111 อาคารวิศวกรรมศาสตร์ มทส.',
       subdistrict: 'สุรนารี',
       district: 'เมืองนครราชสีมา',
       province: 'นครราชสีมา',
       postalCode: '30000',
       role: Role.ADMIN,
+      password: hashedPassword,
     },
     {
       email: 'b6631345@g.sut.ac.th',
-      name: 'นางสาวชุติกาญจน์ ชมกลาง',
+      fullName: 'สมชาย วิศวกร',
       phone: '0892223344',
-      addressLine: '99/12 หมู่ 5',
+      address: '123 หมู่บ้านวิศวกร',
       subdistrict: 'สุรนารี',
       district: 'เมืองนครราชสีมา',
       province: 'นครราชสีมา',
       postalCode: '30000',
       role: Role.STUDENT,
+      password: hashedPassword,
     },
     {
       email: 'b6610364@g.sut.ac.th',
-      name: 'นายปัณณธร ขันละ',
+      fullName: 'สมหญิง วิศวกร',
       phone: '0893334455',
-      addressLine: '88/7 หมู่ 3',
+      address: '456 หมู่บ้านวิศวกร',
       subdistrict: 'สุรนารี',
       district: 'เมืองนครราชสีมา',
       province: 'นครราชสีมา',
       postalCode: '30000',
       role: Role.STUDENT,
+      password: hashedPassword,
     },
     {
       email: 'alumni.2018@sut-eng.ac.th',
-      name: 'นายวีรยุทธ ดอนเมือง',
+      fullName: 'อดีตศิษย์ วิศวกร',
       phone: '0894445566',
-      addressLine: '99/12 ถนนเพิ่มสิน',
-      subdistrict: 'สายไหม',
-      district: 'สายไหม',
-      province: 'กรุงเทพมหานคร',
-      postalCode: '10220',
+      address: '789 หมู่บ้านศิษย์เก่า',
+      subdistrict: 'สุรนารี',
+      district: 'เมืองนครราชสีมา',
+      province: 'นครราชสีมา',
+      postalCode: '30000',
       role: Role.ALUMNI,
+      password: hashedPassword,
     },
     {
       email: 'alumni.2020@sut-eng.ac.th',
-      name: 'นางสาวศุภนิดา วิศวกร',
+      fullName: 'อดีตศิษย์ วิศวกร 2020',
       phone: '0895556677',
-      addressLine: '128/45 หมู่บ้านวิศวกร',
-      subdistrict: 'ในเมือง',
-      district: 'เมืองขอนแก่น',
-      province: 'ขอนแก่น',
-      postalCode: '40000',
+      address: '101 หมู่บ้านศิษย์เก่า',
+      subdistrict: 'สุรนารี',
+      district: 'เมืองนครราชสีมา',
+      province: 'นครราชสีมา',
+      postalCode: '30000',
       role: Role.ALUMNI,
+      password: hashedPassword,
     },
     {
       email: 'alumni.2015@sut-eng.ac.th',
-      name: 'นายธนกฤต ช่างใหญ่',
+      fullName: 'อดีตศิษย์ วิศวกร 2015',
       phone: '0896667788',
-      addressLine: '45/8 ซอยลาดพร้าว 101',
-      subdistrict: 'คลองจั่น',
-      district: 'บางกะปิ',
-      province: 'กรุงเทพมหานคร',
-      postalCode: '10240',
+      address: '202 หมู่บ้านศิษย์เก่า',
+      subdistrict: 'สุรนารี',
+      district: 'เมืองนครราชสีมา',
+      province: 'นครราชสีมา',
+      postalCode: '30000',
       role: Role.ALUMNI,
+      password: hashedPassword,
     },
     {
       email: 'student.2ndyear@g.sut.ac.th',
-      name: 'นายณัฐพงศ์ ทองเถาะ',
+      fullName: 'นิสิต ปี2',
       phone: '0897778899',
-      addressLine: '12/3 หอพักนักศึกษา',
+      address: '303 หมู่บ้านนิสิต',
       subdistrict: 'สุรนารี',
       district: 'เมืองนครราชสีมา',
       province: 'นครราชสีมา',
       postalCode: '30000',
       role: Role.STUDENT,
+      password: hashedPassword,
     },
   ];
 
+  // สร้าง userMap เพื่อ map email -> id
   const userMap: Record<string, { id: number }> = {};
-
   for (const u of userData) {
     const user = await prisma.user.upsert({
       where: { email: u.email },
-      update: {},
-      create: {
-        email: u.email,
-        password: hashedPassword, // ทุกคนใช้ sut12345
-        fullName: u.name,
-        phone: u.phone,
-        address: u.addressLine,
-        subdistrict: u.subdistrict,
-        district: u.district,
-        province: u.province,
-        postalCode: u.postalCode,
-        role: u.role,
-      },
+      update: u,
+      create: u,
     });
-
     userMap[u.email] = { id: user.id };
   }
 
@@ -351,99 +346,7 @@ async function main() {
 
   console.log('✅ Seeded souvenir items');
 
-  // -----------------------------
-  // 5) EVENTS (เชื่อมกับของที่ระลึก)
-  // -----------------------------
-  // ดึง souvenir items ที่สร้างไว้แล้ว
-  const broochItem = await prisma.souvenirItem.findUnique({ where: { sku: 'ENGI-BROOCH-001' } });
-  const capItem = await prisma.souvenirItem.findUnique({ where: { sku: 'ENGI-CAP-001' } });
-  const bottleItem = await prisma.souvenirItem.findUnique({ where: { sku: 'ENGI-BOTTLE-001' } });
-  const bagItem = await prisma.souvenirItem.findUnique({ where: { sku: 'ENGI-BAG-001' } });
-  const bookItem = await prisma.souvenirItem.findUnique({ where: { sku: 'ENGI-BOOK-001' } });
-
-  const eventData = [
-    {
-      name: 'งานสานสัมพันธ์ศิษย์เก่าวิศวกรรมศาสตร์ 2568',
-      description: 'งานรวมพลศิษย์เก่าคณะวิศวกรรมศาสตร์ มทส. ประจำปี 2568 พบปะสังสรรค์ แลกเปลี่ยนประสบการณ์ และสานสายสัมพันธ์',
-      startDate: new Date('2025-03-15T09:00:00Z'),
-      endDate: new Date('2025-03-15T17:00:00Z'),
-      location: 'หอประชุมใหญ่ คณะวิศวกรรมศาสตร์ มทส.',
-      maxAttendees: 500,
-      isActive: true,
-      souvenirItemId: broochItem?.id, // เข็มกลัด ENGi
-    },
-    {
-      name: 'Engineering Open House 2025',
-      description: 'งานเปิดบ้านคณะวิศวกรรมศาสตร์ แนะนำหลักสูตร กิจกรรม และโอกาสในการศึกษาสำหรับน้องๆ ที่สนใจ',
-      startDate: new Date('2025-04-20T08:00:00Z'),
-      endDate: new Date('2025-04-21T16:00:00Z'),
-      location: 'อาคารคณะวิศวกรรมศาสตร์ มทส.',
-      maxAttendees: 1000,
-      isActive: true,
-      souvenirItemId: capItem?.id, // หมวก ENGi
-    },
-    {
-      name: 'วิศวกรรมสัมมนา: นวัตกรรมและเทคโนโลยีสมัยใหม่',
-      description: 'การสัมมนาแลกเปลี่ยนความรู้เกี่ยวกับนวัตกรรมและเทคโนโลยีทางวิศวกรรมล่าสุด โดยวิทยากรผู้เชี่ยวชาญ',
-      startDate: new Date('2025-05-10T13:00:00Z'),
-      endDate: new Date('2025-05-10T17:00:00Z'),
-      location: 'ห้องประชุมใหญ่ ชั้น 5 อาคาร 40 ปี',
-      maxAttendees: 200,
-      isActive: true,
-      souvenirItemId: bottleItem?.id, // กระติกน้ำ ENGi
-    },
-    {
-      name: 'Engineering Job Fair 2025',
-      description: 'งานแนะนำอาชีพและหางานสำหรับนักศึกษาและศิษย์เก่า พบกับบริษัทชั้นนำกว่า 50 บริษัท',
-      startDate: new Date('2025-06-01T09:00:00Z'),
-      endDate: new Date('2025-06-02T17:00:00Z'),
-      location: 'ศูนย์กีฬาและกิจกรรมนักศึกษา มทส.',
-      maxAttendees: 2000,
-      isActive: true,
-      souvenirItemId: bagItem?.id, // กระเป๋า ENGi
-    },
-    {
-      name: 'กิจกรรมบริจาคโลหิต ครั้งที่ 1/2568',
-      description: 'กิจกรรมบริจาคโลหิตเพื่อช่วยเหลือสังคม ร่วมกับสภากาชาดไทย',
-      startDate: new Date('2025-02-14T08:00:00Z'),
-      endDate: new Date('2025-02-14T15:00:00Z'),
-      location: 'ลานหน้าคณะวิศวกรรมศาสตร์',
-      maxAttendees: 300,
-      isActive: true,
-      souvenirItemId: bookItem?.id, // หนังสือ ENGi
-    },
-  ];
-
-  for (const event of eventData) {
-    // ตรวจสอบว่ามีกิจกรรมนี้อยู่แล้วหรือไม่
-    const existing = await prisma.event.findFirst({
-      where: {
-        name: event.name,
-        startDate: event.startDate,
-      },
-    });
-
-    if (existing) {
-      // อัพเดทถ้ามีอยู่แล้ว
-      await prisma.event.update({
-        where: { id: existing.id },
-        data: {
-          description: event.description,
-          endDate: event.endDate,
-          location: event.location,
-          maxAttendees: event.maxAttendees,
-          isActive: event.isActive,
-        },
-      });
-    } else {
-      // สร้างใหม่ถ้ายังไม่มี
-      await prisma.event.create({
-        data: event,
-      });
-    }
-  }
-
-  console.log('✅ Seeded events');
+  // Skipping event seeding, only seed Booking/Content/Donation related data
 
   console.log('\n🎉 All seed data inserted successfully.');
   console.log('\n📋 Login credentials (password: sut12345):');
