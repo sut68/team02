@@ -1,5 +1,5 @@
 // prisma/seed.ts
-import { PrismaClient, Role, StudyStatus, VerifyStatus } from '@prisma/client';
+import { Prisma,PrismaClient, Role, StudyStatus, VerifyStatus } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
