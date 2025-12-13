@@ -423,7 +423,7 @@ for (const form of bookingFormsData) {
     TitleName: "DSA MASCOT CONTENT",
     Description:
       "ขอเชิญชวนนักศึกษา ผู้เรียน และศิษย์เก่า มทส. ทุกท่านร่วมโหวตผลงานผู้เข้าประกวด พร้อมอ่านแนวคิดการออกแบบ ในกิจกรรม“DSA Mascot Contest”  ",
-    categories: "ACTIVITY",
+    categories: "NEWS",
     Booking: "NOT",
     Userid: 1,
     bookingFormIndex: null,
@@ -432,7 +432,7 @@ for (const form of bookingFormsData) {
     TitleName: "การแต่งตั้งให้ดำรงตำแหน่งรักษาการแทนอธิการบดี มทส.",
     Description:
       "มหาวิทยาลัยเทคโนโลยีสุรนารี ประกาศแต่งตั้งคณะผู้บริหารรักษาการชุดใหม่ *มีผลตั้งแต่วันที่ 15 พฤศจิกายน 2568 เป็นต้นไป",
-    categories: "EVENT",
+    categories: "NEWS",
     Booking: "NOT",
     Userid: 1,
     bookingFormIndex: null,
@@ -450,7 +450,7 @@ for (const form of bookingFormsData) {
     TitleName: "ENGi Research to Marget",
     Description:
       "โครงการ เส้นทางสู่นวัตวณิชย์ วิศวกรรม มทส. หรือ ENGi R2M (Research to Market) ครั้งที่ 1",
-    categories: "EVENT",
+    categories: "ACTIVITY",
     Booking: "HAVE",
     Userid: 1,
     bookingFormIndex: 0,
@@ -459,7 +459,7 @@ for (const form of bookingFormsData) {
     TitleName: "SUT GLOBAL ENTREPRENEURSHIP CAMP 2026",
     Description:
       "Be brave to try. Be proud to grow. Be part of GEC2026 !Got the spirit to try, learn, and make new international friends? This camp is for YOU!",
-    categories: "EVENT",
+    categories: "NEWS",
     Booking: "NOT",
     Userid: 1,
     bookingFormIndex: null,

@@ -404,10 +404,7 @@ enum PriceMode {
 
 enum ContentCategoryType {
   NEWS
-  EVENT
-  ANNOUNCEMENT
   ACTIVITY
-  GENERAL
 }
 
 enum Option {

@@ -79,7 +79,7 @@ export default function SouvenirActivityPage() {
         }
 
         // Fetch events
-        const eventsRes = await fetch('/api/admin/events');
+        const eventsRes = await fetch('/api/content');
         if (eventsRes.ok) {
           const eventsData = await eventsRes.json();
           if (Array.isArray(eventsData)) {
