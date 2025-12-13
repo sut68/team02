@@ -3,6 +3,14 @@
 // Enum สถานะตาม Database
 export type ProjectStatus = 'PENDING' | 'OPEN' | 'CLOSE' | 'APPROVED';
 
+export interface ProjectVote {
+  id: number;          // ใช้ id ตามมาตรฐาน Database
+  alumniId: number;
+  proposalId: number;
+  createdAt: string | Date;
+  voteWeight: number;
+}
+
 export interface ProjectManager {
   id: number;           // ใช้ id ตามมาตรฐาน Database
   firstName: string;
@@ -31,6 +39,7 @@ export interface ProjectProposal {
   manager?: ProjectManager;
   budgetRound?: any;
   staff?: any;
+  votes?: ProjectVote[];
 }
 
 // Alias สำหรับการใช้งานที่อาจเรียกชื่อต่างกัน

@@ -648,7 +648,7 @@ model ProjectProposal {
   requestedAmount    Float?
   projectStartDate   DateTime?
   projectEndDate     DateTime?
-  scoreTotal         Int?
+  scoreTotal         Int       @default(0)
   responsibilityUnit String?
   coverFilePath      String?
 
