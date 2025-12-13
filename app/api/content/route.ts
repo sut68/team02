@@ -5,38 +5,13 @@ import { promises as fs } from "fs";
 import { ContentCategoryType, Option } from "@prisma/client"; 
 
 // ============================
-// GET - ดึงรายการ Content ทั้งหมด หรือ 1 อันด้วย id
+// GET - ดึงรายการ Content ทั้งหมด
 // ============================
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const category = searchParams.get("category");
-    const idParam = searchParams.get("id");
-    const id = idParam ? Number(idParam) : null;
 
-    // ถ้ามี id → ดึงแค่อันเดียว
-    if (id) {
-      const content = await prisma.content.findUnique({
-        where: { id },
-        include: {
-          user: true,
-          bookingForm: true,
-          pictures: true,
-          bookings: true,
-        },
-      });
-
-      if (!content) {
-        return NextResponse.json(
-          { error: "ไม่พบเนื้อหา" },
-          { status: 404 }
-        );
-      }
-
-      return NextResponse.json({ content }, { status: 200 });
-    }
-
-    // ถ้าไม่มี id → ดึง list ทั้งหมด (ของเดิม)
     const contents = await prisma.content.findMany({
       where: category
         ? { categories: category as any }

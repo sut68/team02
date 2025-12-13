@@ -267,6 +267,184 @@ async function main() {
 
   console.log('✅ Seeded verifications');
 
+  // -----------------------------
+  // 4) SOUVENIR ITEMS
+  // -----------------------------
+  const souvenirData = [
+    {
+      sku: 'CAP-ENGI-2025',
+      name: 'หมวกวิศวกรรมศาสตร์',
+      description: 'หมวกแก๊ปปักโลโก้คณะวิศวกรรมศาสตร์ มทส.',
+      category: 'กิจกรรม',
+      imageUrl: '/souvenir/EngiCap.png',
+      unit: 'ชิ้น',
+      initialStock: 100,
+      active: true,
+    },
+    {
+      sku: 'BROOCH-ENGI-2025',
+      name: 'เข็มกลัดวิศวกรรมศาสตร์',
+      description: 'เข็มกลัดโลหะปักโลโก้วิศวกรรมศาสตร์ มทส.',
+      category: 'กิจกรรม',
+      imageUrl: '/souvenir/EngiBrooch.png',
+      unit: 'อัน',
+      initialStock: 200,
+      active: true,
+    },
+    {
+      sku: 'BOTTLE-ENGI-2025',
+      name: 'กระบอกน้ำวิศวกรรมศาสตร์',
+      description: 'กระบอกน้ำสแตนเลส พร้อมโลโก้วิศวกรรมศาสตร์ มทส.',
+      category: 'บริจาค',
+      imageUrl: '/souvenir/EngiBottle.png',
+      unit: 'ใบ',
+      initialStock: 150,
+      active: true,
+    },
+    {
+      sku: 'BAG-NEW-2025',
+      name: 'กระเป๋าผ้า มทส.',
+      description: 'กระเป๋าผ้าแคนวาส สกรีนลาย มทส.',
+      category: 'กิจกรรม',
+      imageUrl: '/souvenir/Bag_new.png',
+      unit: 'ใบ',
+      initialStock: 80,
+      active: true,
+    },
+    {
+      sku: 'BOOK-NEW-2025',
+      name: 'สมุดบันทึก มทส.',
+      description: 'สมุดบันทึกปกแข็ง พร้อมโลโก้ มทส.',
+      category: 'บริจาค',
+      imageUrl: '/souvenir/Book_new.png',
+      unit: 'เล่ม',
+      initialStock: 300,
+      active: true,
+    },
+    {
+      sku: 'UMBRELLA-NEW-2025',
+      name: 'ร่ม มทส.',
+      description: 'ร่มพับ 3 ตอน พร้อมโลโก้ มทส.',
+      category: 'บริจาค',
+      imageUrl: '/souvenir/Umbrella_new.png',
+      unit: 'คัน',
+      initialStock: 120,
+      active: true,
+    },
+  ];
+
+  for (const item of souvenirData) {
+    await prisma.souvenirItem.upsert({
+      where: { sku: item.sku },
+      update: {
+        name: item.name,
+        description: item.description,
+        category: item.category,
+        imageUrl: item.imageUrl,
+        unit: item.unit,
+        initialStock: item.initialStock,
+        active: item.active,
+      },
+      create: item,
+    });
+  }
+
+  console.log('✅ Seeded souvenir items');
+
+  // -----------------------------
+  // 5) EVENTS (เชื่อมกับของที่ระลึก)
+  // -----------------------------
+  // ดึง souvenir items ที่สร้างไว้แล้ว
+  const broochItem = await prisma.souvenirItem.findUnique({ where: { sku: 'ENGI-BROOCH-001' } });
+  const capItem = await prisma.souvenirItem.findUnique({ where: { sku: 'ENGI-CAP-001' } });
+  const bottleItem = await prisma.souvenirItem.findUnique({ where: { sku: 'ENGI-BOTTLE-001' } });
+  const bagItem = await prisma.souvenirItem.findUnique({ where: { sku: 'ENGI-BAG-001' } });
+  const bookItem = await prisma.souvenirItem.findUnique({ where: { sku: 'ENGI-BOOK-001' } });
+
+  const eventData = [
+    {
+      name: 'งานสานสัมพันธ์ศิษย์เก่าวิศวกรรมศาสตร์ 2568',
+      description: 'งานรวมพลศิษย์เก่าคณะวิศวกรรมศาสตร์ มทส. ประจำปี 2568 พบปะสังสรรค์ แลกเปลี่ยนประสบการณ์ และสานสายสัมพันธ์',
+      startDate: new Date('2025-03-15T09:00:00Z'),
+      endDate: new Date('2025-03-15T17:00:00Z'),
+      location: 'หอประชุมใหญ่ คณะวิศวกรรมศาสตร์ มทส.',
+      maxAttendees: 500,
+      isActive: true,
+      souvenirItemId: broochItem?.id, // เข็มกลัด ENGi
+    },
+    {
+      name: 'Engineering Open House 2025',
+      description: 'งานเปิดบ้านคณะวิศวกรรมศาสตร์ แนะนำหลักสูตร กิจกรรม และโอกาสในการศึกษาสำหรับน้องๆ ที่สนใจ',
+      startDate: new Date('2025-04-20T08:00:00Z'),
+      endDate: new Date('2025-04-21T16:00:00Z'),
+      location: 'อาคารคณะวิศวกรรมศาสตร์ มทส.',
+      maxAttendees: 1000,
+      isActive: true,
+      souvenirItemId: capItem?.id, // หมวก ENGi
+    },
+    {
+      name: 'วิศวกรรมสัมมนา: นวัตกรรมและเทคโนโลยีสมัยใหม่',
+      description: 'การสัมมนาแลกเปลี่ยนความรู้เกี่ยวกับนวัตกรรมและเทคโนโลยีทางวิศวกรรมล่าสุด โดยวิทยากรผู้เชี่ยวชาญ',
+      startDate: new Date('2025-05-10T13:00:00Z'),
+      endDate: new Date('2025-05-10T17:00:00Z'),
+      location: 'ห้องประชุมใหญ่ ชั้น 5 อาคาร 40 ปี',
+      maxAttendees: 200,
+      isActive: true,
+      souvenirItemId: bottleItem?.id, // กระติกน้ำ ENGi
+    },
+    {
+      name: 'Engineering Job Fair 2025',
+      description: 'งานแนะนำอาชีพและหางานสำหรับนักศึกษาและศิษย์เก่า พบกับบริษัทชั้นนำกว่า 50 บริษัท',
+      startDate: new Date('2025-06-01T09:00:00Z'),
+      endDate: new Date('2025-06-02T17:00:00Z'),
+      location: 'ศูนย์กีฬาและกิจกรรมนักศึกษา มทส.',
+      maxAttendees: 2000,
+      isActive: true,
+      souvenirItemId: bagItem?.id, // กระเป๋า ENGi
+    },
+    {
+      name: 'กิจกรรมบริจาคโลหิต ครั้งที่ 1/2568',
+      description: 'กิจกรรมบริจาคโลหิตเพื่อช่วยเหลือสังคม ร่วมกับสภากาชาดไทย',
+      startDate: new Date('2025-02-14T08:00:00Z'),
+      endDate: new Date('2025-02-14T15:00:00Z'),
+      location: 'ลานหน้าคณะวิศวกรรมศาสตร์',
+      maxAttendees: 300,
+      isActive: true,
+      souvenirItemId: bookItem?.id, // หนังสือ ENGi
+    },
+  ];
+
+  for (const event of eventData) {
+    // ตรวจสอบว่ามีกิจกรรมนี้อยู่แล้วหรือไม่
+    const existing = await prisma.event.findFirst({
+      where: {
+        name: event.name,
+        startDate: event.startDate,
+      },
+    });
+
+    if (existing) {
+      // อัพเดทถ้ามีอยู่แล้ว
+      await prisma.event.update({
+        where: { id: existing.id },
+        data: {
+          description: event.description,
+          endDate: event.endDate,
+          location: event.location,
+          maxAttendees: event.maxAttendees,
+          isActive: event.isActive,
+        },
+      });
+    } else {
+      // สร้างใหม่ถ้ายังไม่มี
+      await prisma.event.create({
+        data: event,
+      });
+    }
+  }
+
+  console.log('✅ Seeded events');
+
   console.log('\n🎉 All seed data inserted successfully.');
   console.log('\n📋 Login credentials (password: sut12345):');
   console.log('   • admin@sut-eng.ac.th');
