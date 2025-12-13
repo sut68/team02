@@ -101,7 +101,7 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
         let linkedDonationProjectId: number | undefined;
         
         // ดึงข้อมูล Events ที่ผูกกับของชิ้นนี้
-        const eventsRes = await fetch('/api/admin/events');
+        const eventsRes = await fetch('/api/content');
         if (eventsRes.ok) {
           const events = await eventsRes.json();
           const linkedEvent = events.find((e: any) => e.souvenirItemId === itemId);
