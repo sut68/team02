@@ -158,7 +158,7 @@ export default function VotePage() {
                   className="group flex flex-col h-full overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-100 bg-white rounded-2xl p-0"
                 >
                   {/* รูปภาพ */}
-                  <div className="relative w-full aspect-4/3 bg-gray-100 overflow-hidden">
+                  <div className="relative w-full aspect-4/3 bg-gray-100 overflow-hidden rounded-xl">
                     {project.coverFilePath ? (
                       <Image
                         src={project.coverFilePath}

@@ -2,6 +2,23 @@
 
 // Enum สถานะตาม Database
 export type ProjectStatus = 'PENDING' | 'OPEN' | 'CLOSE' | 'APPROVED';
+export type BudgetRoundStatus = 'OPEN' | 'CLOSED' | 'PREPARING';
+
+export interface BudgetRound {
+  id: number;
+  roundName: string;
+  fiscalYear: string;
+  totalBudget: number;
+  startDate: string;
+  endDate: string;
+  status: BudgetRoundStatus;
+  stats?: {
+    totalProposals: number;
+    totalRequested: number;
+    totalDonated: number;
+    remaining: number;
+  };
+}
 
 export interface ProjectVote {
   id: number;          // ใช้ id ตามมาตรฐาน Database

@@ -72,6 +72,12 @@ export default function ProjectCard({ project, onUpdate }: ProjectCardProps) {
     setPendingOption(null);
   };
 
+  // --- Handlers: Cancel Change ---
+  const cancelChange = () => {
+    setIsConfirmOpen(false);
+    setPendingOption(null);
+  };
+
   // --- Handlers: Delete ---
   const confirmDelete = async () => {
     if (!projectId) return;
