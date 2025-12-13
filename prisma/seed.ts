@@ -1,5 +1,5 @@
 // prisma/seed.ts
-import { PrismaClient, Role, StudyStatus, VerifyStatus } from '@prisma/client';
+import { Prisma,PrismaClient, Role, StudyStatus, VerifyStatus } from '@prisma/client';
 import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -413,7 +413,7 @@ async function main() {
       souvenirItemId: bookItem?.id, // หนังสือ ENGi
     },
   ];
-
+  
   for (const event of eventData) {
     // ตรวจสอบว่ามีกิจกรรมนี้อยู่แล้วหรือไม่
     const existing = await prisma.event.findFirst({
@@ -442,8 +442,196 @@ async function main() {
       });
     }
   }
-
+  
   console.log('✅ Seeded events');
+
+const bookingFormsData = [
+  {
+    Type: "REUNION",
+    BatchNumber: 1,
+    TotalSeats: 500,
+    StartDate: new Date("2025-03-15T09:00:00Z"),
+    EndDate: new Date("2025-03-15T17:00:00Z"),
+    PriceType: "FREE",
+    singlePrice: null,
+    batchPrices: undefined,
+    Souvenir: "HAVE",
+  },
+  {
+    Type: "SEMINAR",
+    BatchNumber: 1,
+    TotalSeats: 200,
+    StartDate: new Date("2025-05-10T13:00:00Z"),
+    EndDate: new Date("2025-05-10T17:00:00Z"),
+    PriceType: "SINGLE",
+    singlePrice: 199,
+    batchPrices: undefined,
+    Souvenir: "NOT",
+  },
+  {
+    Type: "WORKSHOP",
+    BatchNumber: 2,
+    TotalSeats: 2000,
+    StartDate: new Date("2025-06-01T09:00:00Z"),
+    EndDate: new Date("2025-06-02T17:00:00Z"),
+    PriceType: "BY_BATCH",
+    singlePrice: null,
+    batchPrices: [
+      { startBatch: 1, endBatch: 50, price: 0 },
+      { startBatch: 51, endBatch: 200, price: 49 },
+      { startBatch: 201, endBatch: 500, price: 99 },
+    ],
+    Souvenir: "HAVE",
+  },
+];
+
+// เก็บ id ที่สร้างได้
+const bookingFormIds: number[] = [];
+
+for (const form of bookingFormsData) {
+  const existing = await prisma.bookingForm.findFirst({
+    where: { Type: form.Type as any, StartDate: form.StartDate },
+  });
+
+  const data: Prisma.BookingFormUncheckedUpdateInput = {
+    BatchNumber: form.BatchNumber,
+    TotalSeats: form.TotalSeats,
+    EndDate: form.EndDate,
+    PriceType: form.PriceType as any,
+    singlePrice: form.singlePrice ?? null,
+    batchPrices: form.batchPrices ?? Prisma.DbNull,
+    Souvenir: form.Souvenir as any,
+  };
+
+  const saved = existing
+    ? await prisma.bookingForm.update({
+        where: { id: existing.id },
+        data,
+      })
+    : await prisma.bookingForm.create({
+        data: {
+          ...data,
+          Type: form.Type as any,
+          StartDate: form.StartDate,
+        } as any,
+      });
+
+  bookingFormIds.push(saved.id);
+}
+  const contentData = [
+    {
+    TitleName: "DSA MASCOT CONTENT",
+    Description:
+      "ขอเชิญชวนนักศึกษา ผู้เรียน และศิษย์เก่า มทส. ทุกท่านร่วมโหวตผลงานผู้เข้าประกวด พร้อมอ่านแนวคิดการออกแบบ ในกิจกรรม“DSA Mascot Contest”  ",
+    categories: "ACTIVITY",
+    Booking: "NOT",
+    Userid: 1,
+    bookingFormIndex: null,
+  },
+  {
+    TitleName: "การแต่งตั้งให้ดำรงตำแหน่งรักษาการแทนอธิการบดี มทส.",
+    Description:
+      "มหาวิทยาลัยเทคโนโลยีสุรนารี ประกาศแต่งตั้งคณะผู้บริหารรักษาการชุดใหม่ *มีผลตั้งแต่วันที่ 15 พฤศจิกายน 2568 เป็นต้นไป",
+    categories: "EVENT",
+    Booking: "NOT",
+    Userid: 1,
+    bookingFormIndex: null,
+  },
+  {
+    TitleName: "IESUT FAMILY 2025",
+    Description:
+      "จากวันนั้นถึงวันนี้...ความผูกพัน IE มทส ไม่เคยจางหาย #IESUTFamily2025 #ย้อนวัยIEมทส #คืนสู่เหย้าIEสุรนารี #รวมพลชาวเลือดสีน้ำตาล",
+    categories: "ACTIVITY",
+    Booking: "HAVE",
+    Userid: 1,
+    bookingFormIndex: 2,
+  },
+  {
+    TitleName: "ENGi Research to Marget",
+    Description:
+      "โครงการ เส้นทางสู่นวัตวณิชย์ วิศวกรรม มทส. หรือ ENGi R2M (Research to Market) ครั้งที่ 1",
+    categories: "EVENT",
+    Booking: "HAVE",
+    Userid: 1,
+    bookingFormIndex: 0,
+  },
+  {
+    TitleName: "SUT GLOBAL ENTREPRENEURSHIP CAMP 2026",
+    Description:
+      "Be brave to try. Be proud to grow. Be part of GEC2026 !Got the spirit to try, learn, and make new international friends? This camp is for YOU!",
+    categories: "EVENT",
+    Booking: "NOT",
+    Userid: 1,
+    bookingFormIndex: null,
+  },
+];
+
+for (const c of contentData) {
+  const BookingFormID =
+    c.bookingFormIndex !== null ? bookingFormIds[c.bookingFormIndex] : null;
+
+  const existing = await prisma.content.findFirst({
+    where: {
+      TitleName: c.TitleName,
+      categories: c.categories as any,
+    },
+  });
+
+  const payload = {
+    TitleName: c.TitleName,
+    Description: c.Description,
+    categories: c.categories as any,
+    Booking: c.Booking as any,
+    Userid: c.Userid,
+    BookingFormID,
+  };
+
+  if (existing) {
+    await prisma.content.update({
+      where: { id: existing.id },
+      data: payload,
+    });
+  } else {
+    await prisma.content.create({ data: payload });
+  }
+}
+  const picturePlans = [
+  { title: "SUT GLOBAL ENTREPRENEURSHIP CAMP 2026", paths: ["/Content/Event6.jpg"] },
+  { title: "ENGi Research to Marget", paths: ["/Content/Event5.jpg"] },
+  { title: "DSA MASCOT CONTENT", paths: ["/Content/Event3.png"] },
+  {
+    title: "การแต่งตั้งให้ดำรงตำแหน่งรักษาการแทนอธิการบดี มทส.",
+    paths: ["/Content/Event10.jpg"],
+  },
+  { title: "IESUT FAMILY 2025", paths: ["/Content/Event11.jpg"] },
+];
+
+for (const plan of picturePlans) {
+  const content = await prisma.content.findFirst({
+    where: { TitleName: plan.title },
+  });
+
+  if (!content) continue;
+
+  for (const path of plan.paths) {
+    const existing = await prisma.pictureContent.findFirst({
+      where: { Path: path, ContentID: content.id },
+    });
+
+    if (!existing) {
+      await prisma.pictureContent.create({
+        data: {
+          Path: path,
+          ContentID: content.id,
+        },
+      });
+    }
+  }
+}
+
+console.log("✅ Seeded BookingForm + Content + PictureContent");
+
+
 
   console.log('\n🎉 All seed data inserted successfully.');
   console.log('\n📋 Login credentials (password: sut12345):');
