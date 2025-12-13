@@ -197,7 +197,7 @@ model DonationTransaction {
   status TransactionStatus @default(PENDING)
 
   // Omise/Payment Gateway Reference IDs
-  omiseChargeId String @unique // Omise Charge ID (ใช้ในการตรวจสอบ Webhook)
+  //omiseChargeId String @unique // Omise Charge ID (ใช้ในการตรวจสอบ Webhook)
 
   // ข้อมูลผู้บริจาค (ถ้าผู้ใช้ไม่ได้ Login, อาจ null ได้)
   donorName  String? // ชื่อที่ผู้ใช้ระบุในฟอร์ม (ถ้าไม่ Login)

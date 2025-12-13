@@ -24,7 +24,6 @@ export async function GET(request: NextRequest) {
               amount: true,
               createdAt: true,
               donorName: true,
-              isPublic: true,
             },
             orderBy: { createdAt: 'desc' },
             take: 5,
