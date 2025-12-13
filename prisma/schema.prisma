@@ -202,6 +202,7 @@ model DonationTransaction {
   // ข้อมูลผู้บริจาค (ถ้าผู้ใช้ไม่ได้ Login, อาจ null ได้)
   donorName  String? // ชื่อที่ผู้ใช้ระบุในฟอร์ม (ถ้าไม่ Login)
   donorEmail String?
+  isPublic   Boolean @default(true) // แสดงชื่อผู้บริจาคสาธารณะหรือไม่
 
   // ความสัมพันธ์กับ User (ถ้าบริจาคโดย Login)
   userId Int?
@@ -279,12 +280,14 @@ model EventRegistration {
 // ========================================
 
 model Donation {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  amount    Float
-  donatedAt DateTime @default(now())
-  purpose   String?
-  status    String   @default("completed") // "pending" | "completed" | "failed"
+  id             Int            @id @default(autoincrement())
+  userId         Int
+  amount         Float
+  donatedAt      DateTime       @default(now())
+  purpose        String?
+  status         String         @default("completed") // "pending" | "completed" | "failed"
+  souvenirItemId Int?
+  souvenirItem   SouvenirItem?  @relation(fields: [souvenirItemId], references: [id])
 
   user         User          @relation(fields: [userId], references: [id])
   entitlements Entitlement[]
@@ -316,6 +319,7 @@ model SouvenirItem {
   redemptions  Redemption[]
   shipments    Shipment[]
   events       Event[]
+  donations    Donation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
