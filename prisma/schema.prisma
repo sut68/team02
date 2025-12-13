@@ -640,6 +640,9 @@ model BudgetRound {
   totalBudget Float?
   startDate   DateTime?
   endDate     DateTime?
+  // Safety Switch
+  isPublished Boolean  @default(false)
+  // 
   status      RoundStatus @default(PREPARING)
 
   createdAt DateTime  @default(now())

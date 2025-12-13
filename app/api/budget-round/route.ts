@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Helper: แกะ User ID จาก Token
 function getUserFromToken(req: NextRequest) {
@@ -15,7 +15,32 @@ function getUserFromToken(req: NextRequest) {
   }
 }
 
-// GET - ดึงรายการรอบงบประมาณ
+// ✅ Logic คำนวณสถานะ (สำคัญที่สุด)
+function calculateStatus(round: any) {
+  const now = new Date();
+  const start = new Date(round.startDate);
+  const end = new Date(round.endDate);
+
+  // 1. ถ้ายังไม่กด Publish (ฉบับร่าง) -> PREPARING เสมอ
+  if (!round.isPublished) {
+    return 'PREPARING';
+  }
+
+  // 2. ถ้า Publish แล้ว แต่ยังไม่ถึงเวลาเริ่ม -> PREPARING
+  if (now < start) {
+    return 'PREPARING'; 
+  }
+
+  // 3. ถ้าเลยเวลาจบแล้ว -> CLOSED
+  if (now > end) {
+    return 'CLOSED';
+  }
+
+  // 4. ถ้าอยู่ในช่วงเวลา -> OPEN
+  return 'OPEN';
+}
+
+// GET - ดึงข้อมูล
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -27,32 +52,27 @@ export async function GET(request: NextRequest) {
         ...(fiscalYear && { fiscalYear }),
       },
       include: {
-        creator: {
-          select: { id: true, fullName: true, email: true },
-        },
+        creator: { select: { id: true, fullName: true, email: true } },
         proposals: {
           where: { deletedAt: null },
           select: { id: true, projectName: true, status: true, requestedAmount: true },
         },
-        budgetDonations: {
-          select: { amount: true },
-        },
+        budgetDonations: { select: { amount: true } },
       },
-      // ✅ เรียงลำดับ: เอา OPEN ขึ้นก่อนเสมอ (ต้องมั่นใจว่า Enum ใน Schema เรียงลำดับเหมาะสม หรือใช้ Logic นี้)
-      // หาก Enum คือ PREPARING, OPEN, CLOSED -> การเรียงอาจจะไม่ตรงใจเป๊ะๆ 
-      // แนะนำให้ Frontend ดึงไปแล้ว Filter เอา OPEN ไว้บนสุดจะง่ายกว่า หรือใช้ orderBy หลายชั้น
-      orderBy: [
-        { startDate: 'desc' } // เรียงตามวันที่ล่าสุดก่อน
-      ]
+      orderBy: [{ startDate: 'desc' }]
     });
 
-    // คำนวณยอดรวม
+    // Map ข้อมูลเพื่อใส่ Calculated Status
     const roundsWithStats = budgetRounds.map(round => {
       const totalRequested = round.proposals.reduce((sum, p) => sum + (p.requestedAmount || 0), 0);
       const totalDonated = round.budgetDonations.reduce((sum, d) => sum + d.amount, 0);
 
+      // ✅ ใช้ function คำนวณสถานะ แทนการดึงจาก DB ตรงๆ
+      const realStatus = calculateStatus(round);
+
       return {
         ...round,
+        status: realStatus, // Override ค่า status เดิม
         stats: {
           totalProposals: round.proposals.length,
           totalRequested,
@@ -65,69 +85,52 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ budgetRounds: roundsWithStats }, { status: 200 });
   } catch (error) {
     console.error('Error fetching budget rounds:', error);
-    return NextResponse.json({ error: 'เกิดข้อผิดพลาดในการดึงข้อมูล' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
   }
 }
 
-// POST - สร้างรอบงบประมาณใหม่
+// POST - สร้างรอบใหม่
 export async function POST(request: NextRequest) {
   try {
     const user = getUserFromToken(request);
-    if (!user) return NextResponse.json({ error: 'กรุณาเข้าสู่ระบบก่อนทำรายการ' }, { status: 401 });
-    if (user.role !== 'ADMIN') return NextResponse.json({ error: 'คุณไม่มีสิทธิ์ทำรายการนี้' }, { status: 403 });
+    if (!user || user.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
 
     const body = await request.json();
-    const {
-      roundName,
-      fiscalYear,
-      totalBudget,
-      startDate,
-      endDate,
-      status // ✅ รับค่า status (เผื่อสร้างแล้วเปิดเลย หรือสร้างแบบ draft)
-    } = body;
+    const { roundName, fiscalYear, totalBudget, startDate, endDate, isPublished } = body;
 
-    if (!roundName) {
-      return NextResponse.json({ error: 'กรุณาระบุชื่อรอบงบประมาณ' }, { status: 400 });
-    }
+    if (!roundName) return NextResponse.json({ error: 'Missing roundName' }, { status: 400 });
 
     const budgetRound = await prisma.budgetRound.create({
       data: {
         roundName,
         fiscalYear,
         totalBudget: totalBudget || 0,
-        startDate: startDate ? new Date(startDate) : new Date(), // ควรมี Default หรือ Validate
+        startDate: startDate ? new Date(startDate) : new Date(),
         endDate: endDate ? new Date(endDate) : new Date(),
         creatorId: user.userId,
-        status: status || 'PREPARING' // ✅ ถ้าไม่ส่งมา ให้ Default เป็น PREPARING
-      },
-      include: {
-        creator: { select: { id: true, fullName: true, email: true } },
+        // ✅ สร้างมาเป็น Draft ก่อนเสมอ (false) หรือตามที่ส่งมา
+        isPublished: isPublished || false, 
+        status: 'PREPARING' // ค่า Default ใน DB ใส่ไว้เฉยๆ
       },
     });
 
-    return NextResponse.json({ message: 'สร้างรอบงบประมาณสำเร็จ', budgetRound }, { status: 201 });
+    return NextResponse.json({ message: 'Success', budgetRound }, { status: 201 });
   } catch (error) {
-    console.error('Error creating budget round:', error);
-    return NextResponse.json({ error: 'เกิดข้อผิดพลาดในการสร้างรอบงบประมาณ' }, { status: 500 });
+    return NextResponse.json({ error: 'Creation failed' }, { status: 500 });
   }
 }
 
-// PUT - อัพเดทรอบงบประมาณ (แก้ไขสถานะได้ที่นี่)
+// PUT - แก้ไข (รวมถึงการ Toggle Publish)
 export async function PUT(request: NextRequest) {
   try {
     const user = getUserFromToken(request);
-    if (!user || user.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!user || user.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await request.json();
-    const { id, ...updateData } = body; // updateData จะมี status ติดมาด้วยถ้าส่งมา
+    const { id, isPublished, ...updateData } = body;
 
-    if (!id) {
-      return NextResponse.json({ error: 'กรุณาระบุ ID ของรอบงบประมาณ' }, { status: 400 });
-    }
+    if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
 
-    // ✅ เตรียมข้อมูลที่จะ Update
     const dataToUpdate: any = {
       roundName: updateData.roundName,
       fiscalYear: updateData.fiscalYear,
@@ -136,45 +139,38 @@ export async function PUT(request: NextRequest) {
 
     if (updateData.startDate) dataToUpdate.startDate = new Date(updateData.startDate);
     if (updateData.endDate) dataToUpdate.endDate = new Date(updateData.endDate);
-    
-    // ✅ เพิ่มการอัปเดต Status (สำคัญมากสำหรับการเปลี่ยน OPEN/CLOSED)
-    if (updateData.status) {
-      dataToUpdate.status = updateData.status;
+
+    // ✅ อัปเดตสถานะ Publish (Safety Switch)
+    if (typeof isPublished === 'boolean') {
+      dataToUpdate.isPublished = isPublished;
     }
 
     const budgetRound = await prisma.budgetRound.update({
-      where: { id: Number(id) }, // แปลง id เป็น Number เพื่อความชัวร์
+      where: { id: Number(id) },
       data: dataToUpdate,
     });
 
-    return NextResponse.json({ message: 'อัพเดทรอบงบประมาณสำเร็จ', budgetRound }, { status: 200 });
+    return NextResponse.json({ message: 'Update success', budgetRound }, { status: 200 });
   } catch (error) {
-    console.error('Error updating budget round:', error);
-    return NextResponse.json({ error: 'เกิดข้อผิดพลาดในการอัพเดทรอบงบประมาณ' }, { status: 500 });
+    return NextResponse.json({ error: 'Update failed' }, { status: 500 });
   }
 }
 
-// DELETE - ลบรอบงบประมาณ (เหมือนเดิม)
+// DELETE (ใช้เหมือนเดิม)
 export async function DELETE(request: NextRequest) {
   try {
     const user = getUserFromToken(request);
-    if (!user || user.role !== 'ADMIN') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+    if (!user || user.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-
-    if (!id) return NextResponse.json({ error: 'กรุณาระบุ ID' }, { status: 400 });
+    if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
 
     await prisma.budgetRound.update({
       where: { id: parseInt(id) },
       data: { deletedAt: new Date() },
     });
-
-    return NextResponse.json({ message: 'ลบรอบงบประมาณสำเร็จ' }, { status: 200 });
+    return NextResponse.json({ message: 'Deleted' }, { status: 200 });
   } catch (error) {
-    console.error('Error deleting budget round:', error);
-    return NextResponse.json({ error: 'เกิดข้อผิดพลาดในการลบ' }, { status: 500 });
+    return NextResponse.json({ error: 'Delete failed' }, { status: 500 });
   }
 }

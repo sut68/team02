@@ -11,6 +11,7 @@ export interface BudgetRound {
   totalBudget: number;
   startDate: string;
   endDate: string;
+  isPublished: boolean;
   status: BudgetRoundStatus;
   stats?: {
     totalProposals: number;

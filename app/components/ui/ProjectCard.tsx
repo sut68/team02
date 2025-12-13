@@ -1,17 +1,19 @@
 "use client";
 
-import { PenLine, Trash2, ChevronDown, AlertCircle } from "lucide-react";
+import { PenLine, Trash2, ChevronDown } from "lucide-react";
 import { ProjectWithManager } from "@/app/types/budget_approval";
 import { useState } from "react";
 import { Card, CardContent, CardFooter } from "@/app/components/ui/Card";
 import { useRouter } from 'next/navigation';
+
+// ✅ Import Modal ดีไซน์ใหม่เข้ามา
+import ConfirmModal from "@/app/components/ui/ConfirmModal";
 
 interface ProjectCardProps {
   project: ProjectWithManager;
   onUpdate?: () => void;
 }
 
-// Config สีและข้อความตามดีไซน์เดิม
 const STATUS_OPTIONS = [
   { id: 1, label: "รอดำเนินการ", value: "PENDING", color: "bg-gray-400", textColor: "text-gray-600" },
   { id: 2, label: "เปิดรับโหวต", value: "OPEN", color: "bg-orange-500", textColor: "text-orange-600" },
@@ -22,22 +24,21 @@ const STATUS_OPTIONS = [
 export default function ProjectCard({ project, onUpdate }: ProjectCardProps) {
   const router = useRouter();
   
-  const projectId = project.id; // ใช้ ID มาตรฐาน
+  const projectId = project.id; 
   const initialOption = STATUS_OPTIONS.find(opt => opt.value === project.status) || STATUS_OPTIONS[0];
 
   const [currentOption, setCurrentOption] = useState(initialOption);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
-  // State สำหรับ Modal เปลี่ยนสถานะ
+  // State สำหรับ Modal
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [pendingOption, setPendingOption] = useState<typeof STATUS_OPTIONS[0] | null>(null);
-
-  // State สำหรับ Modal ลบ
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // เพิ่ม state loading
 
   const activeStatusObj = currentOption;
 
-  // --- Handlers: Status Change ---
+  // --- Handlers ---
   const handleStatusClick = (option: typeof STATUS_OPTIONS[0]) => {
     setPendingOption(option);
     setIsMenuOpen(false);
@@ -46,6 +47,7 @@ export default function ProjectCard({ project, onUpdate }: ProjectCardProps) {
 
   const confirmChange = async () => {
     if (pendingOption) {
+      setIsLoading(true); // เริ่ม loading
       try {
         const res = await fetch('/api/project-proposal', {
           method: 'PUT',
@@ -66,27 +68,24 @@ export default function ProjectCard({ project, onUpdate }: ProjectCardProps) {
         }
       } catch (error) {
         alert("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้");
+      } finally {
+        setIsLoading(false); // หยุด loading
+        setIsConfirmOpen(false);
+        setPendingOption(null);
       }
     }
-    setIsConfirmOpen(false);
-    setPendingOption(null);
   };
 
-  // --- Handlers: Cancel Change ---
   const cancelChange = () => {
     setIsConfirmOpen(false);
     setPendingOption(null);
   };
 
-  // --- Handlers: Delete ---
   const confirmDelete = async () => {
     if (!projectId) return;
-
+    setIsLoading(true); // เริ่ม loading
     try {
-        const res = await fetch(`/api/project-proposal?id=${projectId}`, {
-            method: 'DELETE',
-        });
-        
+        const res = await fetch(`/api/project-proposal?id=${projectId}`, { method: 'DELETE' });
         if (res.ok) {
             if (onUpdate) onUpdate(); 
             else router.refresh();
@@ -97,7 +96,8 @@ export default function ProjectCard({ project, onUpdate }: ProjectCardProps) {
     } catch (e) {
         alert("เกิดข้อผิดพลาดในการเชื่อมต่อ");
     } finally {
-        setIsDeleteModalOpen(false); // ปิด Modal หลังจากทำรายการเสร็จ
+        setIsLoading(false); // หยุด loading
+        setIsDeleteModalOpen(false);
     }
   };
 
@@ -172,7 +172,6 @@ export default function ProjectCard({ project, onUpdate }: ProjectCardProps) {
             </button>
           )}
           <button
-            // ✅ เปลี่ยนเป็นเปิด Modal แทน window.confirm
             onClick={() => setIsDeleteModalOpen(true)}
             className={`${currentOption.value === 'PENDING' ? 'w-14' : 'w-full'} h-10 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition flex items-center justify-center shrink-0`}
           >
@@ -180,55 +179,30 @@ export default function ProjectCard({ project, onUpdate }: ProjectCardProps) {
           </button>
         </CardFooter>
       </Card>
+      <ConfirmModal 
+        isOpen={isConfirmOpen}
+        onClose={cancelChange}
+        onConfirm={confirmChange}
+        title="ยืนยันการเปลี่ยนสถานะ"
+        // ใส่ข้อความปกติ (Modal แบบนี้ไม่ต้องใส่ "" เพื่อไฮไลท์สี เพราะดีไซน์นี้ไม่มีไฮไลท์ตัวอักษร)
+        message={`คุณต้องการเปลี่ยนสถานะเป็น "${pendingOption?.label}" ใช่หรือไม่?`} 
+        confirmLabel="ยืนยัน"
+        cancelLabel="ยกเลิก"
+        isDanger={false} // 🟠 เป็นสีส้ม
+      />
 
-      {/* --- Modal 1: Confirm Status Change --- */}
-      {isConfirmOpen && pendingOption && (
-        <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl transform transition-all scale-100">
-            <div className="flex flex-col items-center text-center gap-4">
-              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">
-                <AlertCircle className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">ยืนยันการเปลี่ยนสถานะ</h3>
-                <p className="text-sm text-gray-500 mt-1">
-                    คุณต้องการเปลี่ยนสถานะเป็น <br/>
-                    <span className={`font-bold ${pendingOption.textColor}`}>"{pendingOption.label}"</span> ใช่หรือไม่?
-                </p>
-              </div>
-              <div className="flex gap-3 w-full mt-2">
-                <button onClick={cancelChange} className="flex-1 py-2.5 rounded-full border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition">ยกเลิก</button>
-                <button onClick={confirmChange} className="flex-1 py-2.5 rounded-full bg-[#F36618] text-white font-medium hover:bg-orange-700 transition shadow-md shadow-orange-200">ยืนยัน</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 3. เรียกใช้ Modal ลบ (สีแดง) */}
+      <ConfirmModal 
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        title="ยืนยันการลบโครงการ"
+        message={`คุณต้องการลบโครงการ "${project.projectName}" ใช่หรือไม่?`} 
+        confirmLabel="ลบโครงการ"
+        cancelLabel="ยกเลิก"
+        isDanger={true} // 🔴 เป็นสีแดง
+      />
 
-      {/* --- Modal 2: Confirm Delete (New) --- */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl transform transition-all scale-100">
-            <div className="flex flex-col items-center text-center gap-4">
-              {/* ใช้สีแดงเพื่อให้รู้ว่าเป็น action อันตราย */}
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600">
-                <Trash2 className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">ยืนยันการลบโครงการ</h3>
-                <p className="text-sm text-gray-500 mt-1">
-                    คุณต้องการลบโครงการ <br/>
-                    <span className="font-bold text-gray-800">"{project.projectName}"</span> ใช่หรือไม่?
-                </p>
-              </div>
-              <div className="flex gap-3 w-full mt-2">
-                <button onClick={() => setIsDeleteModalOpen(false)} className="flex-1 py-2.5 rounded-full border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition">ยกเลิก</button>
-                <button onClick={confirmDelete} className="flex-1 py-2.5 rounded-full bg-red-600 text-white font-medium hover:bg-red-700 transition shadow-md shadow-red-200">ลบโครงการ</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
