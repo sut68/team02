@@ -402,28 +402,28 @@ async function main() {
     {
       userEmail: 'alumni.2018@sut-eng.ac.th',
       sku: 'PIN-WEARE-SUT',
-      source: EntitlementSource.EVENT,
+      source: EntitlementSource.BOOKING,
       qtyGranted: 1,
       qtyUsed: 1,
     },
     {
       userEmail: 'alumni.2018@sut-eng.ac.th',
       sku: 'CAP-ENGI-2025-BK',
-      source: EntitlementSource.EVENT,
+      source: EntitlementSource.BOOKING,
       qtyGranted: 1,
       qtyUsed: 1,
     },
     {
       userEmail: 'b6610364@g.sut.ac.th',
       sku: 'BOTTLE-ENGI-2025',
-      source: EntitlementSource.EVENT,
+      source: EntitlementSource.BOOKING,
       qtyGranted: 1,
       qtyUsed: 1,
     },
     {
       userEmail: 'alumni.2020@sut-eng.ac.th',
       sku: 'CAP-ENGI-2025-BK',
-      source: EntitlementSource.EVENT,
+      source: EntitlementSource.BOOKING,
       qtyGranted: 1,
       qtyUsed: 0, // ยังไม่ได้มารับ
     },
