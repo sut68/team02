@@ -112,7 +112,7 @@ model User {
   educationRecords   EducationRecord[]
   verification       Verification?
   submissions        Submission[]
-  eventRegistrations EventRegistration[]
+  // eventRegistrations removed (no longer used)
   donations          Donation[]
   entitlements       Entitlement[]
   redemptions        Redemption[]
@@ -239,41 +239,6 @@ model SubmissionFile {
   submission Submission? // back relation (optional)
 }
 
-// ========================================
-// Event & Registration (Subsystem reference)
-// ========================================
-
-model Event {
-  id             Int            @id @default(autoincrement())
-  name           String
-  description    String?
-  startDate      DateTime
-  endDate        DateTime?
-  location       String?
-  maxAttendees   Int?
-  isActive       Boolean        @default(true)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  souvenirItemId Int?
-  souvenirItem   SouvenirItem?  @relation(fields: [souvenirItemId], references: [id])
-
-  registrations EventRegistration[]
-  entitlements  Entitlement[]
-}
-
-model EventRegistration {
-  id               Int      @id @default(autoincrement())
-  eventId          Int
-  userId           Int
-  registeredAt     DateTime @default(now())
-  attendanceStatus String? // "registered" | "attended" | "absent"
-
-  event        Event         @relation(fields: [eventId], references: [id])
-  user         User          @relation(fields: [userId], references: [id])
-  entitlements Entitlement[]
-
-  @@unique([eventId, userId])
-}
 
 // ========================================
 // Donation (Subsystem reference)
@@ -318,7 +283,6 @@ model SouvenirItem {
   entitlements Entitlement[]
   redemptions  Redemption[]
   shipments    Shipment[]
-  events       Event[]
   donations    Donation[]
 
   createdAt DateTime @default(now())
@@ -341,28 +305,19 @@ model StockMovement {
 
 // ใบสิทธิ์รับของของแต่ละคน (จากกิจกรรม หรือการบริจาค)
 model Entitlement {
-  id                  Int               @id @default(autoincrement())
-  userId              Int
-  itemId              Int
-  source              EntitlementSource // EVENT | DONATION
-  eventId             Int? // อ้างถึงกิจกรรม (ถ้ามาจาก EVENT)
-  eventRegistrationId Int? // ถ้ามาจากกิจกรรม
-  donationId          Int? // ถ้ามาจากบริจาค
-
-  qtyGranted Int @default(1) // ได้สิทธิ์ทั้งหมดกี่ชิ้น
-  qtyUsed    Int @default(0) // ใช้สิทธิ์ไปแล้วกี่ชิ้น
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user              User               @relation(fields: [userId], references: [id])
-  item              SouvenirItem       @relation(fields: [itemId], references: [id])
-  event             Event?             @relation(fields: [eventId], references: [id])
-  eventRegistration EventRegistration? @relation(fields: [eventRegistrationId], references: [id])
-  donation          Donation?          @relation(fields: [donationId], references: [id])
-
-  redemptions Redemption[]
-
+  id           Int         @id @default(autoincrement())
+  userId       Int
+  itemId       Int
+  source       EntitlementSource // BOOKING | DONATION
+  donationId   Int? // ถ้ามาจากบริจาค
+  qtyGranted   Int @default(1) // ได้สิทธิ์ทั้งหมดกี่ชิ้น
+  qtyUsed      Int @default(0) // ใช้สิทธิ์ไปแล้วกี่ชิ้น
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User         @relation(fields: [userId], references: [id])
+  item         SouvenirItem @relation(fields: [itemId], references: [id])
+  donation     Donation?    @relation(fields: [donationId], references: [id])
+  redemptions  Redemption[]
   @@index([userId, itemId])
 }
 
@@ -413,7 +368,7 @@ model Shipment {
 // ========================================
 
 enum EntitlementSource {
-  EVENT
+  BOOKING
   DONATION
 }
 
