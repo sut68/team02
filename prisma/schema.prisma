@@ -278,6 +278,10 @@ model SouvenirItem {
   initialStock Int     @default(0) // สต็อกเริ่มต้น
   active       Boolean @default(true)
 
+  // ความสัมพันธ์กับกิจกรรม (Booking)
+  linkedBookingId Int? // ถ้ามีจะชี้ไปที่กิจกรรม
+  booking         Booking? @relation("BookingToSouvenirItem", fields: [linkedBookingId], references: [id])
+
   // ความสัมพันธ์ฝั่งของที่ระลึก
   movements    StockMovement[]
   entitlements Entitlement[]
@@ -476,7 +480,10 @@ model Booking {
   bookingForm  BookingForm?  @relation(fields: [bookingFormId], references: [id])
 
   bookingFormId Int?
-  attendees     Attendee[]
+    attendees     Attendee[]
+
+    // Relation to SouvenirItem (กิจกรรมแจกของที่ระลึก)
+    souvenirItems SouvenirItem[] @relation("BookingToSouvenirItem")
 }
 
 // ผู้เข้าร่วมในแต่ละการจอง
@@ -771,7 +778,6 @@ model TopicEditHistory {
   @@index([topic_id])
 }
 
-// Audit Log สำหรับการจัดการเนื้อหา
 model ContentManagementLog {
   id         Int                 @id @default(autoincrement())
   targettype ContentTargetType
