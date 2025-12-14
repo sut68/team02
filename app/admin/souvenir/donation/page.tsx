@@ -1,5 +1,11 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { CATEGORY_LABEL } from "@/constants/category";
+
+export const CATEGORY = {
+  ACTIVITY: "ACTIVITY",
+  DONATION: "DONATION",
+} as const;
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, Calendar, RefreshCw, Layers, CheckCircle, Package } from "lucide-react";
 
@@ -82,7 +88,7 @@ export default function SouvenirDonationPage() {
         if (itemsRes.ok) {
           const itemsData = await itemsRes.json();
           if (Array.isArray(itemsData)) {
-            setSouvenirItems(itemsData.filter((item: SouvenirItem) => item.category === 'บริจาค'));
+            setSouvenirItems(itemsData.filter((item: SouvenirItem) => item.category === CATEGORY.DONATION));
           }
         }
 

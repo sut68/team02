@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { CATEGORY_LABEL } from "@/constants/category";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, MapPin, Calendar, RefreshCw, Layers, CheckCircle } from "lucide-react";
 
@@ -74,7 +75,7 @@ export default function SouvenirActivityPage() {
         if (itemsRes.ok) {
           const itemsData = await itemsRes.json();
           if (Array.isArray(itemsData)) {
-            setSouvenirItems(itemsData.filter((item: SouvenirItem) => item.category === 'กิจกรรม'));
+            setSouvenirItems(itemsData.filter((item: SouvenirItem) => item.category === 'ACTIVITY'));
           }
         }
 
@@ -278,8 +279,7 @@ export default function SouvenirActivityPage() {
                       {item.name}
                     </h3>
                     <p className="text-orange-500 font-semibold mb-3 text-sm">
-                    {item.category || 'กิจกรรม'}
-                      {item.category || 'กิจกรรม'}
+                    {CATEGORY_LABEL[item.category as keyof typeof CATEGORY_LABEL] || 'กิจกรรม'}
                     </p>
                     <p className="text-gray-600 text-sm leading-relaxed mb-3 truncate">
                       {item.description || 'ของที่ระลึกสำหรับผู้เข้าร่วมกิจกรรม'}

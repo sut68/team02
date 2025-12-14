@@ -104,7 +104,10 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
         const eventsRes = await fetch('/api/content');
         if (eventsRes.ok) {
           const events = await eventsRes.json();
-          const linkedEvent = events.find((e: any) => e.souvenirItemId === itemId);
+          const eventList = Array.isArray(events)
+            ? events
+            : (events.data ?? events.events ?? []);
+          const linkedEvent = eventList.find((e: any) => e.souvenirItemId === itemId);
           if (linkedEvent) {
             linkedType = 'event';
             linkedEventId = linkedEvent.id;

@@ -34,7 +34,15 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    return NextResponse.json(itemsWithStock, { status: 200 });
+    // Normalize category field to code (safe for string | null)
+    const normalizeCategory = (c: string | null) => {
+      if (!c) return null;
+      if (c === "กิจกรรม") return "ACTIVITY";
+      if (c === "บริจาค") return "DONATION";
+      return c;
+    };
+    const normalized = itemsWithStock.map((x) => ({ ...x, category: normalizeCategory(x.category) }));
+    return NextResponse.json(normalized, { status: 200 });
   } catch (error) {
     console.error("Error fetching souvenir items:", error);
     return NextResponse.json([], { status: 500 });
