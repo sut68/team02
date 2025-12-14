@@ -569,24 +569,30 @@ export default function SouvenirDonationPage() {
                           <td className="px-4 py-4 text-sm text-gray-600 truncate" title={trackingNo}>{trackingNo}</td>
                           <td className="px-4 py-4">
                             {donation.shipments?.[0]?.id ? (
-                              <select
-                                className="border rounded-lg px-3 py-2 text-sm bg-white"
-                                value={donation.shipments?.[0]?.status ?? "PENDING"}
-                                disabled={updatingShipmentId === donation.shipments[0].id}
-                                onChange={(e) =>
-                                  updateShipmentStatus(
-                                    donation.shipments![0].id,
-                                    e.target.value,
-                                    donation.id
-                                  )
-                                }
-                              >
-                                {STATUS_OPTIONS.map((opt) => (
-                                  <option key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                  </option>
-                                ))}
-                              </select>
+                              <div className="relative inline-block">
+                                <select
+                                  value={donation.shipments?.[0]?.status ?? "PENDING"}
+                                  disabled={updatingShipmentId === donation.shipments[0].id}
+                                  onChange={(e) =>
+                                    updateShipmentStatus(
+                                      donation.shipments![0].id,
+                                      e.target.value,
+                                      donation.id
+                                    )
+                                  }
+                                  className={`appearance-none px-3 py-1 pr-8 rounded-full text-xs font-medium border-0 outline-none cursor-pointer transition-colors
+                                    ${donation.shipments?.[0]?.status === 'PENDING'
+                                      ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                      : donation.shipments?.[0]?.status === 'DELIVERED'
+                                      ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                                      : 'bg-red-100 text-red-700 hover:bg-red-200'}
+                                  `}
+                                >
+                                  <option value="PENDING">รอดำเนินการ</option>
+                                  <option value="DELIVERED">จัดส่งแล้ว</option>
+                                </select>
+                                <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                              </div>
                             ) : (
                               <span className="text-sm text-gray-500">-</span>
                             )}
