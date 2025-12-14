@@ -206,6 +206,18 @@ export default function SouvenirDonationPage() {
     return () => cancelAnimationFrame(rafId);
   }, [isPaused, souvenirItems.length]);
 
+  // Helper for formatting date (Thai)
+  const formatDate = (d?: string | Date | null) => {
+    if (!d) return "-";
+    const date = typeof d === "string" ? new Date(d) : d;
+    if (Number.isNaN(date.getTime())) return "-";
+    return date.toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
   return (
     <main className="min-h-screen bg-white pt-10">
       {loading ? (
@@ -303,68 +315,65 @@ export default function SouvenirDonationPage() {
       </section>
       <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
         {/* Section 2: โครงการบริจาค */}
+        {/* Section 2: โครงการบริจาค (Carousel Style) */}
         <section className="mb-12">
-          <h2 className="text-3xl font-medium text-gray-700 mb-8">
-            โครงการบริจาค
-          </h2>
-          {donationProjects.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {donationProjects.map((project) => {
-                const progress = project.goalAmount > 0 
-                  ? Math.min((project.currentAmount / project.goalAmount) * 100, 100)
-                  : 0;
-                
-                return (
+          <h2 className="text-3xl font-medium text-gray-700 mb-8">โครงการบริจาค</h2>
+          <div className="relative">
+            {/* Arrow Left */}
+            <button
+              onClick={handlePrevDonation}
+              className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
+              aria-label="Previous donation project"
+            >
+              <ChevronLeft className="w-6 h-6 text-gray-700" />
+            </button>
+
+            {/* Donation Project Cards Container - Carousel */}
+            <div className="overflow-hidden px-2 py-4">
+              <div 
+                className="flex gap-6 transition-transform duration-500 ease-in-out"
+                style={{ 
+                  transform: `translateX(calc(-${(offsetRef.current / (cardWidthRef.current || 1)) * 100}vw - ${(offsetRef.current / (cardWidthRef.current || 1)) * 24}px))` 
+                }}
+              >
+                {donationProjects.length > 0 ? donationProjects.map((p, index) => (
                   <div
-                    key={project.id}
-                    className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden"
+                    key={p.id}
+                    className={
+                      `shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)] bg-white rounded-xl transition-all duration-300 cursor-pointer ` +
+                      `shadow-md hover:shadow-lg`
+                    }
                   >
-                    {project.posterUrl && (
-                      <div className="relative h-48 bg-gray-100">
-                        <Image
-                          src={project.posterUrl}
-                          alt={project.title}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    )}
-                    <div className="p-6">
-                      <h3 className="text-lg font-medium mb-2 text-orange-500 truncate">
-                        {project.title}
+                    <div className="p-10 text-center min-h-[300px] flex flex-col items-center justify-center">
+                      <h3 className="text-lg font-medium mb-3 text-orange-500">
+                        {p.title}
                       </h3>
-                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                        {project.description}
-                      </p>
-                      <div className="mb-3">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-600">ความคืบหน้า</span>
-                          <span className="text-orange-500 font-semibold">{progress.toFixed(0)}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-orange-500 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">ยอดระดมทุน</span>
-                        <span className="text-gray-800 font-semibold">
-                          {project.currentAmount.toLocaleString()} / {project.goalAmount.toLocaleString()} บาท
+                      <div className="flex items-center justify-center gap-2 text-gray-600">
+                        <Calendar className="w-5 h-5" />
+                        <span className="text-base">
+                          {formatDate(p.startDate)} – {formatDate(p.endDate)}
                         </span>
                       </div>
                     </div>
                   </div>
-                );
-              })}
+                )) : (
+                  <div className="bg-gray-50 rounded-xl p-8 text-center w-full">
+                    <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 text-lg">ยังไม่มีโครงการบริจาคที่เปิดรับ</p>
+                  </div>
+                )}
+              </div>
             </div>
-          ) : (
-            <div className="bg-gray-50 rounded-xl p-8 text-center">
-              <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">ยังไม่มีโครงการบริจาคที่เปิดรับ</p>
-            </div>
-          )}
+
+            {/* Arrow Right */}
+            <button
+              onClick={handleNextDonation}
+              className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
+              aria-label="Next donation project"
+            >
+              <ChevronRight className="w-6 h-6 text-gray-700" />
+            </button>
+          </div>
         </section>
 
         {/* Section 3: การ์ดสถิติการบริจาค */}
