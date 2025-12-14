@@ -92,6 +92,25 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // แจกของที่ระลึกอัตโนมัติถ้ากิจกรรมนี้มี souvenirItemId
+      if (contentId && userId) {
+        const content = await tx.content.findUnique({
+          where: { id: contentId },
+          select: { souvenirItemId: true },
+        });
+        if (content?.souvenirItemId) {
+          await tx.entitlement.create({
+            data: {
+              userId: userId,
+              itemId: content.souvenirItemId,
+              source: 'BOOKING',
+              qtyGranted: 1,
+              qtyUsed: 0,
+            },
+          });
+        }
+      }
+
       return newBooking;
     });
 

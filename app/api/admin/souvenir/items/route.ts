@@ -4,7 +4,16 @@ import { prisma } from '@/app/lib/prisma';
 // GET - ดึงรายการของที่ระลึกทั้งหมด
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const category = searchParams.get("category");
+    const active = searchParams.get("active");
+
+    const where: any = {};
+    if (category) where.category = category;
+    if (active !== null) where.active = active === "true";
+
     const items = await prisma.souvenirItem.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       include: {
         booking: true,
@@ -25,7 +34,15 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    return NextResponse.json(itemsWithStock, { status: 200 });
+    // Normalize category field to code (safe for string | null)
+    const normalizeCategory = (c: string | null) => {
+      if (!c) return null;
+      if (c === "กิจกรรม") return "ACTIVITY";
+      if (c === "บริจาค") return "DONATION";
+      return c;
+    };
+    const normalized = itemsWithStock.map((x) => ({ ...x, category: normalizeCategory(x.category) }));
+    return NextResponse.json(normalized, { status: 200 });
   } catch (error) {
     console.error("Error fetching souvenir items:", error);
     return NextResponse.json([], { status: 500 });
@@ -84,17 +101,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // สร้าง stock movement เริ่มต้น
-    if (initialStock && initialStock > 0) {
-      await prisma.stockMovement.create({
-        data: {
-          itemId: item.id,
-          delta: initialStock,
-          reason: 'initial_stock',
-          refType: 'Initial',
-        },
-      });
-    }
+    // ไม่สร้าง stock movement สำหรับ initialStock อีกต่อไป (initialStock เก็บใน field เดียว)
 
     // ไม่เชื่อมโยงกับ Event หรือ Donation แบบ hardcode อีกต่อไป ใช้ schema-driven เท่านั้น
 

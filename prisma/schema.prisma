@@ -186,6 +186,10 @@ model DonationProject {
 
   // Relations
   transactions DonationTransaction[] // ความสัมพันธ์ 1-to-Many กับ Transaction
+
+  // Souvenir (ของที่ระลึกสำหรับโครงการนี้)
+  souvenirItemId Int?
+  souvenirItem   SouvenirItem? @relation(fields: [souvenirItemId], references: [id])
 }
 
 // 💡 NEW MODEL: ธุรกรรมการบริจาค (DonationTransaction)
@@ -278,9 +282,15 @@ model SouvenirItem {
   initialStock Int     @default(0) // สต็อกเริ่มต้น
   active       Boolean @default(true)
 
-  // ความสัมพันธ์กับกิจกรรม (Booking)
-  linkedBookingId Int? // ถ้ามีจะชี้ไปที่กิจกรรม
+  // ความสัมพันธ์กับกิจกรรม (Booking) [deprecated]
+  linkedBookingId Int? // ถ้ามีจะชี้ไปที่กิจกรรม (deprecated)
   booking         Booking? @relation("BookingToSouvenirItem", fields: [linkedBookingId], references: [id])
+
+  // Back relation: DonationProject -> SouvenirItem
+  donationProjects DonationProject[]
+
+  // ความสัมพันธ์กับ Content (กิจกรรม)
+  contents Content[]
 
   // ความสัมพันธ์ฝั่งของที่ระลึก
   movements    StockMovement[]
@@ -359,6 +369,9 @@ model Shipment {
 
   status     ShipStatus @default(PENDING) // PENDING | DELIVERED 
   trackingNo String?
+
+  shippedAt   DateTime?
+  deliveredAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -521,8 +534,14 @@ model Content {
   user        User?        @relation(fields: [Userid], references: [id])
   bookingForm BookingForm? @relation(fields: [BookingFormID], references: [id])
 
+  // SouvenirItem relation
+  souvenirItemId Int?
+  souvenirItem   SouvenirItem? @relation(fields: [souvenirItemId], references: [id])
+
   pictures PictureContent[]
   bookings Booking[]
+
+  @@index([souvenirItemId])
 }
 
 // รูปภาพที่เกี่ยวข้องกับเนื้อหา
@@ -569,6 +588,12 @@ enum SummarySubmissionStatus {
   NEEDS_REVISION
 }
 
+enum RoundStatus {
+  PREPARING // กำลังเตรียม (ค่า Default)
+  OPEN      // เปิดรับบริจาค/โหวต
+  CLOSED    // ปิดแล้ว
+}
+
 // ผู้จัดการโครงการ
 model ProjectManager {
   id          Int     @id @default(autoincrement())
@@ -593,6 +618,10 @@ model BudgetRound {
   totalBudget Float?
   startDate   DateTime?
   endDate     DateTime?
+  // Safety Switch
+  isPublished Boolean  @default(false)
+  // 
+  status      RoundStatus @default(PREPARING)
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -614,7 +643,7 @@ model ProjectProposal {
   requestedAmount    Float?
   projectStartDate   DateTime?
   projectEndDate     DateTime?
-  scoreTotal         Int?
+  scoreTotal         Int       @default(0)
   responsibilityUnit String?
   coverFilePath      String?
 
@@ -674,7 +703,7 @@ model BudgetDonation {
   amount Float
 
   createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  updatedAt DateTime  @default(now()) @updatedAt
   deletedAt DateTime?
 
   budgetRoundId Int

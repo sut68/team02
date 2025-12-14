@@ -50,7 +50,7 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
       sku: '',
       name: '',
       description: '',
-      category: 'กิจกรรม',
+      category: 'ACTIVITY',
       unit: 'ชิ้น',
       initialStock: 0,
       active: true,
@@ -104,7 +104,10 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
         const eventsRes = await fetch('/api/content');
         if (eventsRes.ok) {
           const events = await eventsRes.json();
-          const linkedEvent = events.find((e: any) => e.souvenirItemId === itemId);
+          const eventList = Array.isArray(events)
+            ? events
+            : (events.data ?? events.events ?? []);
+          const linkedEvent = eventList.find((e: any) => e.souvenirItemId === itemId);
           if (linkedEvent) {
             linkedType = 'event';
             linkedEventId = linkedEvent.id;
@@ -602,7 +605,7 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
                   >
                     <option value="none">ไม่เชื่อมโยง</option>
                     <option value="event">กิจกรรม</option>
-                    <option value="donation">โครงการบริจาค (ยังไม่รองรับ)</option>
+                    <option value="donation">โครงการบริจาค</option>
                   </select>
                 </div>
 
@@ -646,16 +649,31 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
                 {formData.linkedType === 'donation' && (
                   <div className="mt-4">
                     <label className="block text-sm text-gray-500 mb-2">
-                      เลือกโครงการบริจาค
+                      เลือกโครงการบริจาค <span className="text-red-500">*</span>
                     </label>
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                      <p className="text-sm text-yellow-800">
-                        ⚠️ ฟีเจอร์นี้ยังไม่สามารถใช้งานได้ เนื่องจาก Donation model ไม่ได้เชื่อมกับ DonationProject โดยตรง
-                      </p>
-                      <p className="text-xs text-yellow-700 mt-2">
-                        ต้องเพิ่ม projectId field ใน Donation model และทำ migration ก่อน
-                      </p>
-                    </div>
+                    {loadingOptions ? (
+                      <div className="text-sm text-gray-500 px-4 py-2">กำลังโหลด...</div>
+                    ) : (
+                      <select
+                        value={formData.linkedDonationProjectId || ''}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            linkedDonationProjectId: e.target.value ? parseInt(e.target.value) : undefined,
+                          })
+                        }
+                        disabled={!isEditing}
+                        required={formData.linkedType === 'donation'}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:border-orange-400 focus:outline-none disabled:bg-gray-50"
+                      >
+                        <option value="">-- เลือกโครงการบริจาค --</option>
+                        {donationProjects.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.title} ( {p.currentAmount.toLocaleString()} / {p.goalAmount.toLocaleString()} )
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 )}
               </div>

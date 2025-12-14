@@ -50,19 +50,7 @@ async function seedSouvenirs() {
 
   console.log(`✅ Created ${items.length} souvenir items`);
 
-  // สร้าง stock movements เริ่มต้น
-  for (const item of items) {
-    await prisma.stockMovement.create({
-      data: {
-        itemId: item.id,
-        delta: item.initialStock,
-        reason: 'initial_stock',
-        refType: 'Initial',
-      },
-    });
-  }
 
-  console.log('✅ Created initial stock movements');
 
 
   console.log('✨ Souvenir seed completed!');

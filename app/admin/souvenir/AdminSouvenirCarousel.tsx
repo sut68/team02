@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { CATEGORY_LABEL } from '@/constants/category';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -172,9 +173,9 @@ export function AdminSouvenirCarousel({ onCardClick, category }: AdminSouvenirCa
         {/* หัวข้อ */}
         <div className="flex items-center justify-between mb-10">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
-            {category === 'บริจาค' 
-              ? 'จัดการของที่ระลึกสำหรับโครงการบริจาค' 
-              : `ของที่ระลึก${category ? ` (${category})` : ''}`}
+            {category === 'DONATION'
+              ? 'จัดการของที่ระลึกสำหรับโครงการบริจาค'
+              : `ของที่ระลึก${category ? ` (${CATEGORY_LABEL[category as keyof typeof CATEGORY_LABEL] || category})` : ''}`}
           </h2>
         </div>
 
@@ -233,6 +234,12 @@ export function AdminSouvenirCarousel({ onCardClick, category }: AdminSouvenirCa
                     <p className="mt-1 text-sm text-gray-500">
                       จำนวนคงเหลือ: {item.currentStock} {item.unit || 'ชิ้น'}
                     </p>
+                    {/* หมวดหมู่ */}
+                    {item.category && (
+                      <p className="mt-1 text-xs text-gray-400">
+                        หมวดหมู่: {CATEGORY_LABEL[item.category as keyof typeof CATEGORY_LABEL] || item.category}
+                      </p>
+                    )}
                     {/* สถานะ */}
                     <div className="mt-2">
                       <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
