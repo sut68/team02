@@ -573,7 +573,7 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
   };
 
   const RegistrationForm = () => (
-    <form onSubmit={handleSubmit} className="pt-6 pb-4 px-8">
+    <form onSubmit={handleSubmit} className="pt-16 pb-16 px-8">
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-center mb-16">
           {stepLabels.map((label, i) => {
