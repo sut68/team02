@@ -63,6 +63,16 @@ interface Donation {
     shippedAt: string | null;
   }>;
 }
+// Shipment status options and label helper
+const STATUS_OPTIONS = [
+  { value: "PENDING", label: "รอดำเนินการ" },
+  { value: "IN_TRANSIT", label: "กำลังจัดส่ง" },
+  { value: "DELIVERED", label: "จัดส่งแล้ว" },
+  { value: "FAILED", label: "มีปัญหา" },
+] as const;
+
+const statusLabel = (s?: string) =>
+  STATUS_OPTIONS.find(x => x.value === s)?.label ?? "รอดำเนินการ";
 
 export default function SouvenirDonationPage() {
   const [souvenirItems, setSouvenirItems] = useState<SouvenirItem[]>([]);
@@ -71,7 +81,35 @@ export default function SouvenirDonationPage() {
   const [loading, setLoading] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'pending' | 'delivered'>('all');
+  const [updatingShipmentId, setUpdatingShipmentId] = useState<number | null>(null);
   
+  // Update shipment status function
+  const updateShipmentStatus = async (shipmentId: number, status: string, donationId: number) => {
+    try {
+      setUpdatingShipmentId(shipmentId);
+      const res = await fetch(`/api/admin/shipments/${shipmentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("update shipment failed", res.status, text);
+        return;
+      }
+      setDonations(prev =>
+        prev.map(d => {
+          if (d.id !== donationId) return d;
+          const shipments = (d.shipments ?? []).map(s =>
+            s.id === shipmentId ? { ...s, status } : s
+          );
+          return { ...d, shipments };
+        })
+      );
+    } finally {
+      setUpdatingShipmentId(null);
+    }
+  };
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const trackRef = React.useRef<HTMLDivElement>(null);
   const offsetRef = React.useRef(0);
@@ -526,9 +564,28 @@ export default function SouvenirDonationPage() {
                           <td className="px-4 py-4 text-sm text-orange-600 truncate" title={souvenirName}>{souvenirName}</td>
                           <td className="px-4 py-4 text-sm text-gray-600 truncate" title={trackingNo}>{trackingNo}</td>
                           <td className="px-4 py-4">
-                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusColor} whitespace-nowrap`}>
-                              {statusText}
-                            </span>
+                            {donation.shipments?.[0]?.id ? (
+                              <select
+                                className="border rounded-lg px-3 py-2 text-sm bg-white"
+                                value={donation.shipments?.[0]?.status ?? "PENDING"}
+                                disabled={updatingShipmentId === donation.shipments[0].id}
+                                onChange={(e) =>
+                                  updateShipmentStatus(
+                                    donation.shipments![0].id,
+                                    e.target.value,
+                                    donation.id
+                                  )
+                                }
+                              >
+                                {STATUS_OPTIONS.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span className="text-sm text-gray-500">-</span>
+                            )}
                           </td>
                         </tr>
                       );
