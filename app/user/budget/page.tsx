@@ -1,158 +1,217 @@
-export default function UserBudgetPage() {
+"use client";
+
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import { ChevronDown } from "lucide-react";
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+} from "recharts";
+import type { PieLabelRenderProps } from "recharts";
+
+import { PrimaryButton } from "@/app/components/ui/Button";
+
+/* =======================
+   Types
+======================= */
+type ChartDataItem = {
+  name: string;
+  value: number;
+  color: string;
+};
+
+type Project = {
+  id: string;
+  title: string;
+  image: string;
+};
+
+type BudgetReportResponse = {
+  chartData: ChartDataItem[];
+  projects: Project[];
+};
+
+/* =======================
+   Pie label
+======================= */
+const renderCustomizedLabel = (props: PieLabelRenderProps) => {
+  const {
+    cx = 0,
+    cy = 0,
+    midAngle = 0,
+    innerRadius = 0,
+    outerRadius = 0,
+    percent = 0,
+  } = props;
+
+  const RADIAN = Math.PI / 180;
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
   return (
-    <text 
-      x={x} 
-      y={y} 
-      fill="white" 
-      textAnchor="middle" 
-      dominantBaseline="central" 
-      className="text-lg font-bold drop-shadow-md" // เพิ่มขนาดตัวอักษรและเงาเล็กน้อย
+    <text
+      x={x}
+      y={y}
+      fill="white"
+      textAnchor="middle"
+      dominantBaseline="central"
+      className="text-lg font-bold drop-shadow-md"
     >
       {`${(percent * 100).toFixed(0)}%`}
     </text>
   );
 };
 
+/* =======================
+   Page
+======================= */
 export default function BudgetReportPage() {
+  const [year, setYear] = useState("2568");
+  const [loading, setLoading] = useState(true);
+  const [chartData, setChartData] = useState<ChartDataItem[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await fetch(
+          `/api/user/budget/report?year=${year}`,
+          { cache: "no-store" }
+        );
+
+        if (!res.ok) {
+          throw new Error("โหลดข้อมูลไม่สำเร็จ");
+        }
+
+        const data: BudgetReportResponse = await res.json();
+        setChartData(data.chartData ?? []);
+        setProjects(data.projects ?? []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [year]);
+
   return (
-    <div className="min-h-screen bg-white font-sans text-slate-900">
-      
-      {/* --- Hero Section --- */}
-      <section className="relative h-80 md:h-100 w-full overflow-hidden">
-        <div className="absolute inset-0">
-          <Image 
-            src="/budget/22-01.jpg" 
-            alt="SUT Environment" 
-            fill
-            priority
-            className="object-cover opacity-90"
-          />
-          <div className="absolute inset-0 bg-linear-to-r from-white/80 via-white/40 to-white/10" />
-        </div>
-        
+    <div className="min-h-screen bg-white text-slate-900">
+      {/* ================= Hero ================= */}
+      <section className="relative h-80 w-full overflow-hidden">
+        <Image
+          src="/budget/22-01.jpg"
+          alt="Budget cover"
+          fill
+          priority
+          className="object-cover opacity-90"
+        />
+        <div className="absolute inset-0 bg-linear-to-r from-white/80 via-white/40 to-white/10" />
         <div className="absolute inset-0 flex items-center justify-end px-6 md:px-20">
-          <h1 className="text-2xl md:text-5xl font-semibold text-orange-500 drop-shadow-sm tracking-tight text-right">
+          <h1 className="text-2xl md:text-5xl font-semibold text-orange-500">
             รายงานผลงบประมาณ
           </h1>
         </div>
       </section>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 md:px-8">
-        
-        <h2 className="text-2xl md:text-3xl font-bold text-slate-600 mb-8 md:mb-12">รายงานงบประมาณ</h2>
+      {/* ================= Content ================= */}
+      <main className="max-w-7xl mx-auto px-4 py-10">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-10">
+          <h2 className="text-3xl font-bold text-slate-600">
+            รายงานงบประมาณ
+          </h2>
 
-        {/* --- Chart Section --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16 items-center">
-          
-          {/* Pie Chart Zone */}
-          <div className="h-[300px] md:h-[350px] w-full relative flex justify-center">
-             <ResponsiveContainer width="100%" height="100%">
+          <div className="relative">
+            <select
+              value={year}
+              onChange={(e) => setYear(e.target.value)}
+              className="appearance-none w-[140px] h-9 pl-4 pr-10 rounded-full border border-slate-300 bg-white text-sm"
+            >
+              <option value="2568">พ.ศ. 2568</option>
+              <option value="2567">พ.ศ. 2567</option>
+              <option value="2566">พ.ศ. 2566</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
+          </div>
+        </div>
+
+        {/* ================= Chart ================= */}
+        <div className="grid md:grid-cols-2 gap-10 mb-16">
+          <div className="h-[350px]">
+            {loading ? (
+              <div className="h-full rounded-xl bg-slate-100 animate-pulse" />
+            ) : error ? (
+              <div className="text-red-600">{error}</div>
+            ) : chartData.length === 0 ? (
+              <div className="text-slate-500">ไม่มีข้อมูล</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={chartData}
+                    dataKey="value"
                     cx="50%"
                     cy="50%"
+                    outerRadius={140}
                     labelLine={false}
                     label={renderCustomizedLabel}
-                    outerRadius={140} // ปรับขนาดให้ใหญ่ขึ้นเล็กน้อย
-                    innerRadius={0}
-                    dataKey="value"
-                    stroke="white"    // ใช้เส้นขอบสีขาวแทน paddingAngle
-                    strokeWidth={3}   // ความหนาของเส้นขอบ
+                    stroke="white"
+                    strokeWidth={3}
                   >
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    {chartData.map((item, index) => (
+                      <Cell key={index} fill={item.color} />
                     ))}
                   </Pie>
-                  <Tooltip 
-                    formatter={(value: number) => [`${value}%`, 'สัดส่วน']}
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
+
+                  <Tooltip
+                    formatter={(v: number) => [`${v}`, "สัดส่วน"]}
                   />
                 </PieChart>
-             </ResponsiveContainer>
+              </ResponsiveContainer>
+            )}
           </div>
 
-          {/* Legend Zone */}
-          <div className="space-y-6 px-4">
-            <div className="border border-slate-200 rounded-xl p-6 bg-white shadow-sm space-y-5 relative">
-                {chartData.map((item, index) => (
-                    <div key={index} className="flex items-start gap-4">
-                        <div 
-                            className="w-4 h-4 rounded-full mt-1 shrink-0 shadow-sm" 
-                            style={{ backgroundColor: item.color }} 
-                        />
-                        <span className="text-slate-600 text-sm leading-relaxed font-medium">
-                            {item.name}
-                        </span>
-                    </div>
-                ))}
-            </div>
-            <p className="text-xs text-slate-400 text-center md:text-left mt-2 underline decoration-slate-300 underline-offset-4 cursor-pointer hover:text-orange-500 transition-colors">
-                รายละเอียดการใช้งบประมาณของแต่ละโครงการท่านสามารถดูได้ที่ด้านล่าง
-            </p>
+          <div className="flex items-center text-slate-600">
+            เลือกปีงบประมาณเพื่อดูสัดส่วนการใช้งบของแต่ละโครงการ
           </div>
         </div>
 
-        {/* --- Filter Section --- */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <div className="flex items-center gap-2 text-slate-600 font-medium text-sm md:text-base">
-                <span>เลือกรายงานโครงการเฉพาะปี</span>
-                
-                <div className="relative">
-                    <select 
-                        className="appearance-none w-[120px] h-9 pl-4 pr-10 rounded-full border border-slate-300 bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400 transition-all cursor-pointer shadow-sm"
-                        defaultValue="2568"
-                    >
-                        <option value="2568">พ.ศ. 2568</option>
-                        <option value="2567">พ.ศ. 2567</option>
-                        <option value="2566">พ.ศ. 2566</option>
-                    </select>
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
-                        <ChevronDown className="h-4 w-4" />
-                    </div>
-                </div>
+        {/* ================= Projects ================= */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {projects.map((project) => (
+            <div
+              key={project.id}
+              className="bg-white rounded-2xl border shadow-sm overflow-hidden"
+            >
+              <div className="relative h-48">
+                <Image
+                  src={project.image}
+                  alt={project.title}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+
+              <div className="p-5">
+                <p className="font-medium mb-4">{project.title}</p>
+                <PrimaryButton className="rounded-full text-xs px-5 py-2">
+                  อ่านรายละเอียดเพิ่มเติม
+                </PrimaryButton>
+              </div>
             </div>
+          ))}
         </div>
-
-        {/* --- Cards Grid --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {projects.map((project) => (
-                <div 
-                    key={project.id} 
-                    className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col"
-                >
-                    <div className="relative h-48 w-full overflow-hidden">
-                        <Image 
-                            src={project.image} 
-                            alt={project.title}
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                        <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
-                    </div>
-                    
-                    <div className="p-5 flex-1 flex flex-col justify-center min-h-[100px]">
-                        <p className="text-base font-medium text-slate-700 line-clamp-2 leading-relaxed group-hover:text-orange-600 transition-colors">
-                            {project.title}
-                        </p>
-                    </div>
-                    
-                    <div className="p-5 pt-0 flex justify-end">
-                        <Button 
-                            size="sm" 
-                            className="bg-orange-500 hover:bg-orange-600 text-white rounded-full text-xs px-6 py-2 h-auto font-medium shadow-orange-200 shadow-lg hover:shadow-orange-300 hover:-translate-y-0.5 transition-all"
-                        >
-                            อ่านรายละเอียดเพิ่มเติม
-                        </Button>
-                    </div>
-                </div>
-            ))}
-        </div>
-
       </main>
-    <div className="p-8">
-      <h1 className="text-2xl font-bold">งบประมาณ</h1>
-      <p className="text-gray-600 mt-2">หน้านี้อยู่ระหว่างการพัฒนา</p>
     </div>
   );
 }

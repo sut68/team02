@@ -136,6 +136,21 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // อัปเดต Entitlement.qtyUsed (ถ้ามี Entitlement ตรงกับ userId, itemId, donationId)
+      const entitlement = await tx.entitlement.findFirst({
+        where: {
+          userId,
+          itemId,
+          donationId,
+        },
+      });
+      if (entitlement) {
+        await tx.entitlement.update({
+          where: { id: entitlement.id },
+          data: { qtyUsed: { increment: qty || 1 } },
+        });
+      }
+
       return newShipment;
     });
 

@@ -84,30 +84,37 @@ export async function PUT(
       },
     });
 
-    // เชื่อมโยงกับ Event หรือ Donation
-    if (linkedType === 'event' && linkedEventId) {
-      // ยกเลิกการผูกเก่าก่อน (ถ้ามี)
-      await prisma.event.updateMany({
+    // เชื่อมโยงกับ Content (กิจกรรม)
+    if (linkedType === "event") {
+      // ล้างการผูกเก่าทั้งหมดของ item นี้ก่อน
+      await prisma.content.updateMany({
         where: { souvenirItemId: id },
         data: { souvenirItemId: null },
       });
-      
-      // ผูกใหม่
-      await prisma.event.update({
-        where: { id: linkedEventId },
-        data: { souvenirItemId: id },
-      });
-    } else if (linkedType === 'donation' && linkedDonationProjectId) {
-      // ปัจจุบัน Donation ไม่ได้เชื่อมกับ DonationProject โดยตรง
-      // ไม่สามารถทำได้จนกว่าจะเพิ่ม projectId field
-      console.log('Donation project linking not implemented - Donation model does not have projectId');
-    } else if (linkedType === 'none') {
-      // ยกเลิกการผูกทั้งหมด
-      await prisma.event.updateMany({
+
+      // ถ้าเลือกกิจกรรมใหม่
+      if (linkedEventId) {
+        // กันผูกซ้อน: ถ้ากิจกรรมนี้มีของอยู่แล้วและไม่ใช่ item นี้ ให้ throw
+        const c = await prisma.content.findUnique({
+          where: { id: linkedEventId },
+          select: { souvenirItemId: true },
+        });
+        if (c?.souvenirItemId && c.souvenirItemId !== id) {
+          return NextResponse.json({ error: "Activity already linked to another souvenir." }, { status: 400 });
+        }
+
+        await prisma.content.update({
+          where: { id: linkedEventId },
+          data: { souvenirItemId: id },
+        });
+      }
+    }
+
+    if (linkedType === "none") {
+      await prisma.content.updateMany({
         where: { souvenirItemId: id },
         data: { souvenirItemId: null },
       });
-      // Donation จะไม่ยกเลิกเพราะไม่มี projectId
     }
 
     return NextResponse.json(item);
