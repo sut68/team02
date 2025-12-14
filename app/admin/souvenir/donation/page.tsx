@@ -83,8 +83,12 @@ export default function SouvenirDonationPage() {
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'pending' | 'delivered'>('all');
   const [updatingShipmentId, setUpdatingShipmentId] = useState<number | null>(null);
   
-  // Update shipment status function
+  // Update shipment status function with confirmation
   const updateShipmentStatus = async (shipmentId: number, status: string, donationId: number) => {
+    const statusObj = STATUS_OPTIONS.find(opt => opt.value === status);
+    const statusLabelText = statusObj ? statusObj.label : status;
+    const confirmed = window.confirm(`คุณต้องการเปลี่ยนสถานะการจัดส่งเป็น "${statusLabelText}" ใช่หรือไม่?`);
+    if (!confirmed) return;
     try {
       setUpdatingShipmentId(shipmentId);
       const res = await fetch(`/api/admin/shipments/${shipmentId}`, {
