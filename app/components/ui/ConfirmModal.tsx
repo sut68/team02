@@ -10,7 +10,7 @@ interface ConfirmModalProps {
   title: string;
   message: string;
   confirmLabel?: string;
-  cancelLabel?: string;
+  cancelLabel?: string; // ถ้าไม่ส่งมา หรือส่งเป็น "" จะไม่แสดงปุ่มนี้
   isDanger?: boolean;
   isLoading?: boolean;
 }
@@ -28,16 +28,15 @@ export default function ConfirmModal({
 }: ConfirmModalProps) {
   if (!isOpen) return null;
 
-  // ✅ กำหนดธีมสีที่นี่ (แก้สีได้ง่ายๆ ตรงนี้เลย)
   const theme = isDanger ? {
-    bg: 'bg-red-100',           // พื้นหลังไอคอน (แดง)
-    icon: 'text-red-600',       // ไอคอน (แดง)
-    btnBg: 'bg-red-600 hover:bg-red-700', // ปุ่มยืนยัน (แดง)
+    bg: 'bg-red-100',
+    icon: 'text-red-600',
+    btnBg: 'bg-red-600 hover:bg-red-700',
     btnText: 'text-white'
   } : {
-    bg: 'bg-orange-100',        // พื้นหลังไอคอน (ส้ม)
-    icon: 'text-[#F26522]',     // ไอคอน (ส้ม)
-    btnBg: 'bg-[#F26522] hover:bg-[#d65a1f]', // ปุ่มยืนยัน (ส้ม)
+    bg: 'bg-orange-100',
+    icon: 'text-[#F26522]',
+    btnBg: 'bg-[#F26522] hover:bg-[#d65a1f]',
     btnText: 'text-white'
   };
 
@@ -48,7 +47,6 @@ export default function ConfirmModal({
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-gray-50/50">
           <div className="flex items-center gap-2 text-gray-800 font-semibold">
-            {/* เรียกใช้ธีมสี */}
             <div className={`p-2 rounded-full ${theme.bg} ${theme.icon}`}>
               <AlertTriangle size={20} />
             </div>
@@ -68,13 +66,16 @@ export default function ConfirmModal({
 
         {/* Footer */}
         <div className="flex justify-end gap-3 p-4 bg-gray-50 border-t border-gray-100">
-          <button
-            onClick={onClose}
-            disabled={isLoading}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
-            {cancelLabel}
-          </button>
+          {/* แก้ไข: เช็คว่ามี cancelLabel ไหม ถ้าไม่มีไม่แสดงปุ่ม */}
+          {cancelLabel && (
+            <button
+              onClick={onClose}
+              disabled={isLoading}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              {cancelLabel}
+            </button>
+          )}
           
           <button
             onClick={onConfirm}
