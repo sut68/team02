@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { GraduationCap, Book, Upload, UserCheck } from 'lucide-react';
+import { GraduationCap, Book, Upload, UserCheck, UserCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/app/components/ui/Input';
 import { Card, CardContent } from '@/app/components/ui/Card';
@@ -357,10 +357,10 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
   );
 
   const RegisterSelect = () => (
-    <div className="min-h-screen py-6 px-8">
+    <div className="py-30 px-20 pb-40">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-20">
-          <h2 className="text-3xl font-medium text-gray-700 mb-3">
+          <h2 className="text-3xl font-medium text-gray-700 mb-6">
             กรุณาเลือกประเภทของคุณ
           </h2>
           <p className="text-gray-500 text-sm">
@@ -376,10 +376,8 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
               setStep(1);
             }}
           >
-            <CardContent className="p-20 text-center">
-              <div className="flex justify-center mb-8">
-                <GraduationCap className="w-40 h-40 text-orange-500" strokeWidth={1.5} />
-              </div>
+            <CardContent className="p-20 text-center flex flex-col items-center justify-center h-full">
+              <GraduationCap className="w-16 h-16 text-orange-500 mb-6" strokeWidth={1.2} />
               <h3 className="text-2xl font-normal text-gray-700">ศิษย์เก่า</h3>
             </CardContent>
           </Card>
@@ -391,10 +389,8 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
               setStep(1);
             }}
           >
-            <CardContent className="p-20 text-center">
-              <div className="flex justify-center mb-8">
-                <Book className="w-40 h-40 text-orange-500" strokeWidth={1.5} />
-              </div>
+            <CardContent className="p-20 text-center flex flex-col items-center justify-center h-full">
+              <UserCircle className="w-16 h-16 text-orange-500 mb-6" strokeWidth={1.2} />
               <h3 className="text-2xl font-normal text-gray-700">ศิษย์ปัจจุบัน</h3>
             </CardContent>
           </Card>
@@ -577,9 +573,9 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
   };
 
   const RegistrationForm = () => (
-    <form onSubmit={handleSubmit} className="min-h-screen pt-6 pb-4 px-8">
+    <form onSubmit={handleSubmit} className="pt-6 pb-4 px-8">
       <div className="max-w-5xl mx-auto">
-        <div className="flex items-center justify-center mb-14">
+        <div className="flex items-center justify-center mb-16">
           {stepLabels.map((label, i) => {
             const s = i + 1;
             const isActive = step === s;
