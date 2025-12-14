@@ -21,20 +21,41 @@ export async function PUT(
       );
     }
 
-    const shipment = await prisma.shipment.update({
-      where: { id },
-      data: {
-        ...(status && { status }),
-        ...(trackingNo !== undefined && { trackingNo }),
-      },
-      include: {
-        user: true,
-        item: true,
-        donation: true,
-      },
+    // ใช้ transaction เพื่ออัปเดต Entitlement ด้วยถ้าส่งสำเร็จ
+    const result = await prisma.$transaction(async (tx) => {
+      const shipment = await tx.shipment.update({
+        where: { id },
+        data: {
+          ...(status && { status }),
+          ...(trackingNo !== undefined && { trackingNo }),
+        },
+        include: {
+          user: true,
+          item: true,
+          donation: true,
+        },
+      });
+
+      // ถ้าอัปเดตเป็น DELIVERED ให้เพิ่ม qtyUsed ใน Entitlement
+      if (status === 'DELIVERED') {
+        const entitlement = await tx.entitlement.findFirst({
+          where: {
+            userId: shipment.userId,
+            itemId: shipment.itemId,
+            donationId: shipment.donationId,
+          },
+        });
+        if (entitlement) {
+          await tx.entitlement.update({
+            where: { id: entitlement.id },
+            data: { qtyUsed: { increment: shipment.qty } },
+          });
+        }
+      }
+      return shipment;
     });
 
-    return NextResponse.json(shipment);
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Error updating shipment:', error);
     return NextResponse.json(

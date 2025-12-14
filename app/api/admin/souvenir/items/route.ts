@@ -4,7 +4,16 @@ import { prisma } from '@/app/lib/prisma';
 // GET - ดึงรายการของที่ระลึกทั้งหมด
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const category = searchParams.get("category");
+    const active = searchParams.get("active");
+
+    const where: any = {};
+    if (category) where.category = category;
+    if (active !== null) where.active = active === "true";
+
     const items = await prisma.souvenirItem.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       include: {
         booking: true,
@@ -84,17 +93,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // สร้าง stock movement เริ่มต้น
-    if (initialStock && initialStock > 0) {
-      await prisma.stockMovement.create({
-        data: {
-          itemId: item.id,
-          delta: initialStock,
-          reason: 'initial_stock',
-          refType: 'Initial',
-        },
-      });
-    }
+    // ไม่สร้าง stock movement สำหรับ initialStock อีกต่อไป (initialStock เก็บใน field เดียว)
 
     // ไม่เชื่อมโยงกับ Event เพราะไม่มี Event model แล้ว
     // หากต้องการเชื่อมโยงกับ Donation Project ให้ implement เพิ่มเติมในอนาคต
