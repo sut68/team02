@@ -1,27 +1,19 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, TriangleAlert } from "lucide-react";
 import { Input } from "@/app/components/ui/Input";
 import { PrimaryButton, CancelButton } from "@/app/components/ui/Button";
-
-interface BudgetRoundData {
-  id?: number;
-  roundName: string;
-  fiscalYear: string;
-  startDate: string;
-  endDate: string;
-  status?: string;
-}
+import { BudgetRound } from "@/app/types/budget_approval";
 
 interface CreateBudgetRoundModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
-  editData?: BudgetRoundData | null; // ✅ เพิ่ม Prop นี้รับข้อมูลที่จะแก้ไข
+  onSuccess: () => void;
+  initialData: BudgetRound | null;
 }
 
-// Option รอบเหมือนเดิม
+// Configuration รอบงบประมาณมาตรฐาน
 const ROUND_OPTIONS = [
   { id: 1, label: "รอบที่ 1 (ต.ค. - ม.ค.)", startMonth: 10, endMonth: 1, startDay: 1, endDay: 31, yearOffset: -1 },
   { id: 2, label: "รอบที่ 2 (ก.พ. - พ.ค.)", startMonth: 2, endMonth: 5, startDay: 1, endDay: 31, yearOffset: 0 },
@@ -32,7 +24,7 @@ export default function CreateBudgetRoundModal({
   isOpen,
   onClose,
   onSuccess,
-  editData, // ✅ รับค่ามา
+  initialData,
 }: CreateBudgetRoundModalProps) {
   
   const currentThaiYear = new Date().getFullYear() + 543;
@@ -41,6 +33,7 @@ export default function CreateBudgetRoundModal({
     fiscalYear: currentThaiYear.toString(),
     selectedRoundId: 1,
     roundName: "",
+    // totalBudget: "0", // ❌ ตัดออกจาก State หรือปล่อยไว้ก็ได้ แต่ไม่ได้ใช้ใน UI แล้ว
     startDate: "",
     endDate: "",
   });
@@ -48,39 +41,49 @@ export default function CreateBudgetRoundModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // ✅ Effect 1: เมื่อ Modal เปิด หรือ editData เปลี่ยน ให้ Set ค่าลง Form
+  // ✅ Effect 1: เมื่อ Modal เปิด หรือ initialData เปลี่ยน ให้ Set ค่าลง Form
   useEffect(() => {
     if (isOpen) {
-      if (editData) {
-        // กรณีแก้ไข: เอาข้อมูลเดิมมาใส่
-        // พยายามแกะรอบจากชื่อ (ถ้าทำได้) หรือใส่ค่าดิบไปเลย
+      if (initialData) {
+        // --- กรณีแก้ไข ---
+        let matchedRoundId = 0; // 0 = Custom
+
+        // Regex ดึงเลขรอบ
+        const match = initialData.roundName.match(/รอบ.*ที่\s*(\d+)/);
+        
+        if (match && match[1]) {
+           const roundNum = parseInt(match[1]);
+           if ([1, 2, 3].includes(roundNum)) {
+              matchedRoundId = roundNum;
+           }
+        }
+
         setFormData({
-            fiscalYear: editData.fiscalYear,
-            selectedRoundId: 0, // 0 = Custom/Manual (ไม่เข้าเงื่อนไข Auto-gen)
-            roundName: editData.roundName,
-            startDate: editData.startDate ? new Date(editData.startDate).toISOString().split('T')[0] : "",
-            endDate: editData.endDate ? new Date(editData.endDate).toISOString().split('T')[0] : "",
+          fiscalYear: initialData.fiscalYear || currentThaiYear.toString(),
+          selectedRoundId: matchedRoundId,
+          roundName: initialData.roundName || "",
+          startDate: initialData.startDate ? new Date(initialData.startDate).toISOString().split('T')[0] : "",
+          endDate: initialData.endDate ? new Date(initialData.endDate).toISOString().split('T')[0] : "",
         });
       } else {
-        // กรณีสร้างใหม่: Reset ค่าเป็น Default
+        // --- กรณีสร้างใหม่ ---
         setFormData({
-            fiscalYear: currentThaiYear.toString(),
-            selectedRoundId: 1,
-            roundName: "", // จะถูก Auto-gen ใน Effect ถัดไป
-            startDate: "",
-            endDate: "",
+          fiscalYear: currentThaiYear.toString(),
+          selectedRoundId: 1, 
+          roundName: "", 
+          startDate: "",
+          endDate: "",
         });
       }
       setErrors({});
     }
-  }, [isOpen, editData, currentThaiYear]);
+  }, [isOpen, initialData, currentThaiYear]);
 
 
   // ✅ Effect 2: Auto Gen (ทำงานเฉพาะตอนสร้างใหม่ หรือเมื่อเลือก Dropdown)
   useEffect(() => {
-    // ถ้ากำลังแก้ไข (editData มีค่า) และ User ไม่ได้ไปกดเปลี่ยน Dropdown -> ไม่ต้อง Auto Gen ทับ
-    if (editData && formData.selectedRoundId === 0) return;
-
+    if (initialData && formData.selectedRoundId === 0) return;
+    if (formData.selectedRoundId === 0) return;
     if (!formData.fiscalYear || formData.fiscalYear.length !== 4) return;
 
     const budgetYearCE = parseInt(formData.fiscalYear) - 543;
@@ -103,7 +106,7 @@ export default function CreateBudgetRoundModal({
         endDate: strEnd
       }));
     }
-  }, [formData.fiscalYear, formData.selectedRoundId, editData]);
+  }, [formData.fiscalYear, formData.selectedRoundId, initialData]);
 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -127,26 +130,26 @@ export default function CreateBudgetRoundModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!validate()) return;
     setIsSubmitting(true);
 
     try {
       const payload = {
         ...formData,
-        totalBudget: 0,
-        // ถ้าแก้ไข ส่ง id ไปด้วย (แต่ปกติ PUT ใช้ id จาก query/url หรือ body ก็ได้ตาม API)
-        id: editData?.id 
+        totalBudget: 0, // ส่ง 0 ไปเสมอ เพราะระบบคำนวณจาก Donation เอง
+        startDate: new Date(formData.startDate),
+        endDate: new Date(formData.endDate),
       };
 
-      // ✅ เลือก Method และ URL ตามโหมด
-      const method = editData ? "PUT" : "POST";
-      const url = "/api/budget-round";
+      const method = initialData ? "PUT" : "POST";
+      const body = initialData ? { ...payload, id: initialData.id } : payload;
 
-      const res = await fetch(url, {
+      const res = await fetch("/api/budget-round", {
         method: method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -154,8 +157,7 @@ export default function CreateBudgetRoundModal({
         throw new Error(errorData.error || "บันทึกข้อมูลไม่สำเร็จ");
       }
 
-      // alert(editData ? "แก้ไขเรียบร้อย" : "สร้างเรียบร้อย"); // ตัด Alert ออกเพื่อให้ UX ลื่นขึ้น หรือจะใส่ Success Modal แทน
-      onSuccess?.();
+      onSuccess();
       onClose();
 
     } catch (error) {
@@ -167,13 +169,13 @@ export default function CreateBudgetRoundModal({
   };
 
   if (!isOpen) return null;
-  
-  const isEditMode = !!editData;
+  const isEditMode = !!initialData;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
         
+        {/* Header */}
         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-gray-50/50">
           <div>
             <h3 className="text-xl font-semibold text-gray-800">
@@ -181,92 +183,113 @@ export default function CreateBudgetRoundModal({
             </h3>
             <p className="text-xs text-gray-500 mt-1">กำหนด 3 รอบต่อปีงบประมาณ</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100">
             <X size={20} />
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
-            {/* ... (ส่วน Input เหมือนเดิม) ... */}
+        {/* Form Content */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
             
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  ปีงบประมาณ (พ.ศ.) <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  name="fiscalYear"
+                  type="number"
+                  value={formData.fiscalYear}
+                  onChange={handleChange}
+                  placeholder="2568"
+                  radius="md"
+                  className={errors.fiscalYear ? "border-red-500" : ""}
+                  // ล็อกปีงบประมาณถ้าแก้ไข
+                  disabled={isEditMode}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  เลือกรอบ <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="selectedRoundId"
+                  value={formData.selectedRoundId}
+                  onChange={handleChange}
+                  // ล็อกรอบถ้าแก้ไข (เว้นแต่เป็น Custom)
+                  // disabled={isEditMode} // ✅ เปิดให้เลือกได้ตลอด เพื่อดูว่าเป็นรอบไหน
+                  className="w-full h-[42px] px-3 rounded-md border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#F26522] text-sm disabled:bg-gray-100 disabled:text-gray-500"
+                >
+                  {/* แสดง option 'กำหนดเอง' */}
+                  <option value={0}>กำหนดเอง (กรอกวันที่เอง)</option>
+                  
+                  {ROUND_OPTIONS.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                ปีงบประมาณ (พ.ศ.) <span className="text-red-500">*</span>
+                ชื่อรอบ/โครงการ <span className="text-red-500">*</span>
               </label>
               <Input
-                name="fiscalYear"
-                type="number"
-                value={formData.fiscalYear}
+                name="roundName"
+                value={formData.roundName}
                 onChange={handleChange}
-                placeholder="2568"
+                placeholder="ระบบจะสร้างชื่อให้..."
                 radius="md"
-                className={errors.fiscalYear ? "border-red-500" : ""}
+                className={`bg-gray-50 ${errors.roundName ? "border-red-500" : ""}`}
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                เลือกรอบ <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="selectedRoundId"
-                value={formData.selectedRoundId}
-                onChange={handleChange}
-                className="w-full h-[42px] px-3 rounded-md border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-[#F26522] text-sm"
-              >
-                {/* เพิ่ม Option พิเศษสำหรับตอนแก้ไขแบบ Custom */}
-                {isEditMode && formData.selectedRoundId === 0 && (
-                   <option value={0}>กำหนดเอง (Custom)</option>
-                )}
-                {ROUND_OPTIONS.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">วันเปิดรับ <span className="text-red-500">*</span></label>
+                <Input 
+                    type="date" 
+                    name="startDate" 
+                    value={formData.startDate} 
+                    onChange={handleChange} 
+                    radius="md"
+                    className={errors.startDate ? "border-red-500" : ""}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">วันปิดรับ <span className="text-red-500">*</span></label>
+                <Input 
+                    type="date" 
+                    name="endDate" 
+                    value={formData.endDate} 
+                    onChange={handleChange}
+                    radius="md"
+                    className={errors.endDate ? "border-red-500" : ""}
+                />
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              ชื่อรอบ/โครงการ
-            </label>
-            <Input
-              name="roundName"
-              value={formData.roundName}
-              onChange={handleChange}
-              placeholder="ระบบจะสร้างชื่อให้..."
-              radius="md"
-              className={errors.roundName ? "border-red-500" : ""}
-            />
-          </div>
+            {isEditMode && (
+                <div className="text-[11px] text-gray-400 bg-gray-50 p-2 rounded border border-gray-100">
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    <span className="font-semibold text-orange-700">ข้อควรระวัง: </span>
+                    ปีงบประมาณไม่สามารถแก้ไขได้ หากต้องการเปลี่ยนแปลงกรุณาสร้างรอบใหม่
+                  </p>
+                </div>
+            )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">วันเปิดรับ</label>
-              <Input type="date" name="startDate" value={formData.startDate} onChange={handleChange} radius="md" />
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-50 mt-4">
+                <CancelButton onClick={onClose} type="button" disabled={isSubmitting} style={{ borderRadius: "8px", height: "38px" }}>
+                    ยกเลิก
+                </CancelButton>
+                <PrimaryButton type="submit" disabled={isSubmitting} style={{ borderRadius: "8px", height: "38px" }}>
+                    {isSubmitting ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
+                </PrimaryButton>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">วันปิดรับ</label>
-              <Input type="date" name="endDate" value={formData.endDate} onChange={handleChange} radius="md" />
-            </div>
-          </div>
-
-        </div>
-
-        <div className="flex justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-100">
-          <CancelButton onClick={onClose} type="button" style={{ borderRadius: "8px", height: "38px" }}>
-            ยกเลิก
-          </CancelButton>
-          <PrimaryButton 
-            onClick={handleSubmit} 
-            disabled={isSubmitting}
-            style={{ borderRadius: "8px", height: "38px" }}
-          >
-            {isSubmitting ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
-          </PrimaryButton>
-        </div>
+        </form>
 
       </div>
     </div>

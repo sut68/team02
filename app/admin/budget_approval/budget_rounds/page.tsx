@@ -36,21 +36,22 @@ export default function BudgetRoundsPage() {
   const [rounds, setRounds] = useState<BudgetRound[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // State สำหรับ Modal ยืนยัน
+  // State เก็บข้อมูลรอบที่จะแก้ไข (null = สร้างใหม่)
+  const [editingRound, setEditingRound] = useState<BudgetRound | null>(null);
+
+  // ✅ 1. ปรับปรุง State Modal ให้รองรับ Type (Action) ว่าจะทำอะไร (PUBLISH หรือ DELETE)
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
+    action: 'PUBLISH' | 'DELETE' | null; // เพิ่ม Action type
     targetId: number | null;
-    targetCurrentState: boolean; 
+    targetCurrentState?: boolean; // ใช้เฉพาะตอน Publish
   }>({
     isOpen: false,
+    action: null,
     targetId: null,
-    targetCurrentState: false,
   });
 
-  // State สำหรับ Loading ขณะกดยืนยันใน Modal
   const [isConfirming, setIsConfirming] = useState(false);
-
-  // State สำหรับปิดการกดปุ่มอื่นในตารางขณะโหลด
   const [updatingId, setUpdatingId] = useState<number | null>(null);
 
   const fetchRounds = useCallback(async () => {
@@ -72,57 +73,67 @@ export default function BudgetRoundsPage() {
     fetchRounds();
   }, [fetchRounds]);
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("คุณแน่ใจหรือไม่ที่จะลบรายการนี้?")) return;
-    try {
-      const res = await fetch(`/api/budget-round?id=${id}`, { method: "DELETE" });
-      if (res.ok) {
-        fetchRounds();
-      } else {
-        alert("เกิดข้อผิดพลาดในการลบ");
-      }
-    } catch (error) {
-      alert("เกิดข้อผิดพลาดในการเชื่อมต่อ");
-    }
+  // ✅ 2. ฟังก์ชันเปิด Modal สำหรับ "ลบ"
+  const initiateDelete = (id: number) => {
+    setConfirmModal({
+      isOpen: true,
+      action: 'DELETE',
+      targetId: id,
+    });
   };
 
-  // 1. ฟังก์ชันเริ่มกดสวิตช์ (เปิด Modal)
+  // ✅ 3. ฟังก์ชันเปิด Modal สำหรับ "Publish"
   const initiatePublishToggle = (id: number, currentPublishState: boolean) => {
     setConfirmModal({
       isOpen: true,
+      action: 'PUBLISH',
       targetId: id,
       targetCurrentState: currentPublishState,
     });
   };
 
-  // 2. ฟังก์ชันยืนยันจริงๆ (ยิง API)
-  const handleConfirmPublish = async () => {
-    const { targetId, targetCurrentState } = confirmModal;
+  // ✅ 4. ฟังก์ชันกลางสำหรับจัดการการยืนยัน (แยก Case ตาม Action)
+  const handleConfirmAction = async () => {
+    const { action, targetId, targetCurrentState } = confirmModal;
     if (targetId === null) return;
 
     setIsConfirming(true);
-    setUpdatingId(targetId); // ล็อก UI แถวนั้น
-    const newPublishState = !targetCurrentState;
+    setUpdatingId(targetId);
 
     try {
-      const res = await fetch("/api/budget-round", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: targetId, isPublished: newPublishState }),
-      });
+      // --- กรณีลบ (DELETE) ---
+      if (action === 'DELETE') {
+        const res = await fetch(`/api/budget-round?id=${targetId}`, { method: "DELETE" });
+        if (res.ok) {
+          fetchRounds();
+          setConfirmModal({ isOpen: false, action: null, targetId: null });
+        } else {
+          alert("เกิดข้อผิดพลาดในการลบ");
+        }
+      } 
+      
+      // --- กรณีเปลี่ยนสถานะ (PUBLISH) ---
+      else if (action === 'PUBLISH') {
+        const newPublishState = !targetCurrentState;
+        const res = await fetch("/api/budget-round", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: targetId, isPublished: newPublishState }),
+        });
 
-      if (res.ok) {
-        // อัปเดต State UI ทันที
-        setRounds((prev) => 
-          prev.map((r) => r.id === targetId ? { ...r, isPublished: newPublishState } : r)
-        );
-        await fetchRounds();
-        setConfirmModal({ isOpen: false, targetId: null, targetCurrentState: false });
-      } else {
-        alert("อัปเดตสถานะไม่สำเร็จ");
+        if (res.ok) {
+          setRounds((prev) => 
+            prev.map((r) => r.id === targetId ? { ...r, isPublished: newPublishState } : r)
+          );
+          await fetchRounds();
+          setConfirmModal({ isOpen: false, action: null, targetId: null });
+        } else {
+          alert("อัปเดตสถานะไม่สำเร็จ");
+        }
       }
+
     } catch (error) {
-      console.error("Error updating status:", error);
+      console.error("Error:", error);
       alert("เกิดข้อผิดพลาดในการเชื่อมต่อ");
     } finally {
       setIsConfirming(false);
@@ -130,7 +141,18 @@ export default function BudgetRoundsPage() {
     }
   };
 
-  // Styles
+  // Handlers เดิม
+  const handleCreate = () => {
+    setEditingRound(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (round: BudgetRound) => {
+    setEditingRound(round);
+    setIsModalOpen(true);
+  };
+
+  // Styles Helpers
   const getStatusStyle = (status: string) => {
     switch (status) {
       case 'OPEN': return 'bg-green-50 text-green-700 border-green-200';
@@ -163,6 +185,31 @@ export default function BudgetRoundsPage() {
       r.fiscalYear.includes(searchQuery)
   );
 
+  // ✅ Helper สำหรับข้อความใน Modal
+  const getModalContent = () => {
+    if (confirmModal.action === 'DELETE') {
+      return {
+        title: "ยืนยันการลบ",
+        message: "คุณแน่ใจหรือไม่ที่จะลบรายการนี้? \nการกระทำนี้ไม่สามารถย้อนกลับได้",
+        confirmLabel: "ลบรายการ",
+        isDanger: true
+      };
+    } 
+    
+    // Default is PUBLISH
+    const isPublishing = !confirmModal.targetCurrentState;
+    return {
+      title: isPublishing ? "ยืนยันการเผยแพร่" : "ยืนยันการยกเลิกเผยแพร่",
+      message: isPublishing 
+        ? "คุณต้องการเปิดสถานะ \"เผยแพร่ (Publish)\" หรือไม่?\n\nระบบจะคำนวณสถานะ (Open/Closed) ตามวันเริ่มต้น-สิ้นสุดให้อัตโนมัติ"
+        : "คุณต้องการปิดสถานะกลับเป็น \"ฉบับร่าง (Draft)\" หรือไม่?\n\nผู้ใช้งานทั่วไปจะไม่เห็นรอบงบประมาณนี้",
+      confirmLabel: isPublishing ? "ยืนยันการเผยแพร่" : "เปลี่ยนเป็นฉบับร่าง",
+      isDanger: !isPublishing // ถ้าปิดเผยแพร่ ให้ปุ่มเป็นสีแดง (Danger)
+    };
+  };
+
+  const modalContent = getModalContent();
+
   return (
     <div className="min-h-screen bg-white p-8 font-sans">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -184,7 +231,7 @@ export default function BudgetRoundsPage() {
             <h1 className="text-3xl font-medium text-gray-700">จัดการรอบงบประมาณ</h1>
           </div>
           <PrimaryButton 
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleCreate} 
             style={{ borderRadius: "8px", height: "40px", paddingLeft: "24px", paddingRight: "24px" }}
           >
             <CirclePlus className="w-5 h-5 mr-2" />
@@ -194,6 +241,7 @@ export default function BudgetRoundsPage() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+           {/* ... Cards code ... (เหมือนเดิม) */}
            <div className="border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all border-gray-200">
              <Layers className="w-10 h-10 mx-auto text-gray-600 mb-3" />
              <h3 className="text-gray-600">รอบทั้งหมด</h3>
@@ -245,24 +293,22 @@ export default function BudgetRoundsPage() {
                       <TableCell className="font-medium text-gray-700 py-4 pl-6">{round.roundName}</TableCell>
                       <TableCell className="text-center text-gray-600">{round.fiscalYear}</TableCell>
                       <TableCell className="text-center text-sm text-gray-600">
-                         {round.startDate ? new Date(round.startDate).toLocaleDateString("th-TH", { day: 'numeric', month: 'short', year: '2-digit'}) : '-'} 
-                         <span className="mx-2 text-gray-400">-</span>
-                         {round.endDate ? new Date(round.endDate).toLocaleDateString("th-TH", { day: 'numeric', month: 'short', year: '2-digit'}) : '-'}
+                          {round.startDate ? new Date(round.startDate).toLocaleDateString("th-TH", { day: 'numeric', month: 'short', year: '2-digit'}) : '-'} 
+                          <span className="mx-2 text-gray-400">-</span>
+                          {round.endDate ? new Date(round.endDate).toLocaleDateString("th-TH", { day: 'numeric', month: 'short', year: '2-digit'}) : '-'}
                       </TableCell>
                       <TableCell className="text-center text-gray-600 font-medium">
                         {round.stats?.totalDonated.toLocaleString()} <span className="text-xs text-gray-400 font-normal">บาท</span>
                       </TableCell>
                       
-                      {/* Auto Status */}
                       <TableCell className="text-center">
                         <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border ${getStatusStyle(round.status)}`}>
                             {getStatusLabel(round.status)}
                         </span>
                       </TableCell>
 
-                      {/* Publish Switch */}
                       <TableCell className="text-center">
-                         <div className="flex flex-col items-center justify-center gap-1">
+                          <div className="flex flex-col items-center justify-center gap-1">
                             <label className="relative inline-flex items-center cursor-pointer">
                                 <input 
                                     type="checkbox" 
@@ -276,16 +322,23 @@ export default function BudgetRoundsPage() {
                             <span className={`text-[10px] ${round.isPublished ? 'text-[#F26522]' : 'text-gray-400'}`}>
                                 {round.isPublished ? "เผยแพร่แล้ว" : "ฉบับร่าง"}
                             </span>
-                         </div>
+                          </div>
                       </TableCell>
 
                       <TableCell className="text-center">
                         <div className="flex justify-center items-center gap-2">
-                          <button className="text-orange-500 hover:text-orange-700 hover:bg-orange-50 p-1.5 rounded-lg transition-all">
+                          <button 
+                            onClick={() => handleEdit(round)}
+                            className="text-orange-500 hover:text-orange-700 hover:bg-orange-50 p-1.5 rounded-lg transition-all"
+                          >
                             <PenLine size={18} strokeWidth={2} />
                           </button>
                           <span className="text-gray-300 font-light">|</span>
-                          <button onClick={() => handleDelete(round.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-all">
+                          {/* ✅ แก้ไขปุ่มลบ ให้เรียก initiateDelete แทนการ confirm() แบบเดิม */}
+                          <button 
+                            onClick={() => initiateDelete(round.id)} 
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-all"
+                          >
                             <Trash2 size={18} strokeWidth={2} />
                           </button>
                         </div>
@@ -310,20 +363,18 @@ export default function BudgetRoundsPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={() => fetchRounds()} 
+        initialData={editingRound}
       />
 
-      {/* ✅ ใช้ Component ConfirmModal ที่ Import มา */}
+      {/* ✅ ใช้ ConfirmModal ร่วมกัน ทั้ง Publish และ Delete */}
       <ConfirmModal 
         isOpen={confirmModal.isOpen}
-        onClose={() => !isConfirming && setConfirmModal({ ...confirmModal, isOpen: false })}
-        onConfirm={handleConfirmPublish}
-        title={!confirmModal.targetCurrentState ? "ยืนยันการเผยแพร่" : "ยืนยันการยกเลิกเผยแพร่"}
-        message={!confirmModal.targetCurrentState 
-            ? "คุณต้องการเปิดสถานะ \"เผยแพร่ (Publish)\" หรือไม่?\n\nระบบจะคำนวณสถานะ (Open/Closed) ตามวันเริ่มต้น-สิ้นสุดให้อัตโนมัติ และผู้ใช้งานทั่วไปจะสามารถมองเห็นรอบงบประมาณนี้ได้"
-            : "คุณต้องการปิดสถานะกลับเป็น \"ฉบับร่าง (Draft)\" หรือไม่?\n\nผู้ใช้งานทั่วไปจะไม่เห็นรอบงบประมาณนี้ และระบบจะหยุดรับคำร้องทันที"
-        }
-        confirmLabel={!confirmModal.targetCurrentState ? "ยืนยันการเผยแพร่" : "เปลี่ยนเป็นฉบับร่าง"}
-        isDanger={confirmModal.targetCurrentState}
+        onClose={() => !isConfirming && setConfirmModal({ ...confirmModal, isOpen: false, action: null })}
+        onConfirm={handleConfirmAction}
+        title={modalContent.title}
+        message={modalContent.message}
+        confirmLabel={modalContent.confirmLabel}
+        isDanger={modalContent.isDanger}
         isLoading={isConfirming}
       />
     </div>
