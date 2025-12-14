@@ -87,6 +87,14 @@ export default function SouvenirDonationPage() {
   const updateShipmentStatus = async (shipmentId: number, status: string, donationId: number) => {
     const statusObj = STATUS_OPTIONS.find(opt => opt.value === status);
     const statusLabelText = statusObj ? statusObj.label : status;
+    let trackingNo = null;
+    if (status === 'DELIVERED') {
+      trackingNo = window.prompt('กรุณากรอกเลขแทรก (Tracking Number) เพื่อเปลี่ยนสถานะเป็น "จัดส่งแล้ว"');
+      if (!trackingNo || trackingNo.trim() === '') {
+        window.alert('กรุณากรอกเลขแทรกก่อนเปลี่ยนสถานะ');
+        return;
+      }
+    }
     const confirmed = window.confirm(`คุณต้องการเปลี่ยนสถานะการจัดส่งเป็น "${statusLabelText}" ใช่หรือไม่?`);
     if (!confirmed) return;
     try {
@@ -94,7 +102,7 @@ export default function SouvenirDonationPage() {
       const res = await fetch(`/api/admin/shipments/${shipmentId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(status === 'DELIVERED' ? { status, trackingNo } : { status }),
       });
       if (!res.ok) {
         const text = await res.text();
@@ -105,7 +113,7 @@ export default function SouvenirDonationPage() {
         prev.map(d => {
           if (d.id !== donationId) return d;
           const shipments = (d.shipments ?? []).map(s =>
-            s.id === shipmentId ? { ...s, status } : s
+            s.id === shipmentId ? { ...s, status, trackingNo: status === 'DELIVERED' ? trackingNo : s.trackingNo } : s
           );
           return { ...d, shipments };
         })
