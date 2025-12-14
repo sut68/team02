@@ -363,21 +363,27 @@ export default function SouvenirDonationPage() {
           <div className="relative">
             {/* Arrow Left */}
             <button
-              onClick={handlePrevDonation}
+              onClick={() => {
+                if (scrollContainerRef.current) {
+                  scrollContainerRef.current.scrollBy({
+                    left: -scrollContainerRef.current.offsetWidth * 0.9,
+                    behavior: 'smooth',
+                  });
+                }
+              }}
               className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
               aria-label="Previous donation project"
             >
               <ChevronLeft className="w-6 h-6 text-gray-700" />
             </button>
 
-            {/* Donation Project Cards Container - Carousel */}
-            <div className="overflow-hidden px-2 py-4">
-              <div 
-                className="flex gap-6 transition-transform duration-500 ease-in-out"
-                style={{ 
-                  transform: `translateX(calc(-${(offsetRef.current / (cardWidthRef.current || 1)) * 100}vw - ${(offsetRef.current / (cardWidthRef.current || 1)) * 24}px))` 
-                }}
-              >
+            {/* Donation Project Cards Container - Carousel (manual scroll) */}
+            <div
+              ref={scrollContainerRef}
+              className="overflow-x-auto px-2 py-4 scrollbar-hide"
+              style={{ scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch' }}
+            >
+              <div className="flex gap-6">
                 {donationProjects.length > 0 ? donationProjects.map((p, index) => (
                   <div
                     key={p.id}
@@ -409,7 +415,14 @@ export default function SouvenirDonationPage() {
 
             {/* Arrow Right */}
             <button
-              onClick={handleNextDonation}
+              onClick={() => {
+                if (scrollContainerRef.current) {
+                  scrollContainerRef.current.scrollBy({
+                    left: scrollContainerRef.current.offsetWidth * 0.9,
+                    behavior: 'smooth',
+                  });
+                }
+              }}
               className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
               aria-label="Next donation project"
             >

@@ -319,21 +319,27 @@ export default function SouvenirActivityPage() {
           <div className="relative">
             {/* Arrow Left */}
             <button
-              onClick={handlePrevActivity}
+              onClick={() => {
+                if (scrollContainerRef.current) {
+                  scrollContainerRef.current.scrollBy({
+                    left: -scrollContainerRef.current.offsetWidth * 0.9,
+                    behavior: 'smooth',
+                  });
+                }
+              }}
               className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
               aria-label="Previous activity"
             >
               <ChevronLeft className="w-6 h-6 text-gray-700" />
             </button>
 
-            {/* Activity Cards Container - Carousel */}
-            <div className="overflow-hidden px-2 py-4">
-              <div 
-                className="flex gap-6 transition-transform duration-500 ease-in-out"
-                style={{ 
-                  transform: `translateX(calc(-${currentActivityIndex * cardWidth}vw - ${currentActivityIndex * 24}px))` 
-                }}
-              >
+            {/* Activity Cards Container - Carousel (manual scroll) */}
+            <div
+              ref={scrollContainerRef}
+              className="overflow-x-auto px-2 py-4 scrollbar-hide"
+              style={{ scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch' }}
+            >
+              <div className="flex gap-6">
                 {activities.map((activity, index) => (
                   <div
                     key={activity.id}
@@ -369,7 +375,14 @@ export default function SouvenirActivityPage() {
 
             {/* Arrow Right */}
             <button
-              onClick={handleNextActivity}
+              onClick={() => {
+                if (scrollContainerRef.current) {
+                  scrollContainerRef.current.scrollBy({
+                    left: scrollContainerRef.current.offsetWidth * 0.9,
+                    behavior: 'smooth',
+                  });
+                }
+              }}
               className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
               aria-label="Next activity"
             >
