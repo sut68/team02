@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       imageUrl, 
       unit, 
       initialStock,
-      linkedBookingId, // รับ linkedBookingId จาก body
+      linkedBookingId, // ใช้ field ที่ schema รองรับเท่านั้น
     } = body;
 
     // Validate required fields
@@ -103,8 +103,7 @@ export async function POST(request: NextRequest) {
 
     // ไม่สร้าง stock movement สำหรับ initialStock อีกต่อไป (initialStock เก็บใน field เดียว)
 
-    // ไม่เชื่อมโยงกับ Event เพราะไม่มี Event model แล้ว
-    // หากต้องการเชื่อมโยงกับ Donation Project ให้ implement เพิ่มเติมในอนาคต
+    // ไม่เชื่อมโยงกับ Event หรือ Donation แบบ hardcode อีกต่อไป ใช้ schema-driven เท่านั้น
 
     return NextResponse.json(item, { status: 201 });
   } catch (error) {

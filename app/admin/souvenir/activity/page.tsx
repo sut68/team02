@@ -272,6 +272,7 @@ export default function SouvenirActivityPage() {
                       alt={item.name}
                       fill
                       className="object-contain p-6"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     />
                   </div>
                   <div className="p-6">
