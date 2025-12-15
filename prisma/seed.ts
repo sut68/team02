@@ -443,6 +443,24 @@ async function main() {
   // -----------------------------
   const contentData = [
     {
+      TitleName: "SUT CHEERLEADERS CLUB",
+      Description:
+        "ขอแสดงความยินดีกับ ชมรมเชียร์ลีดเดอร์ มทส. SUT CHEERLEADERS CLUB ได้รับราวัลจากการแข่งขันเชียร์ลีดเดอร์ชิงถ้วยพระราชทานฯ ครั้งที่ 21 ประจำปี 2568",
+      categories: ContentCategoryType.NEWS,
+      Booking: Option.NOT,
+      Userid: adminId,
+      bookingFormIndex: null as number | null,
+    },
+    {
+      TitleName: "พิธิมอบหมวกนักศึกษาพยาบาล มทส.",
+      Description:
+        "มทส. จัดพิธีมอบหมวก เข็มสัญลักษณ์ และตะเกียงไนติงเกล ให้กับนักศึกษาพยาบาล รุ่นที่ 16 ประจำปีการศึกษา 2568",
+      categories: ContentCategoryType.NEWS,
+      Booking: Option.NOT,
+      Userid: adminId,
+      bookingFormIndex: null as number | null,
+    },
+    {
       TitleName: "DSA MASCOT CONTENT",
       Description:
         "ขอเชิญชวนนักศึกษา ผู้เรียน และศิษย์เก่า มทส. ทุกท่านร่วมโหวตผลงานผู้เข้าประกวด พร้อมอ่านแนวคิดการออกแบบ ในกิจกรรม“DSA Mascot Contest”",
@@ -528,6 +546,8 @@ async function main() {
       paths: ["/Content/Event10.jpg"],
     },
     { title: "IESUT FAMILY 2025", paths: ["/Content/Event11.jpg"] },
+    { title: "SUT CHEERLEADERS CLUB", paths: ["/Content/Event13.jpg"] },
+    { title: "พิธิมอบหมวกนักศึกษาพยาบาล มทส.", paths: ["/Content/Event14.jpg"] },
   ];
 
   for (const plan of picturePlans) {
