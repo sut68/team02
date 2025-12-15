@@ -304,18 +304,19 @@ export default function SouvenirDonationPage() {
                     >
                       {/* ✅ Card เฉพาะรูป */}
                       <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
-                        <div className="relative h-72 md:h-80 bg-white">
+                        <div className="relative h-72 md:h-80 bg-white flex items-center justify-center">
                           <Image
                             src={item.imageUrl || "/souvenir/placeholder.png"}
                             alt={item.name}
-                            fill
-                            className="object-contain p-6"
-                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            width={600}
+                            height={600}
+                            className="max-h-[75%] w-auto object-contain"
+                            priority={index < 3}
                           />
                         </div>
                       </div>
                       {/* ✅ เนื้อหาอยู่นอกกรอบ (แต่ยังเลื่อนไปพร้อมกันเพราะอยู่ใน item wrapper เดียวกัน) */}
-                      <div className="pt-6 text-center">
+                      <div className="pt-6 pb-8 text-center">
                         <h3 className="text-xl md:text-2xl font-bold text-orange-500 mb-2 line-clamp-1">
                           {item.name}
                         </h3>
