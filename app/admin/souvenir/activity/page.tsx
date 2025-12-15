@@ -57,10 +57,12 @@ export default function SouvenirActivityPage() {
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'remaining' | 'registered' | 'claimed'>('all');
-  const [cardWidth, setCardWidth] = useState(90);
+  // Section 2 (Activity Carousel) ref
+  const activityScrollRef = React.useRef<HTMLDivElement>(null);
   
-  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
-  const trackRef = React.useRef<HTMLDivElement>(null);
+  // Section 1 (Souvenir Carousel) refs
+  const souvenirScrollRef = React.useRef<HTMLDivElement>(null);
+  const souvenirTrackRef = React.useRef<HTMLDivElement>(null);
   const offsetRef = React.useRef(0);
   const loopWidthRef = React.useRef(0);
   const cardWidthRef = React.useRef(0);
@@ -134,8 +136,8 @@ export default function SouvenirActivityPage() {
     offsetRef.current += px;
     while (offsetRef.current >= loopW) offsetRef.current -= loopW;
     while (offsetRef.current < 0) offsetRef.current += loopW;
-    if (trackRef.current) {
-      trackRef.current.style.transform = `translateX(${-offsetRef.current}px)`;
+    if (souvenirTrackRef.current) {
+      souvenirTrackRef.current.style.transform = `translateX(${-offsetRef.current}px)`;
     }
   };
 
@@ -161,25 +163,18 @@ export default function SouvenirActivityPage() {
     if (souvenirItems.length === 0) return;
     
     const measure = () => {
-      const track = trackRef.current;
-      const container = scrollContainerRef.current;
+      const track = souvenirTrackRef.current;
+      const container = souvenirScrollRef.current;
       if (!track || !container) return;
-      
       track.offsetHeight;
-      
+      // Measure actual card width + gap
+      const firstCard = track.querySelector('[data-souvenir-card]');
+      const gap = parseFloat(getComputedStyle(track).gap || '0');
+      if (firstCard) {
+        cardWidthRef.current = (firstCard as HTMLElement).offsetWidth + gap;
+      }
       const fullWidth = track.scrollWidth;
       loopWidthRef.current = fullWidth / 4;
-      const cols = window.innerWidth >= 768 ? 3 : 1;
-      cardWidthRef.current = container.clientWidth / cols;
-      
-      // Update card width for activity carousel (including gap)
-      if (window.innerWidth >= 1024) {
-        setCardWidth(33.333); // lg: full width divided by 3
-      } else if (window.innerWidth >= 768) {
-        setCardWidth(33.333); // md: full width divided by 3
-      } else {
-        setCardWidth(100); // mobile: full width
-      }
     };
     
     measure();
@@ -204,12 +199,12 @@ export default function SouvenirActivityPage() {
       lastTime = currentTime;
       
       const loopW = loopWidthRef.current;
-      if (loopW > 0 && trackRef.current) {
+      if (loopW > 0 && souvenirTrackRef.current) {
         const distance = (speedRef.current * delta) / 1000;
         offsetRef.current += distance;
         while (offsetRef.current >= loopW) offsetRef.current -= loopW;
         while (offsetRef.current < 0) offsetRef.current += loopW;
-        trackRef.current.style.transform = `translateX(${-offsetRef.current}px)`;
+        souvenirTrackRef.current.style.transform = `translateX(${-offsetRef.current}px)`;
       }
       
       rafId = requestAnimationFrame(animate);
@@ -234,13 +229,12 @@ export default function SouvenirActivityPage() {
             จัดการของที่ระลึกสำหรับกิจกรรม
           </h1>
         </div>
-        
         {/* Carousel Container */}
         <div className="max-w-7xl mx-auto px-4">
           <div className="relative">
             {/* Left Arrow */}
             <button
-              onClick={handlePrevActivity}
+              onClick={() => { setIsPaused(true); stepBy(-cardWidthRef.current); }}
               onMouseEnter={() => setIsPaused(true)}
               onMouseLeave={() => setIsPaused(false)}
               className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
@@ -251,54 +245,62 @@ export default function SouvenirActivityPage() {
 
             {/* Scrollable Container */}
             <div
-              ref={scrollContainerRef}
+              ref={souvenirScrollRef}
               className="overflow-hidden py-4"
               onMouseEnter={() => setIsPaused(true)}
               onMouseLeave={() => setIsPaused(false)}
             >
-            <div
-              ref={trackRef}
-              className="flex gap-6 will-change-transform"
-              style={{ transform: 'translateX(0)', transition: 'none' }}
-            >
-              {loopItems.map((item, index) => (
-                <div
-                  key={`${item.id}-${index}`}
-                  className="shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)] bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
-                >
-                  <div className="relative h-72 md:h-80 bg-white">
-                    <Image
-                      src={item.imageUrl || '/souvenir/placeholder.png'}
-                      alt={item.name}
-                      fill
-                      className="object-contain p-6"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    />
-                  </div>
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold text-gray-800 mb-2 truncate">
-                      {item.name}
-                    </h3>
-                    <p className="text-orange-500 font-semibold mb-3 text-sm">
-                    {CATEGORY_LABEL[item.category as keyof typeof CATEGORY_LABEL] || 'กิจกรรม'}
-                    </p>
-                    <p className="text-gray-600 text-sm leading-relaxed mb-3 truncate">
-                      {item.description || 'ของที่ระลึกสำหรับผู้เข้าร่วมกิจกรรม'}
-                    </p>
-                    <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
-                      <span className="text-gray-500 text-sm">คงเหลือ:</span>
-                      <span className="text-lg font-bold text-gray-800">{item.currentStock}</span>
-                      <span className="text-gray-500 text-sm">{item.unit || 'ชิ้น'}</span>
+              <div
+                ref={souvenirTrackRef}
+                className="flex gap-6 will-change-transform"
+                style={{ transform: 'translateX(0)', transition: 'none' }}
+              >
+                {loopItems.map((item, index) => (
+                  <div
+                    data-souvenir-card
+                    key={`${item.id}-${index}`}
+                    className="shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)]"
+                  >
+                    {/* ✅ Card เฉพาะรูป */}
+                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                      <div className="relative h-72 md:h-80 bg-white">
+                        <Image
+                          src={item.imageUrl || "/souvenir/placeholder.png"}
+                          alt={item.name}
+                          fill
+                          className="object-contain p-6"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        />
+                      </div>
+                    </div>
+
+                    {/* ✅ เนื้อหาอยู่นอกกรอบ (แต่ยังเลื่อนไปพร้อมกันเพราะอยู่ใน item wrapper เดียวกัน) */}
+                    <div className="pt-6 text-center">
+                      <h3 className="text-xl md:text-2xl font-bold text-orange-500 mb-2 line-clamp-1">
+                        {item.name}
+                      </h3>
+
+                      <div className="text-gray-500 text-sm mb-2">
+                        จำนวนคงเหลือ: <span className="font-semibold">{item.currentStock}</span>{" "}
+                        {item.unit || "ชิ้น"}
+                      </div>
+
+                      <div className="text-gray-400 text-sm mb-4">
+                        หมวดหมู่: {CATEGORY_LABEL[item.category as keyof typeof CATEGORY_LABEL] || "กิจกรรม"}
+                      </div>
+
+                      <span className="inline-flex items-center justify-center px-4 py-1.5 rounded-full text-sm bg-orange-100 text-orange-700 font-medium">
+                        ใช้งาน
+                      </span>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
 
             {/* Right Arrow */}
             <button
-              onClick={handleNextActivity}
+              onClick={() => { setIsPaused(true); stepBy(cardWidthRef.current); }}
               onMouseEnter={() => setIsPaused(true)}
               onMouseLeave={() => setIsPaused(false)}
               className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
@@ -321,12 +323,9 @@ export default function SouvenirActivityPage() {
             {/* Arrow Left */}
             <button
               onClick={() => {
-                if (scrollContainerRef.current) {
-                  scrollContainerRef.current.scrollBy({
-                    left: -scrollContainerRef.current.offsetWidth * 0.9,
-                    behavior: 'smooth',
-                  });
-                }
+                const el = activityScrollRef.current;
+                if (!el) return;
+                el.scrollBy({ left: -el.clientWidth, behavior: 'smooth' });
               }}
               className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
               aria-label="Previous activity"
@@ -336,7 +335,7 @@ export default function SouvenirActivityPage() {
 
             {/* Activity Cards Container - Carousel (manual scroll) */}
             <div
-              ref={scrollContainerRef}
+              ref={activityScrollRef}
               className="overflow-x-auto px-2 py-4 scrollbar-hide"
               style={{ scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch' }}
             >
@@ -377,12 +376,9 @@ export default function SouvenirActivityPage() {
             {/* Arrow Right */}
             <button
               onClick={() => {
-                if (scrollContainerRef.current) {
-                  scrollContainerRef.current.scrollBy({
-                    left: scrollContainerRef.current.offsetWidth * 0.9,
-                    behavior: 'smooth',
-                  });
-                }
+                const el = activityScrollRef.current;
+                if (!el) return;
+                el.scrollBy({ left: el.clientWidth, behavior: 'smooth' });
               }}
               className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
               aria-label="Next activity"
