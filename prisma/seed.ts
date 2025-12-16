@@ -694,7 +694,8 @@ async function main() {
       },
     });
 
-    // 5.8 create Entitlement
+    // 5.8 create Entitlement (add redeemToken)
+    const { randomUUID } = await import('crypto');
     await prisma.entitlement.create({
       data: {
         userId: testUser.id,
@@ -703,6 +704,7 @@ async function main() {
         donationId: donation.id,
         qtyGranted: 1,
         qtyUsed: 0,
+        redeemToken: randomUUID(),
       },
     });
 
