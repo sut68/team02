@@ -266,7 +266,7 @@ export default function BudgetReportPage() {
         ) : filteredReports.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredReports.map((report) => (
-              <BudgetReportCard key={report.id} report={report} />
+              <BudgetReportCard key={report.id} report={report} onUpdate={fetchData} />
             ))}
           </div>
         ) : (

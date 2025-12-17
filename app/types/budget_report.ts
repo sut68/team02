@@ -1,12 +1,9 @@
 // app/types/budget_report.ts
-import { ProjectProposal } from './budget_approval';
+import { ProjectProposal, User } from './budget_approval';
+export type Role = 'STUDENT' | 'ALUMNI' | 'ADMIN'; // ปรับเพิ่มลดตาม enum จริงใน DB
 
 // Enum สถานะการส่งสรุปโครงการ
-export type SummarySubmissionStatus = 
-  | 'DRAFT' 
-  | 'PENDING_REVIEW' 
-  | 'APPROVED' 
-  | 'NEEDS_REVISION';
+export type SummarySubmissionStatus = 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'NEEDS_REVISION';
 
 // Interface สำหรับรูปภาพประกอบในรายงาน
 export interface SubmissionImage {
@@ -35,8 +32,9 @@ export interface SummarySubmission {
 
   // Relations
   proposal?: ProjectProposal;
-  submitter?: any; // สามารถเปลี่ยนเป็น User Interface ถ้ามีไฟล์ Type ของ User
+  submitter?: User | null; // สามารถเปลี่ยนเป็น User Interface ถ้ามีไฟล์ Type ของ User
   images?: SubmissionImage[];
+  reportTitle?: string;  // ชื่อที่แต่งแล้ว "รายงานสรุปโครงการ..."
 }
 
 // Alias: หากในโค้ดเก่ามีการเรียกใช้ชื่อ BudgetReport คุณสามารถใช้ Type นี้แทนได้

@@ -3,6 +3,31 @@
 // Enum สถานะตาม Database
 export type ProjectStatus = 'PENDING' | 'OPEN' | 'CLOSE' | 'APPROVED';
 export type BudgetRoundStatus = 'OPEN' | 'CLOSED' | 'PREPARING';
+export type Role = 'STUDENT' | 'ALUMNI' | 'ADMIN'; // ปรับเพิ่มลดตาม enum จริงใน DB
+
+export interface User {
+  id: number;
+  email: string;
+  fullName: string;
+  phone: string;
+  address: string;
+  subdistrict: string;
+  district: string;
+  province: string;
+  postalCode: string;
+  role: Role;
+
+  // Legacy fields (Nullable fields ใส่ ? และ | null)
+  studentCode?: string | null;
+  major?: string | null;
+  gradYear?: string | null;
+  userType?: string | null;
+  status?: string | null;
+  transcriptUrl?: string | null;
+
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
 
 export interface BudgetRound {
   id: number;
@@ -55,8 +80,8 @@ export interface ProjectProposal {
   
   // Relations
   manager?: ProjectManager;
-  budgetRound?: any;
-  staff?: any;
+  budgetRound?: BudgetRound | null;
+  staff?: User | null;
   votes?: ProjectVote[];
 }
 
