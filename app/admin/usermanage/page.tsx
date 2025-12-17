@@ -1,6 +1,9 @@
 import { prisma } from '@/app/lib/prisma';
 import UserManagementClient from './UserManagementClient';
 
+// Don't statically generate - requires database access
+export const dynamic = 'force-dynamic';
+
 // Server Component - ดึงข้อมูลจาก Database ที่แยกตาราง User, EducationRecord, Verification
 export default async function AdminUserManagementPage() {
   // ดึงข้อมูล User พร้อมกับ Relations (ไม่รวม ADMIN)

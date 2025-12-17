@@ -1,23 +1,32 @@
 version: "3.9"
 
 services:
-  # web:
-  #   build: .
-  #   container_name: next-app
-  #   ports:
-  #     - "3000:3000"
-  #   env_file:
-  #     - .env
-  #   environment:
-  #     # Make sure this matches what your app expects (e.g. Prisma, Drizzle, etc.)
-  #     DATABASE_URL: postgres://postgres:postgres@db:5432/mydb
-  #   depends_on:
-  #     - db
-  #   command: npm run dev
-  #   # For production switch to:
-  #   # command: npm run start
-  #   # and make sure you build in the Dockerfile
+  # ============================================
+  # Frontend + Backend (Next.js)
+  # ============================================
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: next-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/mydb
+      NODE_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
 
+  # ============================================
+  # PostgreSQL Database
+  # ============================================
   db:
     image: postgres:16-alpine
     container_name: next-db
@@ -27,11 +36,21 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      # Optional: expose to host for direct access (pgAdmin, DBeaver, etc.)
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
 
 volumes:
   db_data:
+
+networks:
+  app-network:
+    driver: bridge
 
