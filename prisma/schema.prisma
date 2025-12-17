@@ -1,3 +1,14 @@
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  email     String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -326,6 +337,9 @@ model Entitlement {
   donationId  Int? // ถ้ามาจากบริจาค
   qtyGranted  Int               @default(1) // ได้สิทธิ์ทั้งหมดกี่ชิ้น
   qtyUsed     Int               @default(0) // ใช้สิทธิ์ไปแล้วกี่ชิ้น
+  // ✅ เพิ่มอันนี้
+  redeemToken String? @unique
+
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   user        User              @relation(fields: [userId], references: [id])
@@ -452,6 +466,9 @@ model BookingForm {
 
   contents Content[]
   bookings Booking[]
+
+  // ✅ เพื่อ upsert ได้: Type + StartDate ต้อง unique
+  @@unique([Type, StartDate])
 }
 
 // ข้อมูลที่ผู้ใช้กรอกในแต่ละการจอง
@@ -542,6 +559,8 @@ model Content {
   bookings Booking[]
 
   @@index([souvenirItemId])
+  // ✅ เพื่อ upsert ได้: TitleName + categories unique
+  @@unique([TitleName, categories])
 }
 
 // รูปภาพที่เกี่ยวข้องกับเนื้อหา
@@ -553,6 +572,9 @@ model PictureContent {
   createdAt DateTime @default(now())
 
   content Content @relation(fields: [ContentID], references: [id], onDelete: Cascade)
+
+  // ✅ ป้องกันรูปซ้ำ และ upsert ได้
+  @@unique([Path, ContentID])
 }
 
 // การชำระเงิน
@@ -836,6 +858,9 @@ model PaymentMethodRecord {
   updatedAt DateTime @updatedAt
 
   payments PaymentRecord[]
+
+  // ✅ เพิ่ม unique เพื่อ upsert โดย methodName ได้
+  @@unique([methodName])
 }
 
 // บันทึกการชำระเงิน

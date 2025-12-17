@@ -94,7 +94,9 @@ const FormSelect = ({ id, value, onChange, options }: any) => (
   </select>
 );
 
-export default function UserBookingPage() {
+import { Suspense } from 'react';
+
+function UserBookingPageInner() {
   const searchParams = useSearchParams();
   const contentIdParam =
     searchParams.get("contentId") ?? searchParams.get("id");
@@ -336,5 +338,13 @@ export default function UserBookingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function UserBookingPage() {
+  return (
+    <Suspense>
+      <UserBookingPageInner />
+    </Suspense>
   );
 }

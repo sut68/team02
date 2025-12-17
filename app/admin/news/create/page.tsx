@@ -33,7 +33,9 @@ type PostData = {
   Booking: Option;
 };
 
-export default function EditPostPage() {
+import { Suspense } from 'react';
+
+function EditPostPageInner() {
   const searchParams = useSearchParams();
   const bookingFormId = searchParams.get('bookingFormId');
   const router = useRouter();
@@ -401,5 +403,13 @@ export default function EditPostPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function EditPostPage() {
+  return (
+    <Suspense>
+      <EditPostPageInner />
+    </Suspense>
   );
 }

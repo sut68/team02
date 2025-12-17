@@ -405,43 +405,51 @@ async function main() {
     },
   ];
 
-  const bookingFormIds: number[] = [];
+  // Refactor: use upsert and map key to id
+  type BookingFormKey = `${EventType}|${string}`;
+  const bookingFormMap = new Map<BookingFormKey, number>();
   for (const form of bookingFormsData) {
-    const existing = await prisma.bookingForm.findFirst({
-      where: { Type: form.Type, StartDate: form.StartDate },
+    const saved = await prisma.bookingForm.upsert({
+      where: { Type_StartDate: { Type: form.Type, StartDate: form.StartDate } },
+      update: {
+        BatchNumber: form.BatchNumber,
+        TotalSeats: form.TotalSeats,
+        EndDate: form.EndDate,
+        PriceType: form.PriceType,
+        singlePrice: form.singlePrice ?? null,
+        batchPrices: form.batchPrices ?? Prisma.DbNull,
+        Souvenir: form.Souvenir,
+      },
+      create: {
+        Type: form.Type,
+        StartDate: form.StartDate,
+        BatchNumber: form.BatchNumber,
+        TotalSeats: form.TotalSeats,
+        EndDate: form.EndDate,
+        PriceType: form.PriceType,
+        singlePrice: form.singlePrice ?? null,
+        batchPrices: form.batchPrices ?? Prisma.DbNull,
+        Souvenir: form.Souvenir,
+      } as any,
     });
-
-    const data: Prisma.BookingFormUncheckedUpdateInput = {
-      BatchNumber: form.BatchNumber,
-      TotalSeats: form.TotalSeats,
-      EndDate: form.EndDate,
-      PriceType: form.PriceType,
-      singlePrice: form.singlePrice ?? null,
-      batchPrices: form.batchPrices ?? Prisma.DbNull,
-      Souvenir: form.Souvenir,
-    };
-
-    const saved = existing
-      ? await prisma.bookingForm.update({
-          where: { id: existing.id },
-          data,
-        })
-      : await prisma.bookingForm.create({
-          data: {
-            ...data,
-            Type: form.Type,
-            StartDate: form.StartDate,
-          } as any,
-        });
-
-    bookingFormIds.push(saved.id);
+    bookingFormMap.set(`${form.Type}|${form.StartDate.toISOString()}`, saved.id);
   }
 
   // -----------------------------
   // 4.2) Content + PictureContent
   // ✅ แก้ Userid: adminId
   // -----------------------------
-  const contentData = [
+  // Refactor: use upsert and bookingFormKey
+
+  // Use BookingFormKey type for bookingFormKey
+  const contentData: Array<{
+    TitleName: string;
+    Description: string;
+    categories: ContentCategoryType;
+    Booking: Option;
+    Userid: number;
+    bookingFormKey: BookingFormKey | null;
+  }> = [
     {
       TitleName: "SUT CHEERLEADERS CLUB",
       Description:
@@ -449,7 +457,7 @@ async function main() {
       categories: ContentCategoryType.NEWS,
       Booking: Option.NOT,
       Userid: adminId,
-      bookingFormIndex: null as number | null,
+      bookingFormKey: null,
     },
     {
       TitleName: "พิธิมอบหมวกนักศึกษาพยาบาล มทส.",
@@ -458,7 +466,7 @@ async function main() {
       categories: ContentCategoryType.NEWS,
       Booking: Option.NOT,
       Userid: adminId,
-      bookingFormIndex: null as number | null,
+      bookingFormKey: null,
     },
     {
       TitleName: "DSA MASCOT CONTENT",
@@ -467,7 +475,7 @@ async function main() {
       categories: ContentCategoryType.NEWS,
       Booking: Option.NOT,
       Userid: adminId,
-      bookingFormIndex: null as number | null,
+      bookingFormKey: null,
     },
     {
       TitleName: "การแต่งตั้งให้ดำรงตำแหน่งรักษาการแทนอธิการบดี มทส.",
@@ -476,7 +484,7 @@ async function main() {
       categories: ContentCategoryType.NEWS,
       Booking: Option.NOT,
       Userid: adminId,
-      bookingFormIndex: null as number | null,
+      bookingFormKey: null,
     },
     {
       TitleName: "IESUT FAMILY 2025",
@@ -485,7 +493,7 @@ async function main() {
       categories: ContentCategoryType.ACTIVITY,
       Booking: Option.HAVE,
       Userid: adminId,
-      bookingFormIndex: 2,
+      bookingFormKey: `${EventType.WORKSHOP}|2025-06-01T09:00:00.000Z` as BookingFormKey,
     },
     {
       TitleName: "ENGi Research to Marget",
@@ -494,7 +502,7 @@ async function main() {
       categories: ContentCategoryType.ACTIVITY,
       Booking: Option.HAVE,
       Userid: adminId,
-      bookingFormIndex: 0,
+      bookingFormKey: `${EventType.REUNION}|2025-03-15T09:00:00.000Z` as BookingFormKey,
     },
     {
       TitleName: "SUT GLOBAL ENTREPRENEURSHIP CAMP 2026",
@@ -503,38 +511,32 @@ async function main() {
       categories: ContentCategoryType.NEWS,
       Booking: Option.NOT,
       Userid: adminId,
-      bookingFormIndex: null as number | null,
+      bookingFormKey: null,
     },
   ];
 
   for (const c of contentData) {
-    const BookingFormID =
-      c.bookingFormIndex !== null ? bookingFormIds[c.bookingFormIndex] : null;
+    const BookingFormID = c.bookingFormKey
+      ? bookingFormMap.get(c.bookingFormKey as BookingFormKey) ?? null
+      : null;
 
-    const existing = await prisma.content.findFirst({
-      where: {
+    await prisma.content.upsert({
+      where: { TitleName_categories: { TitleName: c.TitleName, categories: c.categories } },
+      update: {
+        Description: c.Description,
+        Booking: c.Booking,
+        Userid: c.Userid,
+        BookingFormID,
+      },
+      create: {
         TitleName: c.TitleName,
+        Description: c.Description,
         categories: c.categories,
+        Booking: c.Booking,
+        Userid: c.Userid,
+        BookingFormID,
       },
     });
-
-    const payload = {
-      TitleName: c.TitleName,
-      Description: c.Description,
-      categories: c.categories,
-      Booking: c.Booking,
-      Userid: c.Userid,
-      BookingFormID,
-    };
-
-    if (existing) {
-      await prisma.content.update({
-        where: { id: existing.id },
-        data: payload,
-      });
-    } else {
-      await prisma.content.create({ data: payload });
-    }
   }
 
   const picturePlans = [
@@ -557,18 +559,11 @@ async function main() {
     if (!content) continue;
 
     for (const path of plan.paths) {
-      const existing = await prisma.pictureContent.findFirst({
-        where: { Path: path, ContentID: content.id },
+      await prisma.pictureContent.upsert({
+        where: { Path_ContentID: { Path: path, ContentID: content.id } },
+        update: {},
+        create: { Path: path, ContentID: content.id },
       });
-
-      if (!existing) {
-        await prisma.pictureContent.create({
-          data: {
-            Path: path,
-            ContentID: content.id,
-          },
-        });
-      }
     }
   }
 
@@ -580,21 +575,21 @@ async function main() {
   //    - ไม่ hardcode paymentMethod id
   // =========================================================
 
-  // 5.0 Ensure payment method exists (BANK_TRANSFER)
-  let payMethod = await prisma.paymentMethodRecord.findFirst({
+  // 5.0 Ensure payment method exists (BANK_TRANSFER) - use upsert
+  const payMethod = await prisma.paymentMethodRecord.upsert({
     where: { methodName: PaymentMethodType.BANK_TRANSFER },
+    update: {
+      isActive: true,
+      accountNumber: "123-456-7890",
+      provider: "SUT Bank",
+    },
+    create: {
+      methodName: PaymentMethodType.BANK_TRANSFER,
+      isActive: true,
+      accountNumber: "123-456-7890",
+      provider: "SUT Bank",
+    },
   });
-
-  if (!payMethod) {
-    payMethod = await prisma.paymentMethodRecord.create({
-      data: {
-        methodName: PaymentMethodType.BANK_TRANSFER,
-        isActive: true,
-        accountNumber: "123-456-7890",
-        provider: "SUT Bank",
-      },
-    });
-  }
 
   // 5.1 Find souvenir (must exist after seeding souvenirs)
   const souvenir = await prisma.souvenirItem.findFirst({
@@ -694,19 +689,29 @@ async function main() {
       },
     });
 
-    // 5.8 create Entitlement (add redeemToken)
-    const { randomUUID } = await import('crypto');
-    await prisma.entitlement.create({
-      data: {
+    // 5.8 create Entitlement (add redeemToken, check by stable key)
+    const existedEnt = await prisma.entitlement.findFirst({
+      where: {
         userId: testUser.id,
         itemId: souvenir.id,
-        source: EntitlementSource.DONATION,
         donationId: donation.id,
-        qtyGranted: 1,
-        qtyUsed: 0,
-        redeemToken: randomUUID(),
+        source: EntitlementSource.DONATION,
       },
     });
+    if (!existedEnt) {
+      const { randomUUID } = await import('crypto');
+      await prisma.entitlement.create({
+        data: {
+          userId: testUser.id,
+          itemId: souvenir.id,
+          source: EntitlementSource.DONATION,
+          donationId: donation.id,
+          qtyGranted: 1,
+          qtyUsed: 0,
+          redeemToken: randomUUID(),
+        },
+      });
+    }
 
     console.log("✅ Seeded donation project + tx + payment + donation + entitlement (ครบ flow)");
   } else {

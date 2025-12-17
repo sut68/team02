@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+
+function sha256(input: string) {
+  return crypto.createHash('sha256').update(input).digest('hex');
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { token, newPassword } = await request.json();
+    const { email, token, newPassword } = await request.json();
 
-    if (!token || !newPassword) {
+    if (!email || !token || !newPassword) {
       return NextResponse.json(
         { error: 'กรุณากรอกข้อมูลให้ครบถ้วน' },
         { status: 400 }
@@ -21,28 +26,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ค้นหา token
-    const resetRecord = await prisma.passwordReset.findUnique({
-      where: { token },
-      include: { user: true },
+    // hash token
+    const tokenHash = sha256(token);
+    const resetRecord = await prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
     });
 
-    if (!resetRecord) {
+    if (!resetRecord || resetRecord.email !== email) {
       return NextResponse.json(
         { error: 'ลิงก์รีเซ็ตรหัสผ่านไม่ถูกต้อง' },
         { status: 400 }
       );
     }
 
-    // ตรวจสอบว่า token ถูกใช้ไปแล้วหรือไม่
-    if (resetRecord.used) {
+    if (resetRecord.usedAt) {
       return NextResponse.json(
         { error: 'ลิงก์รีเซ็ตรหัสผ่านนี้ถูกใช้ไปแล้ว' },
         { status: 400 }
       );
     }
 
-    // ตรวจสอบว่า token หมดอายุหรือไม่
     if (new Date() > resetRecord.expiresAt) {
       return NextResponse.json(
         { error: 'ลิงก์รีเซ็ตรหัสผ่านหมดอายุแล้ว กรุณาขอลิงก์ใหม่' },
@@ -53,19 +56,19 @@ export async function POST(request: NextRequest) {
     // Hash รหัสผ่านใหม่
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // อัพเดทรหัสผ่าน
+    // อัพเดทรหัสผ่าน (by email)
     await prisma.user.update({
-      where: { id: resetRecord.userId },
+      where: { email },
       data: { password: hashedPassword },
     });
 
     // ทำเครื่องหมายว่า token ถูกใช้แล้ว
-    await prisma.passwordReset.update({
+    await prisma.passwordResetToken.update({
       where: { id: resetRecord.id },
-      data: { used: true },
+      data: { usedAt: new Date() },
     });
 
-    console.log(`✅ รีเซ็ตรหัสผ่านสำเร็จสำหรับ user: ${resetRecord.user.email}`);
+    console.log(`✅ รีเซ็ตรหัสผ่านสำเร็จสำหรับ user: ${email}`);
 
     return NextResponse.json({
       success: true,
