@@ -20,6 +20,9 @@ function CreateBudgetReportForm() {
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  
+  // ✅ เพิ่ม State เก็บ Staff ID
+  const [currentStaffId, setCurrentStaffId] = useState<number | null>(null);
 
   // 1. ข้อมูลโครงการ
   const [projectData, setProjectData] = useState({
@@ -70,7 +73,25 @@ function CreateBudgetReportForm() {
 
   const formatFileSize = (size: number) => (size / 1024 / 1024).toFixed(2) + " MB";
 
-  // --- Fetch Data (Linked Mode) ---
+  // ✅ Fetch Current User (Staff)
+  useEffect(() => {
+    const fetchUser = async () => {
+        try {
+            const res = await fetch("/api/auth/me");
+            if (res.ok) {
+                const data = await res.json();
+                // ปรับ key ตาม response จริงของ API auth/me ของคุณ
+                const userId = data.user?.id || data.id;
+                if (userId) setCurrentStaffId(userId);
+            }
+        } catch (error) {
+            console.error("Failed to fetch current user", error);
+        }
+    };
+    fetchUser();
+  }, []);
+
+  // --- Fetch Project Data (Linked Mode) ---
   useEffect(() => {
     const fetchProject = async () => {
       if (!projectIdParam) return;
@@ -252,7 +273,8 @@ function CreateBudgetReportForm() {
               projectStartDate: projectData.projectStartDate,
               projectEndDate: projectData.projectEndDate,
               coverFilePath: uploadedCoverPath,
-              status: "APPROVED" // สร้างแล้วให้สถานะเป็น Approved เพื่อให้ทำรายงานได้เลย
+              status: "CLOSE", // ✅ 1. กำหนดสถานะเป็น CLOSE ทันที
+              staffId: currentStaffId // ✅ 2. ส่ง staffId ไปด้วย
             },
             manager: managerData
           };
@@ -726,21 +748,27 @@ function CreateBudgetReportForm() {
           >
             ย้อนกลับ
           </CancelButton>
+          
           <PrimaryButton
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            style={{ borderRadius: "8px", width: "140px", height: "40px" }}
+            className="px-6 transition-all duration-200" 
+            style={{ borderRadius: "8px", minWidth: "140px", height: "40px" }}
           >
-            {isSubmitting ? (
-              <span className="flex items-center gap-2">
-                กำลังบันทึก...
-              </span>
-            ) : (
-              <span className="flex items-center gap-2">
-                <Save className="w-4 h-4" /> บันทึก
-              </span>
-            )}
+            <div className="flex items-center justify-center gap-2 whitespace-nowrap">
+              {isSubmitting ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  <span>กำลังบันทึก...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" /> 
+                  <span>บันทึก</span>
+                </>
+              )}
+            </div>
           </PrimaryButton>
         </div>
       </div>
