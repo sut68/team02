@@ -46,26 +46,33 @@ export function SouvenirSection() {
         const items = await res.json();
         if (!Array.isArray(items)) {
           console.error('Souvenir items is not an array:', items);
+          setSouvenirItems([]); // Fallback to empty array
           setLoading(false);
           return;
         }
-        // สร้าง label/href อัตโนมัติตาม category
-        const categoryMeta: Record<string, { label: string; href: string; requireAuth?: boolean; getDescription?: (name: string) => string }> = {
-          'กิจกรรม': {
+        // Normalize category to code
+        const normalizeCategory = (c?: string) => {
+          if (c === "กิจกรรม") return "ACTIVITY";
+          if (c === "บริจาค") return "DONATION";
+          return c;
+        };
+
+        const categoryMeta: Record<string, { label: string; href: string | ((item: any) => string); requireAuth?: boolean; getDescription?: (name: string) => string }> = {
+          ACTIVITY: {
             label: 'ลงทะเบียนเข้าร่วมกิจกรรม',
             href: '/user/booking',
             getDescription: (name) => `รับ '${name}' เป็นของที่ระลึกสุดพิเศษ`,
           },
-          'บริจาค': {
+          DONATION: {
             label: 'บริจาคเพื่อสนับสนุน ENGi',
-            href: '/user/donation',
-            requireAuth: true,
+            href: (item: any) => item.linkedDonationProjectId ? `/user/donation/projects/${item.linkedDonationProjectId}` : '/user/donation/projects',
             getDescription: (name) => `รับ ${name} แทนคำขอบคุณ`,
           },
         };
         // Dynamic category order (no hardcoding in filter)
         const categoryOrder = Object.keys(categoryMeta);
         const sortedItems = items
+          .map((it: any) => ({ ...it, category: normalizeCategory(it.category) }))
           .sort((a: any, b: any) => {
             const orderA = categoryOrder.indexOf(a.category) === -1 ? 999 : categoryOrder.indexOf(a.category);
             const orderB = categoryOrder.indexOf(b.category) === -1 ? 999 : categoryOrder.indexOf(b.category);
@@ -74,17 +81,26 @@ export function SouvenirSection() {
           })
           .map((item: any) => {
             const meta = categoryMeta[item.category] || { label: item.category || 'อื่นๆ', href: '#', getDescription: (name: string) => item.description || name };
+            const actionHref = typeof meta.href === 'function' ? meta.href(item) : meta.href;
+            if (actionHref === '#') {
+              console.warn('No actionHref for item:', {
+                id: item.id,
+                name: item.name,
+                category: item.category,
+              });
+            }
             return {
               ...item,
               actionLabel: meta.label,
-              actionHref: meta.href,
+              actionHref,
               description: item.description || (meta.getDescription ? meta.getDescription(item.name) : item.name),
               requireAuth: meta.requireAuth || false,
             };
           });
         setSouvenirItems(sortedItems);
       } catch (error) {
-        console.error('Error fetching souvenir data:', error);
+        console.error('Failed to fetch souvenir items:', error);
+        setSouvenirItems([]); // Fallback to empty array
       } finally {
         setLoading(false);
       }
@@ -115,11 +131,19 @@ export function SouvenirSection() {
 
   const prevSlide = () => stepBy(-(cardWidthRef.current || 0));
 
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = Math.sign(e.deltaY) * 60;
-    stepBy(delta);
-  };
+
+  // Add wheel event listener with passive: false to prevent page scroll
+  React.useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const wheelHandler = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = Math.sign(e.deltaY) * 60;
+      stepBy(delta);
+    };
+    el.addEventListener("wheel", wheelHandler, { passive: false });
+    return () => el.removeEventListener("wheel", wheelHandler as any);
+  }, []);
 
   const loopItems = React.useMemo(() => {
     if (souvenirItems.length === 0) return [];
@@ -219,14 +243,13 @@ export function SouvenirSection() {
         {/* แถบโปรโมต 3 บล็อกแบบเลื่อนต่อเนื่อง */}
         <div
           ref={scrollContainerRef}
-          onWheel={handleWheel}
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
           className="relative overflow-hidden max-w-7xl mx-auto"
         >
           <div ref={trackRef} className="flex gap-12 will-change-transform">
             {loopItems.map((item, idx) => {
-              const finalHref = (item.requireAuth && !isAuthenticated) ? '/auth/login' : (item.actionHref || '#');
+              const finalHref = item.actionHref || '#';
               return (
                 <Link
                   key={`${item.id}-${idx}`}

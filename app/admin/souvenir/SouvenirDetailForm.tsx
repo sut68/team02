@@ -50,7 +50,7 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
       sku: '',
       name: '',
       description: '',
-      category: 'กิจกรรม',
+      category: 'ACTIVITY',
       unit: 'ชิ้น',
       initialStock: 0,
       active: true,
@@ -101,10 +101,13 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
         let linkedDonationProjectId: number | undefined;
         
         // ดึงข้อมูล Events ที่ผูกกับของชิ้นนี้
-        const eventsRes = await fetch('/api/admin/events');
+        const eventsRes = await fetch('/api/content');
         if (eventsRes.ok) {
           const events = await eventsRes.json();
-          const linkedEvent = events.find((e: any) => e.souvenirItemId === itemId);
+          const eventList = Array.isArray(events)
+            ? events
+            : (events.data ?? events.events ?? []);
+          const linkedEvent = eventList.find((e: any) => e.souvenirItemId === itemId);
           if (linkedEvent) {
             linkedType = 'event';
             linkedEventId = linkedEvent.id;
@@ -365,30 +368,30 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
           
           {/* คอลัมน์ซ้าย: รูปภาพ */}
           <div className="md:col-span-4">
+            {/* รูปภาพ */}
             <div className="w-full">
               {uploading ? (
-                <div className="w-full aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
+                <div className="w-full aspect-square bg-gray-100 rounded-2xl flex items-center justify-center">
                   <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-2"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-2" />
                     <p className="text-sm text-gray-600">กำลังอัพโหลด...</p>
                   </div>
                 </div>
-              ) : formData.imageUrl ? (
-                <Image
-                  src={formData.imageUrl}
-                  alt={formData.name || 'ของที่ระลึก'}
-                  width={700}
-                  height={700}
-                  className="rounded-lg shadow-lg object-cover w-full"
-                />
               ) : (
-                <div className="w-full aspect-square bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
-                  <div className="text-center">
-                    <Upload className="w-16 h-16 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">ยังไม่มีรูปภาพ</p>
+                <div className="w-full aspect-square bg-white rounded-2xl shadow-lg overflow-hidden">
+                  <div className="relative w-full h-full">
+                    <Image
+                      src={formData.imageUrl || "/souvenir/placeholder.png"}
+                      alt={formData.name || "ของที่ระลึก"}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 40vw"
+                      className="object-contain p-10 md:p-12"
+                      priority
+                    />
                   </div>
                 </div>
               )}
+
               <input
                 ref={fileInputRef}
                 type="file"
@@ -396,14 +399,15 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
                 onChange={handleImageUpload}
                 className="hidden"
               />
-              <button 
+
+              <button
                 type="button"
                 disabled={!isEditing || uploading}
                 onClick={() => fileInputRef.current?.click()}
                 className="w-full mt-4 border-2 border-orange-500 text-orange-500 text-sm font-medium hover:bg-orange-50 px-4 py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Upload className="w-5 h-5 inline mr-2" />
-                {uploading ? 'กำลังอัพโหลด...' : (formData.imageUrl ? 'เปลี่ยนรูปภาพ' : 'เพิ่มรูปภาพ')}
+                {uploading ? "กำลังอัพโหลด..." : formData.imageUrl ? "เปลี่ยนรูปภาพ" : "เพิ่มรูปภาพ"}
               </button>
             </div>
 
@@ -602,7 +606,7 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
                   >
                     <option value="none">ไม่เชื่อมโยง</option>
                     <option value="event">กิจกรรม</option>
-                    <option value="donation">โครงการบริจาค (ยังไม่รองรับ)</option>
+                    <option value="donation">โครงการบริจาค</option>
                   </select>
                 </div>
 
@@ -646,16 +650,31 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
                 {formData.linkedType === 'donation' && (
                   <div className="mt-4">
                     <label className="block text-sm text-gray-500 mb-2">
-                      เลือกโครงการบริจาค
+                      เลือกโครงการบริจาค <span className="text-red-500">*</span>
                     </label>
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                      <p className="text-sm text-yellow-800">
-                        ⚠️ ฟีเจอร์นี้ยังไม่สามารถใช้งานได้ เนื่องจาก Donation model ไม่ได้เชื่อมกับ DonationProject โดยตรง
-                      </p>
-                      <p className="text-xs text-yellow-700 mt-2">
-                        ต้องเพิ่ม projectId field ใน Donation model และทำ migration ก่อน
-                      </p>
-                    </div>
+                    {loadingOptions ? (
+                      <div className="text-sm text-gray-500 px-4 py-2">กำลังโหลด...</div>
+                    ) : (
+                      <select
+                        value={formData.linkedDonationProjectId || ''}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            linkedDonationProjectId: e.target.value ? parseInt(e.target.value) : undefined,
+                          })
+                        }
+                        disabled={!isEditing}
+                        required={formData.linkedType === 'donation'}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:border-orange-400 focus:outline-none disabled:bg-gray-50"
+                      >
+                        <option value="">-- เลือกโครงการบริจาค --</option>
+                        {donationProjects.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.title} ( {p.currentAmount.toLocaleString()} / {p.goalAmount.toLocaleString()} )
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 )}
               </div>

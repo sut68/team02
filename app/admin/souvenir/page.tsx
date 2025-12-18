@@ -61,9 +61,9 @@ export default function SouvenirMenuPage() {
               className="group rounded-3xl bg-white shadow-lg border-2 border-orange-100 hover:border-orange-300 hover:shadow-2xl transition-all duration-200 flex flex-col items-center py-16 px-8 cursor-pointer outline-none focus:ring-2 focus:ring-orange-400"
               tabIndex={0}
               role="button"
-              onClick={() => setShowCarousel(showCarousel === "activity" ? null : "activity")}
-              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setShowCarousel(showCarousel === "activity" ? null : "activity"); }}
-              aria-pressed={showCarousel === "activity"}
+              onClick={() => setShowCarousel(showCarousel === "ACTIVITY" ? null : "ACTIVITY")}
+              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setShowCarousel(showCarousel === "ACTIVITY" ? null : "ACTIVITY"); }}
+              aria-pressed={showCarousel === "ACTIVITY"}
             >
               <div className="flex flex-col items-center mb-4">
                 <Activity className="w-28 h-28 text-orange-500 group-hover:drop-shadow-lg mb-2" strokeWidth={1.5} />
@@ -75,9 +75,9 @@ export default function SouvenirMenuPage() {
               className="group rounded-3xl bg-white shadow-lg border-2 border-orange-100 hover:border-orange-300 hover:shadow-2xl transition-all duration-200 flex flex-col items-center py-16 px-8 cursor-pointer outline-none focus:ring-2 focus:ring-orange-400"
               tabIndex={0}
               role="button"
-              onClick={() => setShowCarousel(showCarousel === "donation" ? null : "donation")}
-              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setShowCarousel(showCarousel === "donation" ? null : "donation"); }}
-              aria-pressed={showCarousel === "donation"}
+              onClick={() => setShowCarousel(showCarousel === "DONATION" ? null : "DONATION")}
+              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setShowCarousel(showCarousel === "DONATION" ? null : "DONATION"); }}
+              aria-pressed={showCarousel === "DONATION"}
             >
               <div className="flex flex-col items-center mb-4">
                 <HandHeart className="w-28 h-28 text-orange-400 group-hover:text-orange-500 group-hover:drop-shadow-lg mb-2" strokeWidth={1.5} />
@@ -89,8 +89,12 @@ export default function SouvenirMenuPage() {
       </div>
       {/* Carousel Section - Full Width like user page */}
       <div className={`transition-all duration-300 ${showCarousel ? 'opacity-100 scale-100' : 'opacity-0 scale-95 h-0 overflow-hidden'}`}>
-        {showCarousel === "activity" && <AdminSouvenirCarousel category="กิจกรรม" onCardClick={handleCardClick} />}
-        {showCarousel === "donation" && <AdminSouvenirCarousel category="บริจาค" onCardClick={handleCardClick} />}
+        {showCarousel && (
+          <AdminSouvenirCarousel
+            category={showCarousel}
+            onCardClick={handleCardClick}
+          />
+        )}
       </div>
       {/* Detail Form Section */}
       <div ref={detailRef} className={`transition-all duration-300 ${showDetail ? 'opacity-100 scale-100' : 'opacity-0 scale-95 h-0 overflow-hidden'}`}>

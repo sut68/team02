@@ -134,7 +134,7 @@ export default function ProfileEditForm() {
 
 
   return (
-    <div className="min-h-screen px-8 pt-16 pb-2">
+    <div className="min-h-[85vh] px-8 pt-20 pb-1">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-medium text-gray-800">แก้ไขข้อมูลส่วนตัว</h2>
@@ -153,7 +153,7 @@ export default function ProfileEditForm() {
         )}
 
         <form onSubmit={handleSubmit}>
-          <div className="space-y-8">
+          <div className="space-y-8 leading-15">
             {/* แถวที่ 1: ชื่อ-นามสกุล และ ที่อยู่ */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
               <div>

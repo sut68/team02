@@ -1,5 +1,11 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { CATEGORY_LABEL } from "@/constants/category";
+
+export const CATEGORY = {
+  ACTIVITY: "ACTIVITY",
+  DONATION: "DONATION",
+} as const;
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, Calendar, RefreshCw, Layers, CheckCircle, Package } from "lucide-react";
 
@@ -57,6 +63,16 @@ interface Donation {
     shippedAt: string | null;
   }>;
 }
+// Shipment status options and label helper
+const STATUS_OPTIONS = [
+  { value: "PENDING", label: "รอดำเนินการ" },
+  { value: "IN_TRANSIT", label: "กำลังจัดส่ง" },
+  { value: "DELIVERED", label: "จัดส่งแล้ว" },
+  { value: "FAILED", label: "มีปัญหา" },
+] as const;
+
+const statusLabel = (s?: string) =>
+  STATUS_OPTIONS.find(x => x.value === s)?.label ?? "รอดำเนินการ";
 
 export default function SouvenirDonationPage() {
   const [souvenirItems, setSouvenirItems] = useState<SouvenirItem[]>([]);
@@ -65,9 +81,52 @@ export default function SouvenirDonationPage() {
   const [loading, setLoading] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'pending' | 'delivered'>('all');
+  const [updatingShipmentId, setUpdatingShipmentId] = useState<number | null>(null);
   
-  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
-  const trackRef = React.useRef<HTMLDivElement>(null);
+  // Update shipment status function with confirmation
+  const updateShipmentStatus = async (shipmentId: number, status: string, donationId: number) => {
+    const statusObj = STATUS_OPTIONS.find(opt => opt.value === status);
+    const statusLabelText = statusObj ? statusObj.label : status;
+    let trackingNo = null;
+    if (status === 'DELIVERED') {
+      trackingNo = window.prompt('กรุณากรอกเลขแทรก (Tracking Number) เพื่อเปลี่ยนสถานะเป็น "จัดส่งแล้ว"');
+      if (!trackingNo || trackingNo.trim() === '') {
+        window.alert('กรุณากรอกเลขแทรกก่อนเปลี่ยนสถานะ');
+        return;
+      }
+    }
+    const confirmed = window.confirm(`คุณต้องการเปลี่ยนสถานะการจัดส่งเป็น "${statusLabelText}" ใช่หรือไม่?`);
+    if (!confirmed) return;
+    try {
+      setUpdatingShipmentId(shipmentId);
+      const res = await fetch(`/api/admin/shipments/${shipmentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(status === 'DELIVERED' ? { status, trackingNo } : { status }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("update shipment failed", res.status, text);
+        return;
+      }
+      setDonations(prev =>
+        prev.map(d => {
+          if (d.id !== donationId) return d;
+          const shipments = (d.shipments ?? []).map(s =>
+            s.id === shipmentId ? { ...s, status, trackingNo: status === 'DELIVERED' ? trackingNo : s.trackingNo } : s
+          );
+          return { ...d, shipments };
+        })
+      );
+    } finally {
+      setUpdatingShipmentId(null);
+    }
+  };
+  // Section 1 (Souvenir Carousel) refs
+  const souvenirScrollRef = React.useRef<HTMLDivElement>(null);
+  const souvenirTrackRef = React.useRef<HTMLDivElement>(null);
+  // Section 2 (Donation Project Carousel) ref
+  const projectScrollRef = React.useRef<HTMLDivElement>(null);
   const offsetRef = React.useRef(0);
   const loopWidthRef = React.useRef(0);
   const cardWidthRef = React.useRef(0);
@@ -82,7 +141,7 @@ export default function SouvenirDonationPage() {
         if (itemsRes.ok) {
           const itemsData = await itemsRes.json();
           if (Array.isArray(itemsData)) {
-            setSouvenirItems(itemsData.filter((item: SouvenirItem) => item.category === 'บริจาค'));
+            setSouvenirItems(itemsData.filter((item: SouvenirItem) => item.category === CATEGORY.DONATION));
           }
         }
 
@@ -119,15 +178,14 @@ export default function SouvenirDonationPage() {
     offsetRef.current += px;
     while (offsetRef.current >= loopW) offsetRef.current -= loopW;
     while (offsetRef.current < 0) offsetRef.current += loopW;
-    if (trackRef.current) {
-      trackRef.current.style.transform = `translateX(${-offsetRef.current}px)`;
+    if (souvenirTrackRef.current) {
+      souvenirTrackRef.current.style.transform = `translateX(${-offsetRef.current}px)`;
     }
   };
 
   const handleNextDonation = () => {
     stepBy(cardWidthRef.current || 0);
   };
-
   const handlePrevDonation = () => {
     stepBy(-(cardWidthRef.current || 0));
   };
@@ -140,31 +198,21 @@ export default function SouvenirDonationPage() {
   // Measure widths for seamless loop
   React.useEffect(() => {
     if (souvenirItems.length === 0) return;
-    
     const measure = () => {
-      const track = trackRef.current;
-      const container = scrollContainerRef.current;
+      const track = souvenirTrackRef.current;
+      const container = souvenirScrollRef.current;
       if (!track || !container) return;
-      
-      // Force reflow
       track.offsetHeight;
-      
+      const firstCard = track.querySelector('[data-souvenir-card]');
+      const gap = parseFloat(getComputedStyle(track).gap || '0');
+      if (firstCard) {
+        cardWidthRef.current = (firstCard as HTMLElement).offsetWidth + gap;
+      }
       const fullWidth = track.scrollWidth;
       loopWidthRef.current = fullWidth / 4;
-      const cols = window.innerWidth >= 768 ? 3 : 1;
-      cardWidthRef.current = container.clientWidth / cols;
-      
-      console.log('Donation carousel measured:', { 
-        fullWidth, 
-        loopWidth: loopWidthRef.current, 
-        cardWidth: cardWidthRef.current,
-        itemsCount: souvenirItems.length 
-      });
     };
-    
     measure();
     const timer = setTimeout(measure, 100);
-    
     window.addEventListener('resize', measure);
     return () => {
       clearTimeout(timer);
@@ -176,29 +224,36 @@ export default function SouvenirDonationPage() {
   React.useEffect(() => {
     if (souvenirItems.length === 0) return;
     if (isPaused) return;
-    
     let lastTime = performance.now();
     let rafId: number;
-
     const animate = (currentTime: number) => {
       const delta = currentTime - lastTime;
       lastTime = currentTime;
-      
       const loopW = loopWidthRef.current;
-      if (loopW > 0 && trackRef.current) {
+      if (loopW > 0 && souvenirTrackRef.current) {
         const distance = (speedRef.current * delta) / 1000;
         offsetRef.current += distance;
         while (offsetRef.current >= loopW) offsetRef.current -= loopW;
         while (offsetRef.current < 0) offsetRef.current += loopW;
-        trackRef.current.style.transform = `translateX(${-offsetRef.current}px)`;
+        souvenirTrackRef.current.style.transform = `translateX(${-offsetRef.current}px)`;
       }
-      
       rafId = requestAnimationFrame(animate);
     };
-
     rafId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(rafId);
   }, [isPaused, souvenirItems.length]);
+
+  // Helper for formatting date (Thai)
+  const formatDate = (d?: string | Date | null) => {
+    if (!d) return "-";
+    const date = typeof d === "string" ? new Date(d) : d;
+    if (Number.isNaN(date.getTime())) return "-";
+    return date.toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
 
   return (
     <main className="min-h-screen bg-white pt-10">
@@ -231,49 +286,55 @@ export default function SouvenirDonationPage() {
               </button>
 
               <div
-                ref={scrollContainerRef}
+                ref={souvenirScrollRef}
                 className="overflow-hidden py-4"
                 onMouseEnter={() => setIsPaused(true)}
                 onMouseLeave={() => setIsPaused(false)}
               >
-              <div
-                ref={trackRef}
-                className="flex gap-6 will-change-transform"
-                style={{ transform: 'translateX(0)', transition: 'none' }}
-              >
-                {loopItems.map((item, index) => (
-                  <div
-                    key={`${item.id}-${index}`}
-                    className="shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)] bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300"
-                  >
-                    <div className="relative h-72 md:h-80 bg-white">
-                      <Image
-                        src={item.imageUrl || '/souvenir/placeholder.png'}
-                        alt={item.name}
-                        fill
-                        className="object-contain p-6"
-                      />
-                    </div>
-                    <div className="p-6">
-                      <h3 className="text-xl font-bold text-gray-800 mb-2 truncate">
-                        {item.name}
-                      </h3>
-                      <p className="text-orange-500 font-semibold mb-3 text-sm">
-                        {item.category || 'บริจาค'}
-                      </p>
-                      <p className="text-gray-600 text-sm leading-relaxed mb-3 truncate">
-                        {item.description || 'ของที่ระลึกสำหรับผู้บริจาค'}
-                      </p>
-                      <div className="flex items-center gap-2 pt-3 border-t border-gray-200">
-                        <span className="text-gray-500 text-sm">คงเหลือ:</span>
-                        <span className="text-lg font-bold text-gray-800">{item.currentStock}</span>
-                        <span className="text-gray-500 text-sm">{item.unit || 'ชิ้น'}</span>
+                <div
+                  ref={souvenirTrackRef}
+                  className="flex gap-6 will-change-transform"
+                  style={{ transform: 'translateX(0)', transition: 'none' }}
+                >
+                  {loopItems.map((item, index) => (
+                    <div
+                      data-souvenir-card
+                      key={`${item.id}-${index}`}
+                      className="shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)]"
+                    >
+                      {/* ✅ Card เฉพาะรูป */}
+                      <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                        <div className="relative h-72 md:h-80 bg-white flex items-center justify-center">
+                          <Image
+                            src={item.imageUrl || "/souvenir/placeholder.png"}
+                            alt={item.name}
+                            width={600}
+                            height={600}
+                            className="max-h-[75%] w-auto object-contain"
+                            priority={index < 3}
+                          />
+                        </div>
+                      </div>
+                      {/* ✅ เนื้อหาอยู่นอกกรอบ (แต่ยังเลื่อนไปพร้อมกันเพราะอยู่ใน item wrapper เดียวกัน) */}
+                      <div className="pt-6 pb-8 text-center">
+                        <h3 className="text-xl md:text-2xl font-bold text-orange-500 mb-2 line-clamp-1">
+                          {item.name}
+                        </h3>
+                        <div className="text-gray-500 text-sm mb-2">
+                          จำนวนคงเหลือ: <span className="font-semibold">{item.currentStock}</span>{" "}
+                          {item.unit || "ชิ้น"}
+                        </div>
+                        <div className="text-gray-400 text-sm mb-4">
+                          หมวดหมู่: {CATEGORY_LABEL[item.category as keyof typeof CATEGORY_LABEL] || "บริจาค"}
+                        </div>
+                        <span className="inline-flex items-center justify-center px-4 py-1.5 rounded-full text-sm bg-orange-100 text-orange-700 font-medium">
+                          ใช้งาน
+                        </span>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
 
               <button
                 onClick={handleNextDonation}
@@ -297,68 +358,72 @@ export default function SouvenirDonationPage() {
       </section>
       <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
         {/* Section 2: โครงการบริจาค */}
+        {/* Section 2: โครงการบริจาค (Carousel Style) */}
         <section className="mb-12">
-          <h2 className="text-3xl font-medium text-gray-700 mb-8">
-            โครงการบริจาค
-          </h2>
-          {donationProjects.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {donationProjects.map((project) => {
-                const progress = project.goalAmount > 0 
-                  ? Math.min((project.currentAmount / project.goalAmount) * 100, 100)
-                  : 0;
-                
-                return (
+          <h2 className="text-3xl font-medium text-gray-700 mb-8">โครงการบริจาค</h2>
+          <div className="relative">
+            {/* Arrow Left */}
+            <button
+              onClick={() => {
+                const el = projectScrollRef.current;
+                if (!el) return;
+                el.scrollBy({ left: -el.clientWidth, behavior: 'smooth' });
+              }}
+              className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
+              aria-label="Previous donation project"
+            >
+              <ChevronLeft className="w-6 h-6 text-gray-700" />
+            </button>
+
+            {/* Donation Project Cards Container - Carousel (manual scroll) */}
+            <div
+              ref={projectScrollRef}
+              className="overflow-x-auto px-2 py-4 scrollbar-hide"
+              style={{ scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch' }}
+            >
+              <div className="flex gap-6">
+                {donationProjects.length > 0 ? donationProjects.map((p, index) => (
                   <div
-                    key={project.id}
-                    className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden"
+                    key={p.id}
+                    className={
+                      `shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)] bg-white rounded-xl transition-all duration-300 cursor-pointer ` +
+                      `shadow-md hover:shadow-lg`
+                    }
                   >
-                    {project.posterUrl && (
-                      <div className="relative h-48 bg-gray-100">
-                        <Image
-                          src={project.posterUrl}
-                          alt={project.title}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    )}
-                    <div className="p-6">
-                      <h3 className="text-lg font-medium mb-2 text-orange-500 truncate">
-                        {project.title}
+                    <div className="p-10 text-center min-h-[300px] flex flex-col items-center justify-center">
+                      <h3 className="text-lg font-medium mb-3 text-orange-500">
+                        {p.title}
                       </h3>
-                      <p className="text-sm text-gray-600 mb-4 line-clamp-2">
-                        {project.description}
-                      </p>
-                      <div className="mb-3">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-600">ความคืบหน้า</span>
-                          <span className="text-orange-500 font-semibold">{progress.toFixed(0)}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-orange-500 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">ยอดระดมทุน</span>
-                        <span className="text-gray-800 font-semibold">
-                          {project.currentAmount.toLocaleString()} / {project.goalAmount.toLocaleString()} บาท
+                      <div className="flex items-center justify-center gap-2 text-gray-600">
+                        <Calendar className="w-5 h-5" />
+                        <span className="text-base">
+                          {formatDate(p.startDate)} – {formatDate(p.endDate)}
                         </span>
                       </div>
                     </div>
                   </div>
-                );
-              })}
+                )) : (
+                  <div className="bg-gray-50 rounded-xl p-8 text-center w-full">
+                    <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 text-lg">ยังไม่มีโครงการบริจาคที่เปิดรับ</p>
+                  </div>
+                )}
+              </div>
             </div>
-          ) : (
-            <div className="bg-gray-50 rounded-xl p-8 text-center">
-              <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">ยังไม่มีโครงการบริจาคที่เปิดรับ</p>
-            </div>
-          )}
+
+            {/* Arrow Right */}
+            <button
+              onClick={() => {
+                const el = projectScrollRef.current;
+                if (!el) return;
+                el.scrollBy({ left: el.clientWidth, behavior: 'smooth' });
+              }}
+              className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
+              aria-label="Next donation project"
+            >
+              <ChevronRight className="w-6 h-6 text-gray-700" />
+            </button>
+          </div>
         </section>
 
         {/* Section 3: การ์ดสถิติการบริจาค */}
@@ -511,9 +576,34 @@ export default function SouvenirDonationPage() {
                           <td className="px-4 py-4 text-sm text-orange-600 truncate" title={souvenirName}>{souvenirName}</td>
                           <td className="px-4 py-4 text-sm text-gray-600 truncate" title={trackingNo}>{trackingNo}</td>
                           <td className="px-4 py-4">
-                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusColor} whitespace-nowrap`}>
-                              {statusText}
-                            </span>
+                            {donation.shipments?.[0]?.id ? (
+                              <div className="relative inline-block">
+                                <select
+                                  value={donation.shipments?.[0]?.status ?? "PENDING"}
+                                  disabled={updatingShipmentId === donation.shipments[0].id}
+                                  onChange={(e) =>
+                                    updateShipmentStatus(
+                                      donation.shipments![0].id,
+                                      e.target.value,
+                                      donation.id
+                                    )
+                                  }
+                                  className={`appearance-none px-3 py-1 pr-8 rounded-full text-xs font-medium border-0 outline-none cursor-pointer transition-colors
+                                    ${donation.shipments?.[0]?.status === 'PENDING'
+                                      ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                      : donation.shipments?.[0]?.status === 'DELIVERED'
+                                      ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                                      : 'bg-red-100 text-red-700 hover:bg-red-200'}
+                                  `}
+                                >
+                                  <option value="PENDING">รอดำเนินการ</option>
+                                  <option value="DELIVERED">จัดส่งแล้ว</option>
+                                </select>
+                                <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-gray-500">-</span>
+                            )}
                           </td>
                         </tr>
                       );

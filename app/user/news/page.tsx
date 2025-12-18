@@ -1,50 +1,33 @@
-
 // app/news/News.tsx
-'use client';
-import React, { use } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { useEffect, useState } from "react";
-import { Card, CardHeader, CardContent } from '../../components/ui/Card';
-import { PrimaryButton } from '../../components/ui/Button';
-import { SouvenirSection } from '../souvenir/SouvenirSection';
+"use client";
 
-// ** Mock Data **
-export const mockData = {
-  featured: {
-    id: 1,
-    title: 'SUT Global Entrepreneurship Camp 2026"',
-    desc: 'โอกาศของคุณมาถึงแล้ว!! พบเพื่อนใหม่นศ.ต่างชาติมากกว่า 6 ประเทศ อย่าลืมคว้าโอกาศนี้ สัมผัสประสบการณ์ใหม่ๆ ที่คุณจะไม่มีวันลืม',
-    slug: 'alumni-talk-2025',
-    imageSrc: '/Content/Event6.jpg',
-  },
-  secondary: {
-    id: 2,
-    title: 'ENGi Research to Market (ENGi R2M)',
-    desc: ' ขอเชิญน้อง ๆ นักศึกษาสำนักวิชาวิศวกรรมศาสตร์ ทุกระดับ ทุกชั้นปี เข้าร่วมการแข่งขัน ENGi Research to Market (ENGi R2M) ประจำปี พ.ศ. 2568!',
-    slug: 'dsa-mascot-main',
-    imageSrc: '/Content/Event5.jpg',
-  },
-  archives: [
-    {
-      id: 3,
-      title: ' งานคืนสู่เหย้า 30 ปี วิศวกรรมโลหการ (ในวันที่ 29 พฤศจิกายนนี้)',
-      slug: 'piles-32',
-      imageSrc: '/Content/Event9.jpg',
-    },
-    {
-      id: 4,
-      title: 'การแต่งตั้งให้ดำรงตำแหน่ง รักษาการแทนอธิการบดีมหาวิทยาลัยเทคโนโลยีสุรนารี',
-      slug: 'piles-33',
-      imageSrc: '/Content/Event10.jpg',
-    },
-  ],
-  upcoming: [
-    { id: 5, title: 'HACKATHON C2C TECH X BY SUPALAI 2025', slug: 'hackathon', imageSrc: '/Content/Event1.jpg', linkText: 'ลงทะเบียนเลย' },
-    { id: 6, title: 'DSA MASCOT CONTEST', slug: 'dsa-mascot', imageSrc: '/Content/Event3.png', linkText: 'ลงทะเบียนเลย' },
-    { id: 7, title: 'SMEs โคราช ห้ามพลาด!  ', slug: 'openhouse', imageSrc: '/Content/Event7.jpg', linkText: 'ลงทะเบียนเลย' },
-  ],
-};
+import React, { useEffect, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { Card, CardHeader, CardContent } from "../../components/ui/Card";
+import { PrimaryButton } from "../../components/ui/Button";
+import { SouvenirSection } from "../souvenir/SouvenirSection";
+
+type ContentCategoryType =
+  | "NEWS"
+  | "ACTIVITY";
+
+type BookingOption = "HAVE" | "NOT";
+
+interface PictureContent {
+  id: number;
+  Path: string;
+}
+
+interface ContentItem {
+  id: number;
+  slug?: string|null; //ถ้าใช้ title url อาจจะยาวๆแปลกๆเพราะเราอาจตั้งชื่อเป็ฯภาษาไทย 
+  TitleName: string | null;//แต่ slugจะแปลงชื่อเรื่องให้เป็น eng ที่รองรับ url ทั้งหมด url จะได้สะอาด
+  Description: string | null;
+  categories: ContentCategoryType | null;
+  Booking: BookingOption | null;
+  pictures: PictureContent[];
+}
 
 function useAuth() {
   const [user, setUser] = useState<{
@@ -57,15 +40,12 @@ function useAuth() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // เรียก API เพื่อตรวจสอบสถานะ
-        const response = await fetch('/api/auth/me');
+        const response = await fetch("/api/auth/me");
 
         if (response.ok) {
           const data = await response.json();
-
-          // ดึง role มาจากทั้ง data.role หรือ data.userType แล้วแปลงเป็นตัวเล็ก
-          const rawRole = (data.role || data.userType || '').toString();
-          const normalizedRole = rawRole.toLowerCase(); // <-- ตรงนี้สำคัญ
+          const rawRole = (data.role || data.userType || "").toString();
+          const normalizedRole = rawRole.toLowerCase();
 
           setUser({
             isAuthenticated: true,
@@ -73,12 +53,11 @@ function useAuth() {
             name: data.name || data.fullName,
           });
         } else {
-          // ไม่ได้ล็อกอิน
-          setUser({ isAuthenticated: false, role: '' });
+          setUser({ isAuthenticated: false, role: "" });
         }
       } catch (error) {
-        console.error('Auth check error:', error);
-        setUser({ isAuthenticated: false, role: '' });
+        console.error("Auth check error:", error);
+        setUser({ isAuthenticated: false, role: "" });
       } finally {
         setLoading(false);
       }
@@ -89,16 +68,65 @@ function useAuth() {
 
   return {
     isLoggedIn: user?.isAuthenticated || false,
-    isAdmin: user?.role === 'admin',   // ตอนนี้จะแมตช์ "ADMIN", "Admin", "admin" ได้หมด
-    isUser: user?.role === 'user',
+    isAdmin: user?.role === "admin",
+    isUser: user?.role === "user",
     loading,
   };
 }
 
-
 export function News() {
-  const { featured, secondary, archives, upcoming } = mockData;
-  const { isLoggedIn, isAdmin, isUser, loading } = useAuth();
+  const { isLoggedIn, isAdmin } = useAuth();
+
+  const [contents, setContents] = useState<ContentItem[]>([]);
+  const [loadingContent, setLoadingContent] = useState(true);
+  const [errorContent, setErrorContent] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchContents = async () => {
+      try {
+        const res = await fetch("/api/content", {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        if (!res.ok) {
+          const t = await res.text();
+          console.error("GET /api/content error:", res.status, t);
+          throw new Error("โหลดข่าวไม่สำเร็จ");
+        }
+
+        const data = await res.json();
+        setContents(data.contents || []);
+      } catch (err) {
+        console.error("Fetch contents error:", err);
+        setErrorContent("ไม่สามารถโหลดข่าวสารได้ในขณะนี้");
+      } finally {
+        setLoadingContent(false);
+      }
+    };
+
+    fetchContents();
+  }, []);
+
+  // ========= แบ่งโพสต์ =========
+  const featured = contents[0] || null;
+  const secondary = contents[1] || null;
+  const archives = contents.slice(2, 4);     // index 2–3 = ใหม่แต่รองลงมา
+
+  const oldPosts = contents.slice(4);        // ตั้งแต่ index 4 ขึ้นไป = โพสต์เก่า
+  const upcoming = oldPosts
+    .filter((c) => c.Booking !== "HAVE")     // เอาเฉพาะที่ "ไม่มีการลงทะเบียน"
+    .slice(0, 3);                            // แสดงได้ 3 วงกลม
+
+  const getFirstImage = (item: ContentItem | null | undefined) =>
+    item?.pictures?.[0]?.Path || "/Content/Event6.jpg";
+
+  const getTitle = (item: ContentItem | null | undefined) =>
+    item?.TitleName || "(ไม่มีชื่อเรื่อง)";
+
+  const getDesc = (item: ContentItem | null | undefined) =>
+    item?.Description || "";
+
   return (
     <>
     <section className="container mx-auto mb-16 px-4 py-0 ">
@@ -125,175 +153,163 @@ export function News() {
               </div>
             </div>
       
-      {/* บรรทัดหัวข้อ + ปุ่มคำขอยื่นเรื่อง */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <h2 className="text-3xl md:text-4xl font-semibold text-gray-800">
-          ข่าวสารและกิจกรรม
-        </h2>
 
-        {isLoggedIn && !isAdmin &&(
-          <Link
-          href="/user/news/submission">
-            <PrimaryButton>
-                คำขอยื่นเรื่อง
-            </PrimaryButton>
-          
-        </Link>
-        )}
+        {/* หัวข้อ + ปุ่ม */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+          <h2 className="text-3xl md:text-4xl font-semibold text-gray-800">
+            ข่าวสารและกิจกรรม
+          </h2>
 
-        {isLoggedIn && isAdmin &&  (
-          <Link href="/admin/news">
-            <PrimaryButton>
-              รายละเอียด
-            </PrimaryButton>
-          </Link>
-        )}
-      </div>
-
-
-      {/* ============ แถวบน ============ */}
-      {/* เพิ่ม h-full ให้ grid row นี้ */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 auto-rows-fr"> {/* เพิ่ม auto-rows-fr เพื่อให้ทุก grid item ใน row นี้มีความสูงเท่ากัน */}
-
-        {/* A. Featured (ใหญ่สุด ซ้าย) */}
-        <Link href={`/user/news/${featured.slug}`} className="lg:col-span-6 block group h-full"> {/* เพิ่ม h-full */}
-          <Card className="h-full overflow-hidden p-0! rounded-2xl shadow-md bg-white flex flex-col"> {/* เพิ่ม flex flex-col */}
-            
-            {/* รูป */}
-            <div className="relative w-full h-60 md:h-72 shrink-0"> {/* เพิ่ม flex-shrink-0 เพื่อให้รูปไม่ถูกบีบ */}
-              <Image
-                src={featured.imageSrc}
-                alt={featured.title}
-                fill
-                className="object-cover"
-                sizes="(max-width:1024px)100vw,50vw"
-              />
-            </div>
-
-            {/* เนื้อหา */}
-            <div className="p-5 grow"> {/* เพิ่ม flex-grow เพื่อให้เนื้อหายืดเต็มพื้นที่ที่เหลือ */}
-              <CardHeader className="mb-2! text-lg! md:text-xl! font-semibold group-hover:text-orange-600 transition">
-                {featured.title}
-              </CardHeader>
-              <CardContent className="p-0! text-sm text-gray-600 line-clamp-3">
-                {featured.desc}
-              </CardContent>
-            </div>
-          </Card>
-        </Link>
-
-
-        {/* B. Secondary (ตรงกลาง) */}
-        <Link href={`/user/news/${secondary.slug}`} className="lg:col-span-3 block group h-full"> {/* เพิ่ม h-full */}
-          <Card className="h-full overflow-hidden p-0! rounded-2xl shadow-md bg-white flex flex-col"> {/* เพิ่ม flex flex-col */}
-            
-            <div className="relative w-full h-60 md:h-72 shrink-0"> {/* เพิ่ม flex-shrink-0 */}
-              <Image
-                src={secondary.imageSrc}
-                alt={secondary.title}
-                fill
-                className="object-cover"
-                sizes="(max-width:1024px)100vw,25vw"
-              />
-            </div> 
-
-              {/* เนื้อหา */}
-            <div className="p-5 grow"> {/* เพิ่ม flex-grow */}
-              <CardHeader className="mb-2! text-lg! md:text-xl! font-semibold group-hover:text-orange-600 transition">
-                {secondary.title} {/* แก้จาก featured.title เป็น secondary.title */}
-              </CardHeader>
-              <CardContent className="p-0! text-sm text-gray-600 line-clamp-3">
-                {secondary.desc} {/* แก้จาก featured.desc เป็น secondary.desc */}
-              </CardContent>
-            </div>
-          </Card>
-        </Link>
-
-
-        {/* C. Archives (คอลัมน์ขวา แบบการ์ด 2 ใบ) */}
-        {/* เพิ่ม flex flex-col h-full เพื่อให้ aside ยืดเต็มความสูง และให้ items ในนั้นจัดเรียงแบบคอลัมน์ */}
-        <aside className="lg:col-span-3 space-y-6 flex flex-col h-full"> 
-          {archives.map((item) => (
-            <Link
-              key={item.id}
-              href={`/user/news/${item.slug}`}
-              className="block group grow" 
-            >
-              <Card className="overflow-hidden p-0! rounded-2xl shadow-md bg-white flex flex-col h-full"> {/* เพิ่ม flex flex-col h-full */}
-
-                {/* รูปด้านบน */}
-                <div className="relative w-full h-32 shrink-0"> {/* เพิ่ม flex-shrink-0 */}
-                  <Image
-                    src={item.imageSrc}
-                    alt={item.title}
-                    fill
-                    className="object-cover"
-                    sizes="20vw"
-                  />
-                </div>
-
-                {/* เนื้อหาด้านล่าง */}
-                <div className="p-4 grow"> {/* เพิ่ม flex-grow */}
-                  <p className="text-sm font-medium text-gray-800 leading-snug group-hover:text-orange-600 transition">
-                    {item.title}
-                  </p>
-                </div>
-              </Card>
+          {isLoggedIn && !isAdmin && (
+            <Link href="/user/news/submission">
+              <PrimaryButton>คำขอยื่นเรื่อง</PrimaryButton>
             </Link>
-          ))}
-        </aside>
+          )}
 
-      </div>
+          {isLoggedIn && isAdmin && (
+            <Link href="/admin/news">
+              <PrimaryButton>รายละเอียด</PrimaryButton>
+            </Link>
+          )}
+        </div>
 
+        {loadingContent && (
+          <p className="text-gray-500 mb-6">กำลังโหลดข่าวสาร...</p>
+        )}
+        {errorContent && !loadingContent && (
+          <p className="text-red-500 mb-6">{errorContent}</p>
+        )}
+        {!loadingContent && !errorContent && contents.length === 0 && (
+          <p className="text-gray-500 mb-6">ยังไม่มีข่าวสารในระบบ</p>
+        )}
 
+        {/* ============ แถวบน: โพสต์ใหม่ ============ */}
+        {contents.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 auto-rows-fr">
+            {/* Featured */}
+            {featured && (
+              <Link
+                href={`/user/news/${featured.slug || featured.id}`}
+                className="lg:col-span-6 block group h-full"
+              >
+                <Card className="h-full overflow-hidden p-0! rounded-2xl shadow-md bg-white flex flex-col">
+                  <div className="relative w-full h-60 md:h-72 shrink-0">
+                    <Image
+                      src={getFirstImage(featured)}
+                      alt={getTitle(featured)}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width:1024px)100vw,50vw"
+                    />
+                  </div>
+                  <div className="p-5 grow">
+                    <CardHeader className="mb-2! text-lg! md:text-xl! font-semibold group-hover:text-orange-600 transition">
+                      {getTitle(featured)}
+                    </CardHeader>
+                    <CardContent className="p-0! text-sm text-gray-600 line-clamp-3">
+                      {getDesc(featured)}
+                    </CardContent>
+                  </div>
+                </Card>
+              </Link>
+            )}
 
-        {/* ============ แถวล่าง: Upcoming Events (แบบในรูป) ============ */}
-<div className="mt-10">
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Secondary */}
+            {secondary && (
+              <Link
+                href={`/user/news/${secondary.slug || secondary.id}`}
+                className="lg:col-span-3 block group h-full"
+              >
+                <Card className="h-full overflow-hidden p-0! rounded-2xl shadow-md bg-white flex flex-col">
+                  <div className="relative w-full h-60 md:h-72 shrink-0">
+                    <Image
+                      src={getFirstImage(secondary)}
+                      alt={getTitle(secondary)}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width:1024px)100vw,25vw"
+                    />
+                  </div>
+                  <div className="p-5 grow">
+                    <CardHeader className="mb-2! text-lg! md:text-xl! font-semibold group-hover:text-orange-600 transition">
+                      {getTitle(secondary)}
+                    </CardHeader>
+                    <CardContent className="p-0! text-sm text-gray-600 line-clamp-3">
+                      {getDesc(secondary)}
+                    </CardContent>
+                  </div>
+                </Card>
+              </Link>
+            )}
 
-    {upcoming.slice(0, 3).map((event) => (
-      <Link
-        key={event.id}
-        href={`/user/news/${event.slug}`}
-        className="block group"
-      >
-        <div className="flex items-center gap-4">
-
-          {/* รูปวงกลมด้านซ้าย */}
-          <div className="relative w-32 h-32 rounded-full overflow-hidden shadow-sm shrink-0">
-            <Image
-              src={event.imageSrc}
-              alt={event.title}
-              fill
-              className="object-cover"
-              sizes="120px"
-            />
+            {/* Archives */}
+            <aside className="lg:col-span-3 space-y-6 flex flex-col h-full">
+              {archives.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/user/news/${item.slug || item.id}`}
+                  className="block group grow"
+                >
+                  <Card className="overflow-hidden p-0! rounded-2xl shadow-md bg-white flex flex-col h-full">
+                    <div className="relative w-full h-32 shrink-0">
+                      <Image
+                        src={getFirstImage(item)}
+                        alt={getTitle(item)}
+                        fill
+                        className="object-cover"
+                        sizes="20vw"
+                      />
+                    </div>
+                    <div className="p-4 grow">
+                      <p className="text-sm font-medium text-gray-800 leading-snug group-hover:text-orange-600 transition">
+                        {getTitle(item)}
+                      </p>
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+            </aside>
           </div>
+        )}
 
-          {/* ข้อความด้านขวา */}
-          <div className="flex flex-col">
-            <p className="text-sm font-medium text-gray-900 leading-snug group-hover:text-orange-600 transition">
-              {event.title}
-            </p>
-
-            <div className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#F26522]">
-              <span>{event.linkText}</span>
-              {/* วงกลมเล็ก + ลูกศร */}
-              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#F26522] text-white text-[9px]">
-                ↗
-              </span>
+        {/* ============ แถวล่าง: โพสต์เก่า + ไม่มีการลงทะเบียน ============ */}
+        {upcoming.length > 0 && (
+          <div className="mt-10">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {upcoming.map((event) => (
+                <Link
+                  key={event.id}
+                  href={`/user/news/${event.slug || event.id}`}
+                  className="block group"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="relative w-32 h-32 rounded-full overflow-hidden shadow-sm shrink-0">
+                      <Image
+                        src={getFirstImage(event)}
+                        alt={getTitle(event)}
+                        fill
+                        className="object-cover"
+                        sizes="120px"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <p className="text-sm font-medium text-gray-900 leading-snug group-hover:text-orange-600 transition">
+                        {getTitle(event)}
+                      </p>
+                      <div className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#F26522]">
+                        <span>ดูรายละเอียด</span>
+                        <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#F26522] text-white text-[9px]">
+                          ↗
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
             </div>
           </div>
-
-        </div>
-      </Link>
-    ))}
-
-  </div>
-</div>
-
-
-    </section>
+        )}
+      </section>
 
     {/* ส่วนของที่ระลึก */}
     <div id="souvenir" className="scroll-mt-28">
@@ -302,6 +318,5 @@ export function News() {
   </>
   );
 }
-
 
 export default News;

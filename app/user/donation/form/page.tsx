@@ -47,7 +47,9 @@ interface FormData {
 // ----------------------------------------------------
 // 💡 Component หน้ารวมรายละเอียดและฟอร์ม
 // ----------------------------------------------------
-export default function CombinedDonationFormPage() {
+import { Suspense } from 'react';
+
+function CombinedDonationFormPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = searchParams.get('projectId');
@@ -399,5 +401,13 @@ export default function CombinedDonationFormPage() {
         </div>
       </div >
     </div >
+  );
+}
+
+export default function CombinedDonationFormPage() {
+  return (
+    <Suspense>
+      <CombinedDonationFormPageInner />
+    </Suspense>
   );
 }

@@ -24,7 +24,7 @@ export async function GET(
             select: {
               id: true,
               amount: true,
-              message: true,
+              //message: true,
               donorName: true,
               createdAt: true,
               user: {
@@ -93,6 +93,7 @@ export async function PUT(
   //         { status: 400 }
   //       );
   //     }  request: NextRequest,
+
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -146,10 +147,10 @@ export async function PUT(
 // --------------------------------------------------------------------------
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } } // แก้ไข Type ของ params
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params; // 💡 ดึง ID จาก Path Parameter
+    const { id } = await params; // 💡 ดึง ID จาก Path Parameter
     const projectId = parseInt(id);
 
     if (isNaN(projectId)) {
