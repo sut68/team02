@@ -1,58 +1,60 @@
 "use client";
 
-import { PenLine, Trash2, ChevronDown } from "lucide-react";
+import { PenLine, Trash2, ChevronDown, RotateCcw } from "lucide-react";
 import Image from "next/image";
-import { BudgetReport, SummarySubmissionStatus } from "@/app/types/budget_report";
+import { BudgetReport } from "@/app/types/budget_report";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardFooter } from "./Card";
 import { useState } from "react";
 import ConfirmModal from "@/app/components/ui/ConfirmModal"; 
 
 interface Props {
-  // รองรับ type ที่อาจจะไม่ตรงกันเป๊ะระหว่าง API Response กับ Type Definition
   report: BudgetReport & { imageSrc?: string }; 
   onDelete?: (id: number) => void;
-  onUpdate?: () => void; // ✅ เพิ่ม callback สำหรับ refresh ข้อมูล
+  onUpdate?: () => void;
+  isTrash?: boolean; // ✅ เพิ่ม: รับค่าว่าอยู่ในถังขยะหรือไม่
 }
 
-// กำหนดตัวเลือกสถานะ
+// ตัวเลือกสถานะ
 const STATUS_OPTIONS = [
   { id: 1, label: "ฉบับร่าง", value: "DRAFT", color: "bg-gray-400", textColor: "text-gray-600" },
-  { id: 2, label: "รอพิจารณา", value: "PENDING_REVIEW", color: "bg-orange-500", textColor: "text-orange-600" },
+  { id: 2, label: "รอตรวจสอบ", value: "PENDING_REVIEW", color: "bg-orange-500", textColor: "text-orange-600" },
   { id: 3, label: "อนุมัติ", value: "APPROVED", color: "bg-green-500", textColor: "text-green-600" },
   { id: 4, label: "ส่งกลับไปแก้ไข", value: "NEEDS_REVISION", color: "bg-red-500", textColor: "text-red-600" },
 ];
 
-export default function BudgetReportCard({ report, onDelete, onUpdate }: Props) {
+export default function BudgetReportCard({ report, onDelete, onUpdate, isTrash = false }: Props) {
   const router = useRouter();
   
-  // --- State Management ---
+  // State
   const [currentStatus, setCurrentStatus] = useState<string>(report.status);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // ✅ เพิ่ม Loading State
+  const [isLoading, setIsLoading] = useState(false);
   
   // Modal State
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [pendingOption, setPendingOption] = useState<typeof STATUS_OPTIONS[0] | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false); // ✅ เพิ่ม Modal กู้คืน
 
-  // หา Object สถานะปัจจุบัน
   const activeStatusObj = STATUS_OPTIONS.find(opt => opt.value === currentStatus) || STATUS_OPTIONS[0];
-
-  // Helper: ดึงรูปภาพ (รองรับทั้งจาก API flattened และ Relation ปกติ)
   const displayImage = report.imageSrc || (report.images && report.images.length > 0 ? report.images[0].imagePath : null);
 
-  // 1. กดเลือกใน Dropdown
+  // เงื่อนไข: แสดงปุ่มแก้ไขเฉพาะเมื่อไม่ใช่สถานะ "รอตรวจสอบ" หรือ "อนุมัติ"
+  const canEdit = currentStatus !== "PENDING_REVIEW" && currentStatus !== "APPROVED";
+
+  // --- Handlers ---
+
+  // 1. เปลี่ยนสถานะ
   const handleStatusClick = (option: typeof STATUS_OPTIONS[0]) => {
     setPendingOption(option);
     setIsMenuOpen(false);
     setIsConfirmOpen(true);
   };
 
-  // 2. กดยืนยันเปลี่ยนสถานะ
   const confirmChange = async () => {
     if (pendingOption) {
-      setIsLoading(true); // เริ่ม Loading
+      setIsLoading(true);
       try {
         const res = await fetch('/api/budget-report', {
             method: 'PUT',
@@ -62,7 +64,6 @@ export default function BudgetReportCard({ report, onDelete, onUpdate }: Props) 
 
         if (res.ok) {
             setCurrentStatus(pendingOption.value);
-            // ✅ Refresh ข้อมูลถ้ามี callback
             if (onUpdate) onUpdate();
             else router.refresh();
         } else {
@@ -73,16 +74,16 @@ export default function BudgetReportCard({ report, onDelete, onUpdate }: Props) 
         console.error("Update error:", error);
         alert("เกิดข้อผิดพลาดในการเชื่อมต่อ");
       } finally {
-        setIsLoading(false); // หยุด Loading
+        setIsLoading(false);
         setIsConfirmOpen(false);
         setPendingOption(null);
       }
     }
   };
 
-  // 3. กดยืนยันลบ
+  // 2. ลบรายงาน (ย้ายลงถังขยะ)
   const confirmDelete = async () => {
-    setIsLoading(true); // เริ่ม Loading
+    setIsLoading(true);
     try {
         const res = await fetch(`/api/budget-report?id=${report.id}`, { method: 'DELETE' });
         if(res.ok) {
@@ -97,14 +98,42 @@ export default function BudgetReportCard({ report, onDelete, onUpdate }: Props) 
         console.error(e);
         alert("เกิดข้อผิดพลาดในการลบ");
     } finally {
-        setIsLoading(false); // หยุด Loading
+        setIsLoading(false);
         setIsDeleteModalOpen(false);
+    }
+  };
+
+  // 3. ✅ กู้คืนรายงาน (Restore)
+  const confirmRestore = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/budget-report/restore', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: report.id })
+      });
+
+      if (res.ok) {
+        if (onUpdate) onUpdate(); // รีเฟรชลิสต์ (รายการจะหายจากถังขยะ)
+        else router.refresh();
+      } else {
+        alert("กู้คืนไม่สำเร็จ");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("เกิดข้อผิดพลาด");
+    } finally {
+      setIsLoading(false);
+      setIsRestoreModalOpen(false);
     }
   };
 
   return (
     <>
-      <Card className="p-4 rounded-[20px] border-none shadow-sm bg-white w-full h-full flex flex-col relative transition-all hover:shadow-md">
+      <Card className="
+        p-4 border-none shadow-sm bg-white 
+        w-full h-full flex flex-col relative transition-all hover:shadow-md
+      ">
         
         {/* --- 1. ส่วนรูปภาพ --- */}
         <div className="relative w-full h-48 mb-4 rounded-2xl overflow-hidden group z-10 bg-gray-100 shrink-0">
@@ -123,53 +152,55 @@ export default function BudgetReportCard({ report, onDelete, onUpdate }: Props) 
             )}
           </div>
           
-          {/* Status Dropdown */}
-          <div className="absolute bottom-2 right-2">
-            {isMenuOpen && (
-              <div className="absolute bottom-full right-0 mb-2 w-40 bg-white rounded-xl shadow-xl p-1 border border-gray-100 flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200 origin-bottom-right z-50">
-                {STATUS_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleStatusClick(option);
-                    }}
-                    className={`
-                      flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium w-full transition-colors
-                      ${currentStatus === option.value ? "bg-gray-100 text-gray-900" : "hover:bg-gray-50 text-gray-600"}
-                    `}
-                  >
-                    <div className={`w-2 h-2 rounded-full shrink-0 ${option.color}`} />
-                    <span className="truncate">{option.label}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+          {/* Status Dropdown (ซ่อนถ้าอยู่ในถังขยะ) */}
+          {!isTrash && (
+            <div className="absolute bottom-2 right-2">
+              {isMenuOpen && (
+                <div className="absolute bottom-full right-0 mb-2 w-40 bg-white rounded-xl shadow-xl p-1 border border-gray-100 flex flex-col gap-1 animate-in fade-in zoom-in-95 duration-200 origin-bottom-right z-50">
+                  {STATUS_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStatusClick(option);
+                      }}
+                      className={`
+                        flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium w-full transition-colors
+                        ${currentStatus === option.value ? "bg-gray-100 text-gray-900" : "hover:bg-gray-50 text-gray-600"}
+                      `}
+                    >
+                      <div className={`w-2 h-2 rounded-full shrink-0 ${option.color}`} />
+                      <span className="truncate">{option.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
 
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsMenuOpen(!isMenuOpen);
-              }}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur-md shadow-sm rounded-full hover:bg-white transition-all ring-1 ring-black/5"
-            >
-              <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${activeStatusObj.color}`} />
-              <span className="text-xs font-semibold text-gray-700 truncate max-w-24">
-                {activeStatusObj.label}
-              </span>
-              <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform duration-200 ${isMenuOpen ? "rotate-180" : ""}`} />
-            </button>
-            
-            {isMenuOpen && (
-              <div 
-                className="fixed inset-0 z-[-1]" 
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setIsMenuOpen(false);
-                }} 
-              />
-            )}
-          </div>
+                  setIsMenuOpen(!isMenuOpen);
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 bg-white/90 backdrop-blur-md shadow-sm rounded-full hover:bg-white transition-all ring-1 ring-black/5"
+              >
+                <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${activeStatusObj.color}`} />
+                <span className="text-xs font-semibold text-gray-700 truncate max-w-24">
+                  {activeStatusObj.label}
+                </span>
+                <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform duration-200 ${isMenuOpen ? "rotate-180" : ""}`} />
+              </button>
+              
+              {isMenuOpen && (
+                <div 
+                  className="fixed inset-0 z-[-1]" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsMenuOpen(false);
+                  }} 
+                />
+              )}
+            </div>
+          )}
         </div>
 
         {/* --- 2. เนื้อหา --- */}
@@ -181,8 +212,8 @@ export default function BudgetReportCard({ report, onDelete, onUpdate }: Props) 
             {report.reportTitle}
           </h3>
           <p className="text-gray-500 font-light mt-auto text-sm">
-            อัปเดตล่าสุดเมื่อ : <span className="font-normal">
-              {new Date(report.updatedAt).toLocaleDateString("th-TH", {
+            {isTrash ? "ลบเมื่อ" : "อัปเดตล่าสุดเมื่อ"} : <span className="font-normal">
+              {new Date(isTrash ? (report.deletedAt || report.updatedAt) : report.updatedAt).toLocaleDateString("th-TH", {
                 year: "2-digit",
                 month: "short",
                 day: "numeric",
@@ -194,24 +225,45 @@ export default function BudgetReportCard({ report, onDelete, onUpdate }: Props) 
         </CardContent>
 
         {/* --- 3. ปุ่ม Action --- */}
-        <CardFooter className="p-0 flex justify-center gap-0 mt-auto shrink-0">
-          <button
-            onClick={() => router.push(`/admin/budget_report/edit/${report.id}`)}
-            className="bg-[#F36618] text-white h-10 rounded-lg hover:bg-orange-700 transition flex items-center justify-center gap-2 text-base font-medium px-8 w-30 mr-2"
-          >
-            <PenLine className="w-5 h-5" />
-            แก้ไข
-          </button>
+        <CardFooter className="p-0 flex justify-center gap-2 mt-auto shrink-0">
+          
+          {/* ✅ กรณีอยู่ใน "ถังขยะ" -> แสดงปุ่มกู้คืน */}
+          {isTrash ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsRestoreModalOpen(true);
+              }}
+              className="bg-orange-500 text-white h-10 rounded-lg hover:bg-orange-600 transition flex items-center justify-center gap-2 text-base font-medium px-8 w-full shadow-sm"
+            >
+              <RotateCcw className="w-5 h-5" />
+              กู้คืน
+            </button>
+          ) : (
+            /* ✅ กรณีปกติ -> แสดงปุ่มแก้ไข/ลบ */
+            <>
+              {canEdit && (
+                <button
+                    onClick={() => router.push(`/admin/budget_report/edit/${report.id}`)}
+                    className="bg-[#F36618] text-white h-10 rounded-lg hover:bg-orange-700 transition flex items-center justify-center gap-2 text-base font-medium px-8 w-30 mr-2"
+                >
+                    <PenLine className="w-5 h-5" />
+                    แก้ไข
+                </button>
+              )}
 
-          <button
-            onClick={(e) => { 
-                e.stopPropagation(); 
-                setIsDeleteModalOpen(true);
-            }}
-            className="w-14 h-10 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition flex items-center justify-center shrink-0"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+              <button
+                onClick={(e) => { 
+                    e.stopPropagation(); 
+                    setIsDeleteModalOpen(true);
+                }}
+                className="w-14 h-10 bg-white text-gray-500 border border-gray-200 rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition flex items-center justify-center shrink-0 shadow-sm"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
+          )}
+
         </CardFooter>
       </Card>
 
@@ -225,7 +277,7 @@ export default function BudgetReportCard({ report, onDelete, onUpdate }: Props) 
         confirmLabel="ยืนยัน"
         cancelLabel="ยกเลิก"
         isDanger={false}
-        isLoading={isLoading} // ✅ ส่ง loading props
+        isLoading={isLoading}
       />
 
       {/* --- Delete Confirmation Modal (ลบ) --- */}
@@ -238,7 +290,20 @@ export default function BudgetReportCard({ report, onDelete, onUpdate }: Props) 
         confirmLabel="ลบรายงาน"
         cancelLabel="ยกเลิก"
         isDanger={true}
-        isLoading={isLoading} // ✅ ส่ง loading props
+        isLoading={isLoading}
+      />
+
+      {/* --- ✅ Restore Confirmation Modal (กู้คืน) --- */}
+      <ConfirmModal 
+        isOpen={isRestoreModalOpen}
+        onClose={() => setIsRestoreModalOpen(false)}
+        onConfirm={confirmRestore}
+        title="ยืนยันการกู้คืน"
+        message={`คุณต้องการกู้คืนรายงาน "${report.reportTitle}" กลับมาใช่หรือไม่?`} 
+        confirmLabel="กู้คืน"
+        cancelLabel="ยกเลิก"
+        isDanger={false} // สีปกติ (ไม่ใช่สีแดง)
+        isLoading={isLoading}
       />
     </>
   );

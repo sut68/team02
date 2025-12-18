@@ -42,34 +42,62 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST: สร้างข้อมูล (✅ แก้ไขให้รองรับ budgetRoundId และ staffId)
+// POST: สร้างข้อมูล (✅ ปรับปรุง Logic)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { project, manager } = body;
 
-    // เตรียมข้อมูล Manager (เชื่อมโยง หรือ สร้างใหม่)
+    // 1. จัดการข้อมูล Project Manager (ป้องกันข้อมูลซ้ำ)
     let managerData = undefined;
     if (manager) {
       if (manager.id) {
+        // กรณีเลือกจาก List เดิมที่มี ID มาแล้ว (เช่นจากหน้าปกติ)
         managerData = { connect: { id: Number(manager.id) } };
       } else {
-        managerData = {
-          create: {
-            firstName: manager.firstName,
-            lastName: manager.lastName,
-            department: manager.department,
-            position: manager.position,
-            phoneNumber: manager.phoneNumber,
-            email: manager.email,
-          }
+        // ✅ กรณี Manual Input: ค้นหาว่ามีคนนี้ในระบบหรือยัง?
+        // เช็คจาก (ชื่อ AND นามสกุล) หรือ (Email ถ้ามีค่า)
+        const whereCondition: any = {
+            OR: [
+                {
+                    AND: [
+                        { firstName: { equals: manager.firstName, mode: 'insensitive' } },
+                        { lastName: { equals: manager.lastName, mode: 'insensitive' } }
+                    ]
+                }
+            ]
         };
+
+        if (manager.email && manager.email.trim() !== "") {
+            whereCondition.OR.push({ email: manager.email });
+        }
+
+        const existingManager = await prisma.projectManager.findFirst({
+            where: whereCondition
+        });
+
+        if (existingManager) {
+            // เจอคนเดิม -> Link เลย ไม่ต้องสร้างใหม่
+            managerData = { connect: { id: existingManager.id } };
+        } else {
+            // ไม่เจอ -> สร้างใหม่
+            managerData = {
+                create: {
+                    firstName: manager.firstName,
+                    lastName: manager.lastName,
+                    department: manager.department,
+                    position: manager.position,
+                    phoneNumber: manager.phoneNumber,
+                    email: manager.email,
+                }
+            };
+        }
       }
     }
 
-    // ✅ แปลงค่า budgetRoundId และ staffId ให้เป็นตัวเลข หรือ undefined
+    // แปลงค่า ID ต่างๆ
     const roundId = project.budgetRoundId ? Number(project.budgetRoundId) : undefined;
-    const staffId = project.staffId ? Number(project.staffId) : undefined;
+    const staffId = project.staffId ? Number(project.staffId) : undefined; // ✅ รับค่า Staff ID
 
     const newProposal = await prisma.projectProposal.create({
       data: {
@@ -78,14 +106,17 @@ export async function POST(request: NextRequest) {
         description: project.description,
         requestedAmount: Number(project.requestedAmount),
         responsibilityUnit: project.responsibilityUnit,
-        coverFilePath: project.coverFilePath,
+        coverFilePath: project.coverFilePath || null,
         projectStartDate: project.projectStartDate ? new Date(project.projectStartDate) : null,
         projectEndDate: project.projectEndDate ? new Date(project.projectEndDate) : null,
-        status: 'PENDING',
-        manager: managerData,
         
-        // ✅ เพิ่มการเชื่อมโยง BudgetRound และ Staff (ถ้ามีค่าส่งมา)
+        // ✅ ใช้ status ที่ส่งมา (เช่น CLOSED) ถ้าไม่มีจะเป็น PENDING
+        status: project.status || 'PENDING',
+        
+        manager: managerData,
         budgetRound: roundId ? { connect: { id: roundId } } : undefined,
+        
+        // ✅ เชื่อมโยง Staff ผู้บันทึก (ถ้ามี)
         staff: staffId ? { connect: { id: staffId } } : undefined,
       },
       include: { manager: true, budgetRound: true, staff: true }
@@ -99,7 +130,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT: แก้ไขข้อมูล
+// PUT: แก้ไขข้อมูล (เหมือนเดิม)
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
@@ -154,10 +185,8 @@ export async function PUT(request: NextRequest) {
         select: { email: true, fullName: true }
       });
 
-      // สร้างลิงก์ไปยังหน้าโหวต
       const voteLink = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/user/vote`;
 
-      // สร้าง Array ของ Promise สำหรับการส่งอีเมล
       const emailPromises = eligibleVoters.map((voter) => {
         const mailSubject = `📢 เชิญร่วมโหวตโครงการ: ${updatedProposal.projectName}`;
         
@@ -186,7 +215,6 @@ export async function PUT(request: NextRequest) {
           </div>
         `;
 
-        // สั่งส่งอีเมล (คืนค่า Promise กลับไป)
         return transporter.sendMail({
           ...mailOptions,
           to: voter.email,
@@ -195,13 +223,10 @@ export async function PUT(request: NextRequest) {
         });
       });
 
-      // ✅ สั่งให้ทำงานพร้อมกันทั้งหมด และรอจนเสร็จ (หรือใช้ Promise.allSettled ถ้าไม่อยากให้ error เดียวทำล่มทั้งหมด)
       try {
         await Promise.all(emailPromises);
-        console.log(`✅ Sent voting invitation emails to ${eligibleVoters.length} users.`);
       } catch (emailError) {
         console.error("❌ Failed to send some emails:", emailError);
-        // ไม่ throw error เพื่อให้การ update status สำเร็จต่อไป
       }
     }
 
@@ -213,7 +238,7 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE: ลบข้อมูล
+// DELETE: ลบข้อมูล (เหมือนเดิม)
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
