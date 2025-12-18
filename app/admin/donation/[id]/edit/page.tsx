@@ -21,12 +21,14 @@ interface ProjectData {
   status: string;
   posterUrl: string | null;
   ownerName: string; 
+  isCentralFund: boolean;
 }
 
 interface EditFormData extends Omit<ProjectData, 'id' | 'goalAmount' | 'posterUrl' | 'ownerName'> {
   id?: number;
   goalAmount: number;
   posterImage: FileList | null; // สำหรับรูปภาพใหม่
+  isCentralFund: boolean;
 }
 
 
@@ -96,6 +98,7 @@ export default function EditProjectPage({ params }: { params: any }) {
           startDate: formatISODate(p.startDate),
           endDate: formatISODate(p.endDate),
           status: p.status,
+          isCentralFund: p.isCentralFund || false,
         });
 
       } catch (err: any) {
@@ -177,6 +180,7 @@ export default function EditProjectPage({ params }: { params: any }) {
         posterUrl: updatedPosterUrl,
         // ส่งค่า ownerName/contact ที่มีอยู่จริง แทนการใช้ String constructor
         ownerName: initialData?.ownerName ?? '',
+        isCentralFund: data.isCentralFund,
       };
 
       const response = await fetch(`/api/donation-project/${projectId}`, {
@@ -339,6 +343,18 @@ export default function EditProjectPage({ params }: { params: any }) {
               <option value="COMPLETED">สำเร็จ</option>
             </select>
             {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status.message}</p>}
+          </div>
+
+          <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <input
+              type="checkbox"
+              id="isCentralFund"
+              {...register('isCentralFund')}
+              className="w-5 h-5 text-[#F26522] border-gray-300 rounded focus:ring-[#F26522] accent-[#F26522] cursor-pointer"
+            />
+            <label htmlFor="isCentralFund" className="text-gray-700 text-sm font-semibold cursor-pointer select-none">
+              ตั้งเป็นกองทุนกลาง (Central Fund)
+            </label>
           </div>
 
           {/* รายละเอียดโครงการ */}
