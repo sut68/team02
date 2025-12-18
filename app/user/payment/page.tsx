@@ -54,10 +54,12 @@ export default function DonationPage() {
   return (
     // 💡 1. Container หลัก: จัดให้อยู่กลางหน้าจอ และพื้นหลังสีเทา
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      
       {/* 💡 2. Card UI: การ์ดสีขาวสำหรับเนื้อหา */}
       <div className="bg-white w-full max-w-md p-8 rounded-xl shadow-xl text-center">
         
+      <h1 className="text-2xl font-bold text-red-800 mb-8">
+          หน้านี้ยังไม่มีเวลาทำจริงจังนะครับ 
+      </h1>
         <h1 className="text-3xl font-bold text-gray-800 mb-2">
           ร่วมบริจาค {amountToDonate} บาท
         </h1>
