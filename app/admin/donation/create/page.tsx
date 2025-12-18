@@ -20,6 +20,7 @@ interface FormData {
   startDate: string;
   endDate: string;
   posterImage: FileList | null;
+  isCentralFund: boolean;
 }
 
 // --------------------------------------------------------------------------
@@ -99,6 +100,7 @@ export default function CreateProjectPage() {
         contact: "contact@engisut.ac.th",
         posterUrl: posterUrl, // 💡 ใช้ URL จริงที่ได้จากการอัปโหลด
         status: data.status,
+        isCentralFund: data.isCentralFund || false,
       };
       
        const response = await fetch('/api/donation-project', { 
@@ -183,7 +185,7 @@ export default function CreateProjectPage() {
               id="targetAmount"
               step="any"
               {...register('targetAmount', { 
-                required: 'กรุณาระบุเป้าหมาย', 
+                // required: 'กรุณาระบุเป้าหมาย', 
                 min: { value: 0.01, message: 'เป้าหมายต้องมากกว่า 0' },
                 valueAsNumber: true 
               })}
@@ -236,6 +238,18 @@ export default function CreateProjectPage() {
               <option value="COMPLETED">สำเร็จ</option>
             </select>
             {errors.status && <p className="text-red-500 text-xs mt-1">{errors.status.message}</p>}
+          </div>
+
+          <div className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg border border-gray-200">
+            <input
+              type="checkbox"
+              id="isCentralFund"
+              {...register('isCentralFund')}
+              className="w-5 h-5 text-[#F26522] border-gray-300 rounded focus:ring-[#F26522] focus:ring-offset-0 cursor-pointer accent-[#F26522]"
+            />
+            <label htmlFor="isCentralFund" className="text-gray-700 text-sm font-semibold cursor-pointer select-none">
+              ตั้งเป็นกองทุนกลาง (Central Fund)
+            </label>
           </div>
 
           {/* รายละเอียดโครงการ */}

@@ -3,8 +3,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
-import { PrimaryButton } from './../../components/ui/Button';
-import { Card } from './../../components/ui/Card';
+import { PrimaryButton } from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
 import { FaCircleInfo, FaSpinner } from 'react-icons/fa6'; // Icon สำหรับ Loading/Error
 
 // --- 1. กำหนด Type สำหรับข้อมูลโครงการบริจาค ---
