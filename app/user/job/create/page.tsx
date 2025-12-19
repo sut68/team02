@@ -8,13 +8,14 @@ export default function JobPostPage() {
     title: '',
     position: '',
     jobType: 'Select Type',
-    education: '',
+    education: 'Select Education',
     salary: '',
     companyName: '',
     positions: '',
     address: '',
     contact: '',
-    transportation: ''
+    transportation: '',
+    qualifications: '' // 1. เพิ่มสถานะข้อมูลคุณสมบัติ
   });
 
   const [files, setFiles] = useState<{
@@ -63,33 +64,31 @@ export default function JobPostPage() {
       title: '',
       position: '',
       jobType: 'Select Type',
-      education: '',
+      education: 'Select Education',
       salary: '',
       companyName: '',
       positions: '',
       address: '',
       contact: '',
-      transportation: ''
+      transportation: '',
+      qualifications: '' // 2. รีเซ็ตข้อมูลคุณสมบัติเมื่อยกเลิก
     });
     setFiles({ attachment: null, logo: null, image: null });
     setPreviews({ attachment: null, logo: null, image: null });
     
-    // กลับไปหน้า /user/job
     window.location.href = '/user/job';
   };
 
   const handleSubmit = () => {
-    // Validate required fields
     if (!formData.jobTitle) {
       alert('กรุณาระบุชื่อหัวข้อของงาน');
       return;
     }
 
-    // Create job object
     const newJob = {
       id: Date.now(),
       ...formData,
-      previews: { ...previews }, // ใช้ previews จริง (base64)
+      previews: { ...previews },
       status: 'รออนุมัติ',
       date: new Date().toLocaleDateString('th-TH', {
         year: 'numeric',
@@ -100,14 +99,9 @@ export default function JobPostPage() {
     };
 
     try {
-        // Save to localStorage
         const existingJobs = JSON.parse(localStorage.getItem('jobs') || '[]');
         localStorage.setItem('jobs', JSON.stringify([...existingJobs, newJob]));
-
-        // Show success message
         alert('บันทึกประกาศงานสำเร็จ!');
-
-        // กลับไปหน้า List
         window.location.href = '/user/job';
         
     } catch (error) {
@@ -194,13 +188,21 @@ export default function JobPostPage() {
                 <label className="block text-sm text-[#6B7280] mb-2">
                   ระดับการศึกษา
                 </label>
-                <input 
-                  type="text"
-                  className="w-full px-4 py-3 border border-[#D1D5DB] rounded-full text-sm focus:border-[#FB923C] focus:outline-none"
-                  placeholder="ระบุระดับการศึกษา"
-                  value={formData.education}
-                  onChange={(e) => handleInputChange('education', e.target.value)}
-                />
+                <div className="relative">
+                  <select 
+                    className="w-full px-4 py-3 border border-[#D1D5DB] rounded-full text-sm text-[#9CA3AF] focus:border-[#FB923C] focus:outline-none appearance-none bg-[#E5E7EB] cursor-pointer pr-10"
+                    value={formData.education}
+                    onChange={(e) => handleInputChange('education', e.target.value)}
+                  >
+                    <option>Select Education</option>
+                    <option>ต่ำกว่าปริญญาตรี</option>
+                    <option>ปริญญาตรี</option>
+                    <option>ปริญญาโท</option>
+                    <option>ปริญญาเอก</option>
+                    <option>อื่นๆ</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#6B7280] pointer-events-none" />
+                </div>
               </div>
               <div>
                 <label className="block text-sm text-[#6B7280] mb-2">
@@ -283,6 +285,20 @@ export default function JobPostPage() {
                 placeholder="ระบุวิธีการเดินทาง"
                 value={formData.transportation}
                 onChange={(e) => handleInputChange('transportation', e.target.value)}
+              />
+            </div>
+
+            {/* คุณสมบัติ - 3. เพิ่มช่องกรอกคุณสมบัติใน UI */}
+            <div>
+              <label className="block text-sm text-[#6B7280] mb-2">
+                คุณสมบัติ
+              </label>
+              <textarea 
+                className="w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none resize-none"
+                rows={4}
+                placeholder="ระบุคุณสมบัติของผู้สมัคร (เช่น ประสบการณ์, ทักษะที่ต้องการ)"
+                value={formData.qualifications}
+                onChange={(e) => handleInputChange('qualifications', e.target.value)}
               />
             </div>
 

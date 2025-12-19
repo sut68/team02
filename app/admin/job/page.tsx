@@ -1,4 +1,3 @@
-
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Layers, RefreshCw, CheckCircle, XCircle, Edit2, Trash2 } from 'lucide-react';
@@ -63,7 +62,9 @@ export default function JobManagementPage() {
   };
 
   const handleViewDetail = (jobId: number) => {
+    // บันทึก jobId ลง localStorage เพื่อให้หน้ารายละเอียดดึงไปใช้
     localStorage.setItem('selectedJobId', jobId.toString());
+    // Redirect ไปหน้า edit
     window.location.href = '/admin/job/edit';
   };
 
@@ -101,13 +102,13 @@ export default function JobManagementPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <button 
             onClick={() => setFilterStatus('all')}
-            className={`bg-white rounded-2xl h-40 px-4 transition-all ${
+            className={`bg-white rounded-2xl p-6 transition-all ${
               filterStatus === 'all' 
                 ? 'shadow-[0_0_20px_rgba(249,115,22,0.4)] scale-105' 
                 : 'shadow-sm hover:shadow-md'
             }`}
           >
-            <div className="flex flex-col items-center justify-center h-full gap-3">
+            <div className="flex flex-col items-center gap-3">
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                 <Layers className="w-6 h-6 text-orange-500" />
               </div>
@@ -118,13 +119,13 @@ export default function JobManagementPage() {
 
           <button 
             onClick={() => setFilterStatus('pending')}
-            className={`bg-white rounded-2xl h-40 px-4 transition-all ${
+            className={`bg-white rounded-2xl p-4  transition-all ${
               filterStatus === 'pending' 
                 ? 'shadow-[0_0_20px_rgba(249,115,22,0.4)]  scale-105' 
                 : 'shadow-sm hover:shadow-md'
             }`}
           >
-            <div className="flex flex-col items-center justify-center h-full gap-3">
+            <div className="flex flex-col items-center gap-3">
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                 <RefreshCw className="w-6 h-6 text-orange-500" />
               </div>
@@ -135,13 +136,13 @@ export default function JobManagementPage() {
 
           <button 
             onClick={() => setFilterStatus('approved')}
-            className={`bg-white rounded-2xl h-40 px-4 transition-all ${
+            className={`bg-white rounded-2xl p-6 transition-all ${
               filterStatus === 'approved' 
                 ? 'shadow-[0_0_20px_rgba(249,115,22,0.4)]  scale-105' 
                 : 'shadow-sm hover:shadow-md'
             }`}
           >
-            <div className="flex flex-col items-center justify-center h-full gap-3">
+            <div className="flex flex-col items-center gap-3">
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                 <CheckCircle className="w-6 h-6 text-orange-500" />
               </div>
@@ -152,13 +153,13 @@ export default function JobManagementPage() {
 
           <button 
             onClick={() => setFilterStatus('rejected')}
-            className={`bg-white rounded-2xl h-40 px-4 transition-all ${
+            className={`bg-white rounded-2xl p-6 transition-all ${
               filterStatus === 'rejected' 
                 ? 'shadow-[0_0_20px_rgba(249,115,22,0.4)] scale-105' 
                 : 'shadow-sm hover:shadow-md'
             }`}
           >
-            <div className="flex flex-col items-center justify-center h-full gap-3">
+            <div className="flex flex-col items-center gap-3">
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                 <XCircle className="w-6 h-6 text-orange-500" />
               </div>
@@ -203,12 +204,24 @@ export default function JobManagementPage() {
                   filteredJobs.map((job) => (
                     <tr key={job.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-4">
-                        {/* ส่วนที่แก้ไข: ลบรูปภาพออก เหลือแต่ Text */}
-                        <div>
-                          <p className="text-sm font-medium text-gray-800">
-                            {job.jobTitle || job.title || 'ไม่ระบุชื่องาน'}
-                          </p>
-                          <p className="text-xs text-gray-500">{job.companyName || 'ไม่ระบุบริษัท'}</p>
+                        <div className="flex items-center gap-3">
+                          {job.previews?.logo ? (
+                            <img 
+                              src={job.previews.logo} 
+                              alt="Logo" 
+                              className="w-12 h-12 rounded-lg object-cover border border-gray-200"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
+                              <span className="text-gray-400 text-xs">No Logo</span>
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">
+                              {job.jobTitle || job.title || 'ไม่ระบุชื่องาน'}
+                            </p>
+                            <p className="text-xs text-gray-500">{job.companyName || 'ไม่ระบุบริษัท'}</p>
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">

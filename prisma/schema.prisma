@@ -890,5 +890,3 @@ model DonationTransaction {
   @@index([status])
   @@index([createdAt])
 }
-
-//kk

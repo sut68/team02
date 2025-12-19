@@ -29,12 +29,12 @@ export default function JobDetailPage() {
   const [job, setJob] = useState<Job | null>(null);
 
   useEffect(() => {
-    // ดึง jobId จาก localStorage
+    // ดึง jobId จาก localStorage (ในโปรเจคจริงใช้ router params)
     const jobId = localStorage.getItem('selectedJobId');
     
     if (jobId) {
       const jobs = JSON.parse(localStorage.getItem('jobs') || '[]');
-      const selectedJob = jobs.find((j: Job) => j.id === parseInt(jobId, 10));
+      const selectedJob = jobs.find((j: Job) => j.id === parseInt(jobId));
       setJob(selectedJob || null);
     }
   }, []);
@@ -73,6 +73,7 @@ export default function JobDetailPage() {
 
   const handleUpdateStatus = (newStatus: string) => {
     if (!job) return;
+
     // อัปเดตสถานะใน state
     setJob({ ...job, status: newStatus });
   };
@@ -82,7 +83,7 @@ export default function JobDetailPage() {
       case 'อนุมัติแล้ว': return 'bg-orange-500';
       case 'ไม่อนุมัติ': return 'bg-red-500';
       case 'รออนุมัติ': return 'bg-yellow-500';
-      default: return 'bg-gray-500';
+      default: return 'bg-orange-500';
     }
   };
 
@@ -126,13 +127,13 @@ export default function JobDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">ชื่อหัวข้อของงาน</label>
-                <div className="bg-gray-50 px-4 py-3 rounded-lg min-h-[48px]">
+                <div className="bg-gray-50 px-4 py-3 rounded-lg">
                   <p className="text-gray-800">{job.jobTitle || '-'}</p>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">Title</label>
-                <div className="bg-gray-50 px-4 py-3 rounded-lg min-h-[48px]">
+                <div className="bg-gray-50 px-4 py-3 rounded-lg">
                   <p className="text-gray-800">{job.title || '-'}</p>
                 </div>
               </div>
@@ -141,13 +142,13 @@ export default function JobDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">ตำแหน่งงาน</label>
-                <div className="bg-gray-50 px-4 py-3 rounded-lg min-h-[48px]">
+                <div className="bg-gray-50 px-4 py-3 rounded-lg">
                   <p className="text-gray-800">{job.position || '-'}</p>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">ประเภทของงาน</label>
-                <div className="bg-gray-50 px-4 py-3 rounded-lg min-h-[48px]">
+                <div className="bg-gray-50 px-4 py-3 rounded-lg">
                   <p className="text-gray-800">{job.jobType === 'Select Type' ? '-' : job.jobType}</p>
                 </div>
               </div>
@@ -156,13 +157,13 @@ export default function JobDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">ระดับการศึกษา</label>
-                <div className="bg-gray-50 px-4 py-3 rounded-lg min-h-[48px]">
+                <div className="bg-gray-50 px-4 py-3 rounded-lg">
                   <p className="text-gray-800">{job.education || '-'}</p>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">รายได้เฉลี่ย</label>
-                <div className="bg-gray-50 px-4 py-3 rounded-lg min-h-[48px]">
+                <div className="bg-gray-50 px-4 py-3 rounded-lg">
                   <p className="text-gray-800">{job.salary || '-'}</p>
                 </div>
               </div>
@@ -171,13 +172,13 @@ export default function JobDetailPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">ชื่อบริษัท</label>
-                <div className="bg-gray-50 px-4 py-3 rounded-lg min-h-[48px]">
+                <div className="bg-gray-50 px-4 py-3 rounded-lg">
                   <p className="text-gray-800">{job.companyName || '-'}</p>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">จำนวนอัตรา</label>
-                <div className="bg-gray-50 px-4 py-3 rounded-lg min-h-[48px]">
+                <div className="bg-gray-50 px-4 py-3 rounded-lg">
                   <p className="text-gray-800">{job.positions || '-'}</p>
                 </div>
               </div>
@@ -185,21 +186,21 @@ export default function JobDetailPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-2">ที่อยู่บริษัท</label>
-              <div className="bg-gray-50 px-4 py-3 rounded-lg min-h-[48px]">
+              <div className="bg-gray-50 px-4 py-3 rounded-lg">
                 <p className="text-gray-800 whitespace-pre-wrap">{job.address || '-'}</p>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-2">ช่องทางการติดต่อ</label>
-              <div className="bg-gray-50 px-4 py-3 rounded-lg min-h-[48px]">
+              <div className="bg-gray-50 px-4 py-3 rounded-lg">
                 <p className="text-gray-800 whitespace-pre-wrap">{job.contact || '-'}</p>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-2">วิธีการเดินทาง</label>
-              <div className="bg-gray-50 px-4 py-3 rounded-lg min-h-[48px]">
+              <div className="bg-gray-50 px-4 py-3 rounded-lg">
                 <p className="text-gray-800 whitespace-pre-wrap">{job.transportation || '-'}</p>
               </div>
             </div>

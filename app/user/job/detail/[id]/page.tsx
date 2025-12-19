@@ -11,6 +11,7 @@ interface Job {
   jobType: string;
   education: string;
   salary: string;
+  qualifications: string;
   companyName: string;
   positions: string;
   address: string;
@@ -93,6 +94,7 @@ export default function JobDetailPage() {
               )}
 
               {/* Logo Overlay (ซ้อนทับมุมซ้ายล่าง) */}
+              {/* แก้ไข: เปลี่ยน rounded-lg เป็น rounded-none เพื่อให้กรอบเป็นเหลี่ยม */}
               <div className="absolute -bottom-4 left-6 translate-y-0 w-24 h-24 md:w-32 md:h-32 bg-white rounded-non shadow-md border border-gray-100 flex items-center justify-center overflow-hidden p-2 z-10">
                  {job.previews?.logo ? (
                       <img
@@ -139,14 +141,6 @@ export default function JobDetailPage() {
                     <p className="text-base text-[#1F2937] font-medium">{job.positions || '-'} อัตรา</p>
                   </div>
                 </div>
-
-                <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 text-[#F97316] flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm text-[#6B7280]">สถานที่ปฏิบัติงาน</p>
-                    <p className="text-base text-[#1F2937] font-medium">{job.address || '-'}</p>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -176,11 +170,8 @@ export default function JobDetailPage() {
                   คุณสมบัติ
                 </h3>
                 <div className="space-y-1 text-sm text-[#374151]">
-                  {job.education && (
-                    <p>• ระดับการศึกษา: {job.education}</p>
-                  )}
-                  {job.jobType && job.jobType !== 'Select Type' && (
-                    <p>• ประเภทงาน: {job.jobType}</p>
+                  {job.qualifications && (
+                    <p> {job.qualifications}</p>
                   )}
                 </div>
               </div>
