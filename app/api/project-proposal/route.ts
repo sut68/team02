@@ -66,12 +66,47 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// ... (POST, PUT, DELETE functions remain the same as previous version)
 // POST: สร้างข้อมูล
 export async function POST(request: NextRequest) {
     try {
       const body = await request.json();
       const { project, manager } = body;
+  
+      // เตรียมตัวแปร roundId และชื่อโครงการเพื่อใช้ตรวจสอบ
+      const roundId = project.budgetRoundId ? Number(project.budgetRoundId) : undefined;
+      const cleanName = project.projectName ? project.projectName.trim() : '';
+
+      // --- VALIDATION ชื่อโครงการ (projectName) ---
+      
+      // 1. เช็คค่าว่าง (ชื่อโครงการ)
+      if (!cleanName) {
+        return NextResponse.json({ error: 'ชื่อโครงการห้ามว่าง' }, { status: 400 });
+      }
+
+      // 2. เช็คความยาวขั้นต่ำ (3 ตัวอักษร)
+      if (cleanName.length < 3) {
+        return NextResponse.json({ error: 'ชื่อโครงการสั้นเกินไป (ต้องมีอย่างน้อย 3 ตัวอักษร)' }, { status: 400 });
+      }
+
+      // 3. เช็คความยาวสูงสุด (200 ตัวอักษร)
+      if (cleanName.length > 200) {
+        return NextResponse.json({ error: 'ชื่อโครงการยาวเกินไป (ไม่เกิน 200 ตัวอักษร)' }, { status: 400 });
+      }
+
+      // 4. เช็คชื่อซ้ำ (เฉพาะในรอบงบประมาณเดียวกัน)
+      if (roundId) {
+        const existingProject = await prisma.projectProposal.findFirst({
+            where: { 
+                projectName: { equals: cleanName, mode: 'insensitive' }, // ไม่สนตัวพิมพ์เล็กใหญ่
+                budgetRoundId: roundId, // เช็คเฉพาะรอบนี้
+                deletedAt: null // ไม่นับตัวที่ถูกลบไปแล้ว
+            }
+        });
+
+        if (existingProject) {
+            return NextResponse.json({ error: 'ชื่อโครงการนี้มีอยู่ในรอบงบประมาณนี้แล้ว' }, { status: 409 }); // 409 Conflict
+        }
+      }
   
       let managerData = undefined;
       if (manager) {
@@ -114,15 +149,14 @@ export async function POST(request: NextRequest) {
         }
       }
   
-      const roundId = project.budgetRoundId ? Number(project.budgetRoundId) : undefined;
       const staffId = project.staffId ? Number(project.staffId) : undefined;
   
       const newProposal = await prisma.projectProposal.create({
         data: {
-          projectName: project.projectName,
+          projectName: cleanName, // ใช้ชื่อที่ trim แล้ว
           objective: project.objective,
           description: project.description,
-          requestedAmount: Number(project.requestedAmount),
+          requestedAmount: project.requestedAmount ? Number(project.requestedAmount) : undefined,
           responsibilityUnit: project.responsibilityUnit,
           coverFilePath: project.coverFilePath || null,
           projectStartDate: project.projectStartDate ? new Date(project.projectStartDate) : null,
