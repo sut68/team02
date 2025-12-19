@@ -156,24 +156,83 @@ describe('Project Proposal API - Validation Tests', () => {
   });
 
   it('TC-VAL-07: Should trim whitespace from project name before saving', async () => {
-  const body = {
-    project: { projectName: '   Project A   ', budgetRoundId: 2, requestedAmount: 500 },
-    manager: { firstName: 'Test' }
-  };
-  
-  // Mock ให้หาไม่เจอ (ไม่ซ้ำ) และ Create สำเร็จ
-  (prisma.projectProposal.findFirst as jest.Mock).mockResolvedValue(null);
-  (prisma.projectProposal.create as jest.Mock).mockResolvedValue({ id: 1, projectName: 'Project A' }); // Mock ผลลัพธ์ที่ Trim แล้ว
+    const body = {
+        project: { projectName: '   Project A   ', budgetRoundId: 2, requestedAmount: 500 },
+        manager: { firstName: 'Test' }
+    };
+    
+    // Mock ให้หาไม่เจอ (ไม่ซ้ำ) และ Create สำเร็จ
+    (prisma.projectProposal.findFirst as jest.Mock).mockResolvedValue(null);
+    (prisma.projectProposal.create as jest.Mock).mockResolvedValue({ id: 1, projectName: 'Project A' }); // Mock ผลลัพธ์ที่ Trim แล้ว
 
-  const req = new NextRequest('http://localhost:3000/api', { method: 'POST', body: JSON.stringify(body) });
-  await POST(req);
+    const req = new NextRequest('http://localhost:3000/api', { method: 'POST', body: JSON.stringify(body) });
+    await POST(req);
 
-  // ตรวจสอบว่า Prisma ถูกเรียกด้วยค่าที่ Trim แล้ว ('Project A') ไม่ใช่ค่าเดิมที่มี Space
-  expect(prisma.projectProposal.create).toHaveBeenCalledWith(expect.objectContaining({
-    data: expect.objectContaining({
-      projectName: 'Project A' // ✅ ต้องตรงกับค่าที่คาดหวัง
-    })
-  }));
-});
+    // ตรวจสอบว่า Prisma ถูกเรียกด้วยค่าที่ Trim แล้ว ('Project A') ไม่ใช่ค่าเดิมที่มี Space
+    expect(prisma.projectProposal.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({
+        projectName: 'Project A' // ✅ ต้องตรงกับค่าที่คาดหวัง
+        })
+    }));
+    });
 
+ it('TC-VAL-08: Should return 400 if description is too long (> 500 chars)', async () => {
+    const longDesc = 'a'.repeat(501); // สร้างคำบรรยายยาว 501 ตัว
+    const body = {
+      project: { 
+          projectName: 'Normal Name', 
+          description: longDesc,
+          budgetRoundId: 1 
+      },
+      manager: { firstName: 'Test' }
+    };
+    const req = new NextRequest('http://localhost:3000/api', { method: 'POST', body: JSON.stringify(body) });
+    
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.error).toMatch(/รายละเอียดโครงการต้องไม่เกิน 500/);
+  });
+
+  // ✅ Test Case: ทดสอบส่ง 500 ตัวพอดีเป๊ะ
+  it('TC-VAL-09: Should ALLOW description with exactly 500 chars', async () => {
+    const boundaryDesc = 'a'.repeat(500); // 500 ตัวพอดีเป๊ะ
+    const body = {
+      project: { 
+          projectName: 'Boundary Project', 
+          description: boundaryDesc,
+          budgetRoundId: 2 
+      },
+      manager: { firstName: 'Test' }
+    };
+
+    // Mock ให้ผ่าน
+    (prisma.projectProposal.findFirst as jest.Mock).mockResolvedValue(null);
+    (prisma.projectProposal.create as jest.Mock).mockResolvedValue({ id: 1, ...body.project });
+
+    const req = new NextRequest('http://localhost:3000/api', { method: 'POST', body: JSON.stringify(body) });
+    const res = await POST(req);
+
+    expect(res.status).toBe(201); // ต้องผ่าน
+  });
+
+  // ✅ Test Case: ทดสอบว่าเป็น Optional (ไม่กรอกก็ต้องได้)
+  it('TC-VAL-10: Should ALLOW creating project without description', async () => {
+    const body = {
+      project: { 
+          projectName: 'No Desc Project', 
+          budgetRoundId: 2 
+      },
+      manager: { firstName: 'Test' }
+    };
+
+    (prisma.projectProposal.findFirst as jest.Mock).mockResolvedValue(null);
+    (prisma.projectProposal.create as jest.Mock).mockResolvedValue({ id: 1, ...body.project });
+
+    const req = new NextRequest('http://localhost:3000/api', { method: 'POST', body: JSON.stringify(body) });
+    const res = await POST(req);
+
+    expect(res.status).toBe(201); // ต้องผ่าน
+  });
 });

@@ -107,6 +107,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'ชื่อโครงการนี้มีอยู่ในรอบงบประมาณนี้แล้ว' }, { status: 409 }); // 409 Conflict
         }
       }
+
+      // 5. ตรวจสอบรายละเอียด (ถ้ามี ต้องไม่เกิน 500 ตัวอักษร)
+      if (project.description && project.description.length > 500) {
+        return NextResponse.json({ error: 'รายละเอียดโครงการต้องไม่เกิน 500 ตัวอักษร' }, { status: 400 });
+      }
   
       let managerData = undefined;
       if (manager) {
