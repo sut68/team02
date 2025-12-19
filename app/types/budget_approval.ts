@@ -77,6 +77,7 @@ export interface ProjectProposal {
   scoreTotal?: number;
   status: ProjectStatus; // ใช้ Enum String
   createdAt?: string | Date;
+  deletedAt?: string | Date | null;
   
   // Relations
   manager?: ProjectManager;
