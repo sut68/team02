@@ -112,7 +112,24 @@ export async function POST(request: NextRequest) {
       if (project.description && project.description.length > 500) {
         return NextResponse.json({ error: 'รายละเอียดโครงการต้องไม่เกิน 500 ตัวอักษร' }, { status: 400 });
       }
-  
+
+      // 6. ตรวจสอบ requestedAmount
+    if (project.requestedAmount !== undefined && project.requestedAmount !== null) {
+      const amount = Number(project.requestedAmount);
+
+      // 1. เช็คว่าไม่ใช่ตัวเลข หรือ น้อยกว่าเท่ากับ 0
+      if (isNaN(amount) || amount <= 0) {
+        return NextResponse.json({ error: 'งบประมาณที่ขอต้องมากกว่า 0' }, { status: 400 });
+      }
+
+      // 2. เช็คทศนิยม (ไม่เกิน 2 ตำแหน่ง)
+      // แปลงเป็น string แล้วเช็คว่าถ้ามีจุดทศนิยม ส่วนหลังจุดต้องยาวไม่เกิน 2
+      const amountStr = amount.toString();
+      if (amountStr.includes('.') && amountStr.split('.')[1].length > 2) {
+         return NextResponse.json({ error: 'งบประมาณต้องมีทศนิยมไม่เกิน 2 ตำแหน่ง' }, { status: 400 });
+      }
+    }
+
       let managerData = undefined;
       if (manager) {
         if (manager.id) {
@@ -198,6 +215,39 @@ export async function PUT(request: NextRequest) {
     const { id, status, manager, ...data } = body;
     if (!id) return NextResponse.json({ error: 'ไม่พบ ID' }, { status: 400 });
 
+    if (data.projectName !== undefined) {
+       const cleanName = data.projectName.trim();
+       if (!cleanName) {
+           return NextResponse.json({ error: 'ชื่อโครงการห้ามว่าง' }, { status: 400 });
+       }
+       if (cleanName.length < 3) {
+           return NextResponse.json({ error: 'ชื่อโครงการสั้นเกินไป (ต้องมีอย่างน้อย 3 ตัวอักษร)' }, { status: 400 });
+       }
+       if (cleanName.length > 200) {
+           return NextResponse.json({ error: 'ชื่อโครงการยาวเกินไป (ไม่เกิน 200 ตัวอักษร)' }, { status: 400 });
+       }
+       // การเช็คชื่อซ้ำตอน Edit จะซับซ้อนกว่า ถ้ายังไม่ซีเรียสมาก ข้ามการเช็คชื่อซ้ำใน Edit ไปก่อนได้ครับ
+    }
+
+    if (data.description && data.description.length > 500) {
+       return NextResponse.json({ error: 'รายละเอียดโครงการต้องไม่เกิน 500 ตัวอักษร' }, { status: 400 });
+    }
+
+    if (data.requestedAmount !== undefined && data.requestedAmount !== null) {
+      const amount = Number(data.requestedAmount);
+
+      // 1. เช็ค <= 0
+      if (isNaN(amount) || amount <= 0) {
+        return NextResponse.json({ error: 'งบประมาณที่ขอต้องมากกว่า 0' }, { status: 400 });
+      }
+
+      // 2. เช็คทศนิยม
+      const amountStr = amount.toString();
+      if (amountStr.includes('.') && amountStr.split('.')[1].length > 2) {
+         return NextResponse.json({ error: 'งบประมาณต้องมีทศนิยมไม่เกิน 2 ตำแหน่ง' }, { status: 400 });
+      }
+    }
+
     let managerUpdate = undefined;
     if (manager && manager.id) {
         managerUpdate = {
@@ -218,7 +268,7 @@ export async function PUT(request: NextRequest) {
         projectName: data.projectName,
         objective: data.objective,
         description: data.description,
-        requestedAmount: data.requestedAmount ? Number(data.requestedAmount) : undefined,
+        requestedAmount: data.requestedAmount ? Number(data.requestedAmount) : undefined, 
         responsibilityUnit: data.responsibilityUnit,
         coverFilePath: data.coverFilePath,
         projectStartDate: data.projectStartDate ? new Date(data.projectStartDate) : undefined,

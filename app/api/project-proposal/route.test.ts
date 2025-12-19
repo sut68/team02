@@ -235,4 +235,53 @@ describe('Project Proposal API - Validation Tests', () => {
 
     expect(res.status).toBe(201); // ต้องผ่าน
   });
+
+  // ✅ Test Case: ตรวจสอบงบประมาณ (ห้ามติดลบ หรือ เป็น 0)
+  it('TC-VAL-11: Should return 400 if requested amount is zero or negative', async () => {
+    const body = {
+      project: { 
+          projectName: 'Bad Budget Project', 
+          requestedAmount: -500, // ❌ ลองส่งค่าติดลบ
+          budgetRoundId: 2 
+      },
+      manager: { firstName: 'Test' }
+    };
+
+    const req = new NextRequest('http://localhost:3000/api', { method: 'POST', body: JSON.stringify(body) });
+    
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.error).toBe('งบประมาณที่ขอต้องมากกว่า 0'); // ต้องตรงกับข้อความใน route.ts
+  });
+
+  it('TC-VAL-12: Should return 400 if decimal places > 2', async () => {
+    const body = {
+      project: { projectName: 'Decimal Project', requestedAmount: 100.123, budgetRoundId: 1 },
+      manager: { firstName: 'Test' }
+    };
+    const req = new NextRequest('http://localhost:3000/api', { method: 'POST', body: JSON.stringify(body) });
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.error).toBe('งบประมาณต้องมีทศนิยมไม่เกิน 2 ตำแหน่ง');
+  });
+
+  it('TC-VAL-13: Should create proposal successfully (regardless of budget limit)', async () => {
+    const roundId = 1;
+    const body = {
+      project: { projectName: 'My Project', requestedAmount: 99999999, budgetRoundId: roundId }, // ขอเยอะๆ ก็ได้
+      manager: { firstName: 'Test' }
+    };
+
+    (prisma.projectProposal.findFirst as jest.Mock).mockResolvedValue(null);
+    (prisma.projectProposal.create as jest.Mock).mockResolvedValue({ id: 1, ...body.project });
+
+    const req = new NextRequest('http://localhost:3000/api', { method: 'POST', body: JSON.stringify(body) });
+    const res = await POST(req);
+
+    expect(res.status).toBe(201);
+  });
 });
