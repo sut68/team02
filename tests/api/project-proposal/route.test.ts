@@ -389,5 +389,161 @@ describe('Project Proposal API - Validation Tests', () => {
     expect(res.status).toBe(201); // Created
   });
 
-  // Test Case ของ PUT ยังคงเดิมได้ (แต่ถ้าจะเทส PUT เรื่อง Manager ก็ต้องเพิ่ม manager object ใน body ให้ครบเหมือนกันครับ)
+  describe('PUT Request Validation', () => {
+    
+    // ✅ Test Case: แก้ไขข้อมูลสำเร็จ (Happy Path)
+    it('TC-PUT-01: Should update project details successfully', async () => {
+      const body = {
+        id: 1,
+        projectName: 'Updated Project Name',
+        description: 'Updated Description',
+        manager: { id: 1, firstName: 'UpdatedManager' } // ส่ง ID เพื่อบอกว่าอัปเดตคนเดิม
+      };
+
+      // Mock Update
+      (prisma.projectProposal.update as jest.Mock).mockResolvedValue({
+        id: 1,
+        projectName: 'Updated Project Name',
+        description: 'Updated Description'
+      });
+
+      const req = new NextRequest('http://localhost:3000/api', { method: 'PUT', body: JSON.stringify(body) });
+      const res = await PUT(req);
+      const json = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(json.message).toBe('แก้ไขสำเร็จ');
+      expect(json.proposal.projectName).toBe('Updated Project Name');
+    });
+
+    // ❌ Validation Failures (เหมือน POST)
+
+    it('TC-PUT-VAL-02: Should Trim whitespace when updating project name', async () => {
+      const body = { id: 1, projectName: '   Updated Name   ' };
+      
+      // Mock result
+      (prisma.projectProposal.update as jest.Mock).mockResolvedValue({ id: 1, projectName: 'Updated Name' });
+
+      const req = new NextRequest('http://localhost:3000/api', { method: 'PUT', body: JSON.stringify(body) });
+      await PUT(req);
+
+      // เช็คว่า Prisma ถูกเรียกด้วยค่าที่ Trim แล้ว
+      expect(prisma.projectProposal.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ projectName: 'Updated Name' })
+      }));
+    });
+
+    it('TC-PUT-VAL-03: Should return 400 if UPDATING description too long (> 500 chars)', async () => {
+      const longDesc = 'a'.repeat(501);
+      const body = { id: 1, description: longDesc };
+      const req = new NextRequest('http://localhost:3000/api', { method: 'PUT', body: JSON.stringify(body) });
+      const res = await PUT(req);
+      const json = await res.json();
+      expect(res.status).toBe(400);
+      expect(json.error).toMatch(/รายละเอียดโครงการต้องไม่เกิน 500/);
+    });
+
+    it('TC-PUT-VAL-04: Should return 400 if UPDATING requested amount to zero or negative', async () => {
+      const body = { id: 1, requestedAmount: -100 };
+      const req = new NextRequest('http://localhost:3000/api', { method: 'PUT', body: JSON.stringify(body) });
+      const res = await PUT(req);
+      const json = await res.json();
+      expect(res.status).toBe(400);
+      expect(json.error).toBe('งบประมาณที่ขอต้องมากกว่า 0');
+    });
+
+    it('TC-PUT-VAL-05: Should return 400 if UPDATING requested amount decimal > 2', async () => {
+      const body = { id: 1, requestedAmount: 500.999 };
+      const req = new NextRequest('http://localhost:3000/api', { method: 'PUT', body: JSON.stringify(body) });
+      const res = await PUT(req);
+      const json = await res.json();
+      expect(res.status).toBe(400);
+      expect(json.error).toBe('งบประมาณต้องมีทศนิยมไม่เกิน 2 ตำแหน่ง');
+    });
+
+    it('TC-PUT-DATE-06: Should return 400 if UPDATING End Date BEFORE Start Date', async () => {
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() - 1); // จบก่อนเริ่ม
+      const body = { 
+          id: 1, 
+          projectStartDate: startDate.toISOString(), 
+          projectEndDate: endDate.toISOString() 
+      };
+      const req = new NextRequest('http://localhost:3000/api', { method: 'PUT', body: JSON.stringify(body) });
+      const res = await PUT(req);
+      const json = await res.json();
+      expect(res.status).toBe(400);
+      expect(json.error).toBe('วันสิ้นสุดโครงการต้องไม่อยู่ก่อนวันเริ่มต้น');
+    });
+
+    it('TC-PUT-FILE-07: Should return 400 when UPDATING with invalid file extension', async () => {
+      const body = { id: 1, coverFilePath: '/uploads/virus.exe' };
+      const req = new NextRequest('http://localhost:3000/api', { method: 'PUT', body: JSON.stringify(body) });
+      const res = await PUT(req);
+      const json = await res.json();
+      expect(res.status).toBe(400);
+      expect(json.error).toMatch(/ต้องเป็นไฟล์รูปภาพเท่านั้น/);
+    });
+
+    // ❌ Manager Validation in PUT
+
+    it('TC-PUT-MGR-08: Should return 400 if updating manager with empty name', async () => {
+      const body = { 
+          id: 1, 
+          manager: { id: 1, firstName: '' } // ❌ ส่งชื่อว่าง
+      };
+      const req = new NextRequest('http://localhost:3000/api', { method: 'PUT', body: JSON.stringify(body) });
+      const res = await PUT(req);
+      const json = await res.json();
+      expect(res.status).toBe(400);
+      expect(json.error).toBe('ชื่อผู้รับผิดชอบโครงการห้ามว่าง');
+    });
+
+    it('TC-PUT-MGR-09: Should return 400 if updating manager with invalid phone (9 digits)', async () => {
+      const body = { 
+          id: 1, 
+          manager: { id: 1, phoneNumber: '081234567' } // ❌ 9 หลัก
+      };
+      const req = new NextRequest('http://localhost:3000/api', { method: 'PUT', body: JSON.stringify(body) });
+      const res = await PUT(req);
+      const json = await res.json();
+      expect(res.status).toBe(400);
+      expect(json.error).toBe('เบอร์โทรศัพท์มือถือต้องมี 10 หลัก');
+    });
+
+    // ✅ Logic Checks
+
+    it('TC-PUT-LOGIC-10: Should trigger email sending when status changes to OPEN', async () => {
+      const body = { id: 1, status: 'OPEN' };
+      // Mock ให้คืนค่าที่มี budgetRoundId เพื่อไปหา Voter ได้
+      (prisma.projectProposal.update as jest.Mock).mockResolvedValue({
+        id: 1, status: 'OPEN', projectName: 'Open Project', budgetRoundId: 10
+      });
+      // Mock Voters
+      (prisma.user.findMany as jest.Mock).mockResolvedValue([
+        { email: 'voter@test.com', fullName: 'Voter' }
+      ]);
+
+      const req = new NextRequest('http://localhost:3000/api', { method: 'PUT', body: JSON.stringify(body) });
+      const res = await PUT(req);
+      expect(res.status).toBe(200);
+      
+      // เช็คว่าส่งเมลจริง
+      const { transporter } = require('@/app/lib/nodemailer');
+      expect(transporter.sendMail).toHaveBeenCalled();
+    });
+    
+    it('TC-PUT-LOGIC-11: Should restore deleted project', async () => {
+      const body = { id: 1, restore: true };
+      (prisma.projectProposal.update as jest.Mock).mockResolvedValue({ id: 1, deletedAt: null });
+      
+      const req = new NextRequest('http://localhost:3000/api', { method: 'PUT', body: JSON.stringify(body) });
+      const res = await PUT(req);
+      const json = await res.json();
+      
+      expect(res.status).toBe(200);
+      expect(json.message).toBe('กู้คืนสำเร็จ');
+    });
+  });
 });
