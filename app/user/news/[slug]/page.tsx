@@ -97,7 +97,7 @@ export default function NewsDetailPage({
 }) {
   // ✅ Next 16 ต้องใช้ use(params)
   const { slug } = use(params);
-  //const id = Number(slug); // ใช้ slug เป็น id
+
   const [data, setData] = useState<ContentDetail | null>(null);
   const [meta, setMeta] = useState<MetaItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,7 +105,6 @@ export default function NewsDetailPage({
 
   useEffect(() => {
     const fetchDetail = async () => {
-
       try {
         const res = await fetch(`/api/content?id=${slug}`, {
           method: "GET",
@@ -182,9 +181,7 @@ export default function NewsDetailPage({
 
   // -------- คำนวณจำนวนที่นั่ง ----------
   const totalSeats =
-    data?.bookingForm?.TotalSeats != null
-      ? data.bookingForm.TotalSeats
-      : null;
+    data?.bookingForm?.TotalSeats != null ? data.bookingForm.TotalSeats : null;
 
   const usedSeats =
     data?.bookings?.reduce(
@@ -199,8 +196,7 @@ export default function NewsDetailPage({
   const imageUrl = data?.pictures?.[0]?.Path || "/Content/Event6.jpg";
 
   const displayTitle = data?.TitleName || "(ไม่มีชื่อเรื่อง)";
-  const displayDate =
-    meta.find((m) => m.label === "เผยแพร่เมื่อ")?.value || "";
+  const displayDate = meta.find((m) => m.label === "เผยแพร่เมื่อ")?.value || "";
 
   const authorName =
     data?.user?.fullName ||
@@ -220,10 +216,7 @@ export default function NewsDetailPage({
     return (
       <div className="container mx-auto py-10 px-4 max-w-4xl">
         <p className="text-red-500 mb-4">{error || "ไม่พบข่าวที่ต้องการ"}</p>
-        <Link
-          href="/news"
-          className="text-[#F26522] hover:underline text-sm"
-        >
+        <Link href="/news" className="text-[#F26522] hover:underline text-sm">
           ← กลับไปหน้าข่าวทั้งหมด
         </Link>
       </div>
@@ -237,9 +230,7 @@ export default function NewsDetailPage({
         <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-1">
           {displayTitle}
         </h1>
-        {displayDate && (
-          <p className="text-sm text-gray-500">{displayDate}</p>
-        )}
+        {displayDate && <p className="text-sm text-gray-500">{displayDate}</p>}
       </header>
 
       {/* Featured Image */}
@@ -287,19 +278,13 @@ export default function NewsDetailPage({
               {remainingSeats != null ? remainingSeats : "-"}
             </p>
             {totalSeats != null && (
-              <p className="text-sm text-gray-700">
-                จาก {totalSeats} คน
-              </p>
+              <p className="text-sm text-gray-700">จาก {totalSeats} คน</p>
             )}
           </div>
 
-          {/* ปุ่มลงทะเบียน */}
+          {/* ✅ ปุ่มลงทะเบียน: ไปหน้า booking ของ slug นี้ (ไม่อิง bookingFormId) */}
           <Link
-            href={
-              data.bookingForm?.id
-                ? `/user/booking/${data.bookingForm.id}`
-                : "#"
-            } // 👈 เปลี่ยน path นี้ให้ตรงกับหน้าจองของ bro ได้
+            href={`/user/booking?contentId=${data.id}`}
             className="mt-4 w-full max-w-sm"
           >
             <button className="w-full bg-[#F26522] text-white rounded-full py-3 text-center text-sm font-semibold hover:bg-orange-600 transition disabled:opacity-60">
@@ -314,16 +299,10 @@ export default function NewsDetailPage({
       {/* Footer ผู้เขียน */}
       <footer className="mt-6 flex ">
         <div className="flex items-center gap-4">
-          
-          {/* Author name */}
           <span className="text-base font-semibold text-[#F26522]">
             {authorName}
           </span>
-
-          {/* Divider */}
           <span className="text-gray-300">|</span>
-
-          {/* Label */}
           <span className="text-base text-gray-600">ผู้เขียน</span>
         </div>
       </footer>

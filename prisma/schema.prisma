@@ -1,14 +1,15 @@
 model PasswordResetToken {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   email     String
-  tokenHash String   @unique
+  tokenHash String    @unique
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([email])
   @@index([expiresAt])
 }
+
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -177,7 +178,6 @@ model Verification {
   user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-
 //kk
 model Submission {
   id     Int          @id @default(autoincrement())
@@ -254,8 +254,10 @@ model SouvenirItem {
   shipments    Shipment[]
   donations    Donation[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  donationTransaction   DonationTransaction? @relation(fields: [donationTransactionId], references: [id])
+  donationTransactionId Int?
 }
 
 // บันทึกการเคลื่อนไหวสต็อก (เติม/ตัดของ)
@@ -282,13 +284,13 @@ model Entitlement {
   qtyGranted  Int               @default(1) // ได้สิทธิ์ทั้งหมดกี่ชิ้น
   qtyUsed     Int               @default(0) // ใช้สิทธิ์ไปแล้วกี่ชิ้น
   // ✅ เพิ่มอันนี้
-  redeemToken String? @unique
+  redeemToken String?           @unique
 
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  user        User              @relation(fields: [userId], references: [id])
-  item        SouvenirItem      @relation(fields: [itemId], references: [id])
-  donation    Donation?         @relation(fields: [donationId], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  user        User         @relation(fields: [userId], references: [id])
+  item        SouvenirItem @relation(fields: [itemId], references: [id])
+  donation    Donation?    @relation(fields: [donationId], references: [id])
   redemptions Redemption[]
 
   @@index([userId, itemId])
@@ -434,9 +436,11 @@ model BookingField {
 // การจองของผู้ใช้
 model Booking {
   id                Int               @id @default(autoincrement())
-  Date              DateTime          @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   Userid            Int?
   ContentID         Int?
+  bookingFormId Int?
   BookingFieldID    Int?              @unique
   PaymentID         Int?              @unique
   transactionStatus TransactionStatus @default(PENDING)
@@ -444,11 +448,11 @@ model Booking {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user         User?         @relation(fields: [Userid], references: [id])
-  content      Content?      @relation(fields: [ContentID], references: [id])
-  bookingField BookingField? @relation(fields: [BookingFieldID], references: [id])
-  payment      PaymentRecord?      @relation(fields: [PaymentID], references: [id])
-  bookingForm  BookingForm?  @relation(fields: [bookingFormId], references: [id])
+  user         User?          @relation(fields: [Userid], references: [id])
+  content      Content?       @relation(fields: [ContentID], references: [id])
+  bookingField BookingField?  @relation(fields: [BookingFieldID], references: [id])
+  payment      PaymentRecord? @relation(fields: [PaymentID], references: [id])
+  bookingForm  BookingForm?   @relation(fields: [bookingFormId], references: [id])
 
   bookingFormId Int?
   attendees     Attendee[]
@@ -502,9 +506,9 @@ model Content {
   pictures PictureContent[]
   bookings Booking[]
 
-  @@index([souvenirItemId])
   // ✅ เพื่อ upsert ได้: TitleName + categories unique
   @@unique([TitleName, categories])
+  @@index([souvenirItemId])
 }
 
 // รูปภาพที่เกี่ยวข้องกับเนื้อหา
@@ -556,8 +560,8 @@ enum SummarySubmissionStatus {
 
 enum RoundStatus {
   PREPARING // กำลังเตรียม (ค่า Default)
-  OPEN      // เปิดรับบริจาค/โหวต
-  CLOSED    // ปิดแล้ว
+  OPEN // เปิดรับบริจาค/โหวต
+  CLOSED // ปิดแล้ว
 }
 
 // ผู้จัดการโครงการ
@@ -578,14 +582,14 @@ model ProjectManager {
 
 // รอบงบประมาณ
 model BudgetRound {
-  id          Int       @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   roundName   String
   fiscalYear  String?
   totalBudget Float?
   startDate   DateTime?
   endDate     DateTime?
   // Safety Switch
-  isPublished Boolean  @default(false)
+  isPublished Boolean     @default(false)
   // 
   status      RoundStatus @default(PREPARING)
 
@@ -665,15 +669,15 @@ model SubmissionImage {
 
 // การบริจาคเข้ารอบงบประมาณ
 model BudgetDonation {
-  id      Int   @id @default(autoincrement())
-  message String?
-  status  TransactionStatus @default(PENDING)
-  amount Float
-  donorName  String? // ชื่อที่ผู้ใช้ระบุในฟอร์ม (ถ้าไม่ Login)
-  donorEmail String?
-  donorPhone String?
-  isPublic   Boolean @default(true) // แสดงชื่อผู้บริจาคสาธารณะหรือไม่
-  paymentId Int?
+  id            Int               @id @default(autoincrement())
+  message       String?
+  status        TransactionStatus @default(PENDING)
+  amount        Float
+  donorName     String? // ชื่อที่ผู้ใช้ระบุในฟอร์ม (ถ้าไม่ Login)
+  donorEmail    String?
+  donorPhone    String?
+  isPublic      Boolean           @default(true) // แสดงชื่อผู้บริจาคสาธารณะหรือไม่
+  paymentId     Int?
   paymentRecord PaymentRecord[]
 
   createdAt DateTime  @default(now())
@@ -681,9 +685,9 @@ model BudgetDonation {
   deletedAt DateTime?
 
   budgetRoundId Int
-  budgetRound BudgetRound @relation(fields: [budgetRoundId], references: [id])
+  budgetRound   BudgetRound @relation(fields: [budgetRoundId], references: [id])
   userId        Int
-  user        User        @relation(fields: [userId], references: [id])
+  user          User        @relation(fields: [userId], references: [id])
 }
 
 // การโหวตโครงการ
@@ -799,31 +803,33 @@ model ContentManagementLog {
 
 // 💡 NEW MODEL: โครงการระดมทุน (DonationProject)
 model DonationProject {
-  id            Int      @id @default(autoincrement())
+  id            Int           @id @default(autoincrement())
   title         String
   description   String
   goalAmount    Float
-  currentAmount Float    @default(0)
+  currentAmount Float         @default(0)
   startDate     DateTime
   endDate       DateTime
   ownerName     String
   contact       String
-  isCentralFund Boolean  @default(false)
+  isCentralFund Boolean       @default(false)
   // status (ใช้ Enum ใหม่)
-  status    ProjectStatus @default(OPEN)
-  posterUrl String?
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  status        ProjectStatus @default(OPEN)
+  posterUrl     String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   // Relations
-  transactions DonationTransaction[] // ความสัมพันธ์ 1-to-Many กับ Transaction
+  transactions   DonationTransaction[] // ความสัมพันธ์ 1-to-Many กับ Transaction
+  souvenirItem   SouvenirItem?         @relation(fields: [souvenirItemId], references: [id])
+  souvenirItemId Int?
 }
 
 // 💡 NEW MODEL: ธุรกรรมการบริจาค (DonationTransaction)
 model DonationTransaction {
   id Int @id @default(autoincrement())
 
-  amount Float
+  amount  Float
   message String?
 
   // สถานะการทำธุรกรรม (Pending, Success, Failed)
@@ -846,10 +852,11 @@ model DonationTransaction {
   projectId Int
   project   DonationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  paymentId Int?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  paymentId     Int?
   paymentRecord PaymentRecord[]
+  souvenirItems SouvenirItem[]
 }
 
 // วิธีการชำระเงิน
@@ -891,8 +898,8 @@ model PaymentRecord {
 
   transaction           DonationTransaction? @relation(fields: [donationTransactionId], references: [id])
   donationTransactionId Int?
-  bookings Booking[]
-  budgetDonations BudgetDonation[]
+  bookings              Booking[]
+  budgetDonations       BudgetDonation[]
 
   @@index([paymentStatus])
   @@index([createdAt])

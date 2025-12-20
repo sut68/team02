@@ -1,87 +1,103 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/app/lib/prisma';
+// app/api/booking/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/app/lib/prisma";
 
-// GET - ดึงรายการ booking ทั้งหมด
-export async function GET(request: NextRequest) {
-  try {
-    const bookings = await prisma.booking.findMany({
-      include: {
-        user: {
-          select: {
-            id: true,
-            fullName: true,
-            email: true,
-          },
-        },
-        content: true,
-        bookingField: true,
-        payment: true,
-        attendees: {
-          include: {
-            checkins: true,
-          },
-        },
-        bookingForm: true,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-
-    return NextResponse.json({ bookings }, { status: 200 });
-  } catch (error) {
-    console.error('Error fetching bookings:', error);
-    return NextResponse.json(
-      { error: 'เกิดข้อผิดพลาดในการดึงข้อมูล' },
-      { status: 500 }
-    );
-  }
-}
-
-// POST - สร้าง booking ใหม่
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const {
-      userId,
-      contentId,
-      bookingFormId,
-      bookingField,
-      attendees,
-    } = body;
+    const { userId, contentId, bookingField, attendees } = body;
 
-    // สร้าง booking พร้อม relation ใน transaction
-    const booking = await prisma.$transaction(async (tx) => {
-      // 1. สร้าง BookingField ก่อน
-      let bookingFieldRecord = null;
-      if (bookingField) {
-        bookingFieldRecord = await tx.bookingField.create({
-          data: {
-            BatchNumber: bookingField.batchNumber,
-            BookingSeats: bookingField.bookingSeats,
-            Name1: bookingField.name1,
-            Name2: bookingField.name2,
-            Name3: bookingField.name3,
-            Name4: bookingField.name4,
-            TotalPrice: bookingField.totalPrice,
-            Souvenir: bookingField.souvenir,
-            Note: bookingField.note,
+    if (!userId || !contentId) {
+      return NextResponse.json(
+        { error: "ต้องระบุ userId และ contentId" },
+        { status: 400 }
+      );
+    }
+
+    // ✅ ดึง bookingForm ที่ “ผูกกับ content” เท่านั้น
+    const content = await prisma.content.findUnique({
+      where: { id: Number(contentId) },
+      select: {
+        Booking: true,
+        BookingFormID: true,
+        bookingForm: {
+          select: {
+            id: true,
+            TotalSeats: true,
+            Souvenir: true,
+            PriceType: true,
+            singlePrice: true,
+            batchPrices: true,
           },
-        });
-      }
+        },
+      },
+    });
 
-      // 2. สร้าง Booking
+    if (!content) {
+      return NextResponse.json({ error: "ไม่พบ content" }, { status: 404 });
+    }
+
+    if (content.Booking !== "HAVE") {
+      return NextResponse.json(
+        { error: "กิจกรรมนี้ไม่ได้เปิดให้จอง" },
+        { status: 400 }
+      );
+    }
+
+    const realBookingFormId = content.BookingFormID;
+    if (!realBookingFormId) {
+      return NextResponse.json(
+        { error: "กิจกรรมนี้ยังไม่มี bookingForm ผูกอยู่" },
+        { status: 400 }
+      );
+    }
+
+    // ✅ validate จำนวนที่นั่งไม่ให้เกิน TotalSeats (ถ้ามี)
+    const seats = Number(bookingField?.bookingSeats ?? 1);
+    if (!Number.isFinite(seats) || seats < 1) {
+      return NextResponse.json(
+        { error: "จำนวนที่นั่งไม่ถูกต้อง" },
+        { status: 400 }
+      );
+    }
+
+    if (content.bookingForm?.TotalSeats && seats > content.bookingForm.TotalSeats) {
+      return NextResponse.json(
+        { error: `จำนวนที่นั่งเกินที่กำหนด (สูงสุด ${content.bookingForm.TotalSeats})` },
+        { status: 400 }
+      );
+    }
+
+    // ✅ สร้างแบบ transaction: BookingField -> Booking -> Attendees
+    const booking = await prisma.$transaction(async (tx) => {
+      // 1) BookingField
+      const bookingFieldRecord = await tx.bookingField.create({
+        data: {
+          BatchNumber: bookingField?.batchNumber ?? null,     // String?
+          BookingSeats: seats,                                // Int?
+          Name1: bookingField?.name1 ?? null,
+          Name2: bookingField?.name2 ?? null,
+          Name3: bookingField?.name3 ?? null,
+          Name4: bookingField?.name4 ?? null,
+          TotalPrice: bookingField?.totalPrice ?? null,       // Int?
+          Souvenir: bookingField?.souvenir ?? null,           // String? (แนะนำเก็บ "HAVE"/"NOT" หรือชื่อ item)
+          Note: bookingField?.note ?? null,
+        },
+      });
+
+      // 2) Booking (ผูก bookingFormId จาก content เท่านั้น)
       const newBooking = await tx.booking.create({
         data: {
-          Userid: userId,
-          ContentID: contentId,
-          bookingFormId: bookingFormId,
-          BookingFieldID: bookingFieldRecord?.id,
-          transactionStatus: 'PENDING',
+          Userid: Number(userId),
+          ContentID: Number(contentId),
+          bookingFormId: realBookingFormId,
+          BookingFieldID: bookingFieldRecord.id,
+          // transactionStatus ไม่ต้อง set ก็ได้ เพราะ schema default(PENDING) อยู่แล้ว
           attendees: {
-            create: attendees?.map((name: string) => ({
-              Name: name,
-            })) || [],
+            create:
+              (attendees ?? [])
+                .filter((x: any) => typeof x === "string" && x.trim() !== "")
+                .map((name: string) => ({ Name: name.trim() })),
           },
         },
         include: {
@@ -89,42 +105,21 @@ export async function POST(request: NextRequest) {
           content: true,
           bookingField: true,
           attendees: true,
+          bookingForm: true,
         },
       });
-
-      // แจกของที่ระลึกอัตโนมัติถ้ากิจกรรมนี้มี souvenirItemId
-      if (contentId && userId) {
-        const content = await tx.content.findUnique({
-          where: { id: contentId },
-          select: { souvenirItemId: true },
-        });
-        if (content?.souvenirItemId) {
-          await tx.entitlement.create({
-            data: {
-              userId: userId,
-              itemId: content.souvenirItemId,
-              source: 'BOOKING',
-              qtyGranted: 1,
-              qtyUsed: 0,
-            },
-          });
-        }
-      }
 
       return newBooking;
     });
 
     return NextResponse.json(
-      {
-        message: 'สร้างการจองสำเร็จ',
-        booking,
-      },
+      { message: "สร้างการจองสำเร็จ", booking },
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error creating booking:', error);
+    console.error("Error creating booking:", error);
     return NextResponse.json(
-      { error: 'เกิดข้อผิดพลาดในการสร้างการจอง' },
+      { error: "เกิดข้อผิดพลาดในการสร้างการจอง" },
       { status: 500 }
     );
   }
