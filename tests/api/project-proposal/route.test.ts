@@ -1,5 +1,5 @@
 // app/api/project-proposal/route.test.ts
-import { POST } from '@/app/api/project-proposal/route';
+import { POST, PUT } from '@/app/api/project-proposal/route';
 import { prisma } from '@/app/lib/prisma';
 import { NextRequest } from 'next/server';
 
@@ -381,4 +381,41 @@ describe('Project Proposal API - Validation Tests', () => {
       expect(json.error).toBe('รูปแบบวันที่ไม่ถูกต้อง');
     });
 
+    it('TC-VAL-IMG-18: Should return 400 if coverFilePath is NOT an image (e.g. .pdf)', async () => {
+      const body = {
+        project: { 
+            projectName: 'PDF Project', 
+            budgetRoundId: 1,
+            coverFilePath: '/uploads/document.pdf' // ห้ามส่ง PDF ไป
+        },
+        manager: { firstName: 'Test' }
+      };
+
+      const req = new NextRequest('http://localhost:3000/api', { method: 'POST', body: JSON.stringify(body) });
+      const res = await POST(req);
+      const json = await res.json();
+
+      expect(res.status).toBe(400);
+      expect(json.error).toMatch(/ต้องเป็นไฟล์รูปภาพเท่านั้น/);
+    });
+
+    it('TC-VAL-IMG-19: Should ALLOW valid image extensions (.jpg, .png)', async () => {
+      const body = {
+        project: { 
+            projectName: 'Image Project', 
+            budgetRoundId: 1,
+            coverFilePath: '/uploads/poster.png' // ✅ ส่ง PNG (ถูกต้อง)
+        },
+        manager: { firstName: 'Test' }
+      };
+
+      // Mock ให้ผ่าน
+      (prisma.projectProposal.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.projectProposal.create as jest.Mock).mockResolvedValue({ id: 1, ...body.project });
+
+      const req = new NextRequest('http://localhost:3000/api', { method: 'POST', body: JSON.stringify(body) });
+      const res = await POST(req);
+
+      expect(res.status).toBe(201); // Created
+    });
 });

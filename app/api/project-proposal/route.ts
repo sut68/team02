@@ -167,6 +167,17 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: 'รูปแบบวันที่ไม่ถูกต้อง' }, { status: 400 });
             }
         }
+      
+        // ✅ 8. เพิ่ม: ตรวจสอบไฟล์รูปภาพ (Cover Image)
+      if (project.coverFilePath) {
+          const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+          const lowerCasePath = project.coverFilePath.toLowerCase();
+          const isValidImage = validExtensions.some(ext => lowerCasePath.endsWith(ext));
+
+          if (!isValidImage) {
+              return NextResponse.json({ error: 'ไฟล์ภาพปกต้องเป็นไฟล์รูปภาพเท่านั้น (.jpg, .jpeg, .png, .webp)' }, { status: 400 });
+          }
+      }
 
       let managerData = undefined;
       if (manager) {
@@ -309,6 +320,16 @@ export async function PUT(request: NextRequest) {
         if (newEndDate < newStartDate) {
             return NextResponse.json({ error: 'วันสิ้นสุดโครงการต้องไม่อยู่ก่อนวันเริ่มต้น' }, { status: 400 });
         }
+    }
+
+    if (data.coverFilePath) {
+       const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+       const lowerCasePath = data.coverFilePath.toLowerCase();
+       const isValidImage = validExtensions.some(ext => lowerCasePath.endsWith(ext));
+
+       if (!isValidImage) {
+           return NextResponse.json({ error: 'ไฟล์ภาพปกต้องเป็นไฟล์รูปภาพเท่านั้น (.jpg, .jpeg, .png, .webp)' }, { status: 400 });
+       }
     }
 
     let managerUpdate = undefined;
