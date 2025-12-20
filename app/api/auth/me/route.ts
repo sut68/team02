@@ -3,24 +3,31 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '@/app/lib/prisma';
 
 export async function GET(req: NextRequest) {
+  // Get token from cookies
+  const token = req.cookies.get('token')?.value;
+
+  if (!token) {
+    return NextResponse.json(
+      { error: 'ไม่พบข้อมูลการเข้าสู่ระบบ' },
+      { status: 401 }
+    );
+  }
+
+  let decoded;
   try {
-    // Get token from cookies
-    const token = req.cookies.get('token')?.value;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'ไม่พบข้อมูลการเข้าสู่ระบบ' },
-        { status: 401 }
-      );
-    }
-
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || '') as {
+    decoded = jwt.verify(token, process.env.JWT_SECRET || '') as {
       userId: number;
       email: string;
       role: string;
     };
+  } catch (err) {
+    return NextResponse.json(
+      { error: 'Token ไม่ถูกต้องหรือหมดอายุ' },
+      { status: 401 }
+    );
+  }
 
+  try {
     // Get user data from database with relations
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
@@ -69,8 +76,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(response, { status: 200 });
   } catch (error: any) {
     return NextResponse.json(
-      { error: 'ข้อมูลการเข้าสู่ระบบไม่ถูกต้อง' },
-      { status: 401 }
+      { error: 'เกิดข้อผิดพลาดของเซิร์ฟเวอร์หรือฐานข้อมูล' },
+      { status: 500 }
     );
   }
 }

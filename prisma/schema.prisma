@@ -16,10 +16,6 @@ model PasswordResetToken {
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
 
 generator client {
   provider = "prisma-client-js"
@@ -411,7 +407,7 @@ model BookingForm {
   updatedAt DateTime @updatedAt
 
   contents Content[]
-  bookings Booking[]
+  // bookings Booking[]
 
   // ✅ เพื่อ upsert ได้: Type + StartDate ต้อง unique
   @@unique([Type, StartDate])
@@ -440,21 +436,21 @@ model Booking {
   updatedAt DateTime @updatedAt
   Userid            Int?
   ContentID         Int?
-  bookingFormId Int?
+  // bookingFormId Int?
   BookingFieldID    Int?              @unique
   PaymentID         Int?              @unique
   transactionStatus TransactionStatus @default(PENDING)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // createdAt DateTime @default(now())
+  // updatedAt DateTime @updatedAt
 
   user         User?          @relation(fields: [Userid], references: [id])
   content      Content?       @relation(fields: [ContentID], references: [id])
   bookingField BookingField?  @relation(fields: [BookingFieldID], references: [id])
   payment      PaymentRecord? @relation(fields: [PaymentID], references: [id])
-  bookingForm  BookingForm?   @relation(fields: [bookingFormId], references: [id])
+  // bookingForm  BookingForm?   @relation(fields: [bookingFormId], references: [id])
 
-  bookingFormId Int?
+  // bookingFormId Int?
   attendees     Attendee[]
 
   // Relation to SouvenirItem (กิจกรรมแจกของที่ระลึก)
