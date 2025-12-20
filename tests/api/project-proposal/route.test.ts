@@ -1,5 +1,5 @@
 // tests/api/project-proposal/route.test.ts
-import { POST, PUT } from '@/app/api/project-proposal/route';
+import { POST, PUT, GET, DELETE } from '@/app/api/project-proposal/route';
 import { prisma } from '@/app/lib/prisma';
 import { NextRequest } from 'next/server';
 
@@ -544,6 +544,85 @@ describe('Project Proposal API - Validation Tests', () => {
       
       expect(res.status).toBe(200);
       expect(json.message).toBe('กู้คืนสำเร็จ');
+    });
+  });
+
+  describe('GET Request', () => {
+    it('TC-GET-01: Should fetch project by ID', async () => {
+      const req = new NextRequest('http://localhost:3000/api?id=1', { method: 'GET' });
+
+      (prisma.projectProposal.findUnique as jest.Mock).mockResolvedValue({
+        id: 1,
+        projectName: 'Test Project',
+        manager: { firstName: 'Manager' }
+      });
+
+      const res = await GET(req);
+      const json = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(json.proposal.id).toBe(1);
+    });
+
+    it('TC-GET-02: Should return 404 if project not found', async () => {
+      const req = new NextRequest('http://localhost:3000/api?id=999', { method: 'GET' });
+      (prisma.projectProposal.findUnique as jest.Mock).mockResolvedValue(null);
+
+      const res = await GET(req);
+      expect(res.status).toBe(404);
+    });
+
+    it('TC-GET-03: Should fetch all projects (with filters)', async () => {
+      const req = new NextRequest('http://localhost:3000/api?status=PENDING', { method: 'GET' });
+
+      (prisma.projectProposal.findMany as jest.Mock).mockResolvedValue([
+        { id: 1, status: 'PENDING' },
+        { id: 2, status: 'PENDING' }
+      ]);
+
+      const res = await GET(req);
+      const json = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(json.proposals).toHaveLength(2);
+      
+      // เช็คว่ามีการส่ง filter ไป query จริง
+      expect(prisma.projectProposal.findMany).toHaveBeenCalledWith(expect.objectContaining({
+          where: expect.objectContaining({ status: 'PENDING' })
+      }));
+    });
+  });
+
+  // ==========================================
+  // 🔴 Test Group: DELETE Request (ลบข้อมูล)
+  // ==========================================
+
+  describe('DELETE Request', () => {
+    it('TC-DEL-01: Should soft delete project (update deletedAt)', async () => {
+      const req = new NextRequest('http://localhost:3000/api?id=1', { method: 'DELETE' });
+
+      (prisma.projectProposal.update as jest.Mock).mockResolvedValue({
+        id: 1,
+        deletedAt: new Date()
+      });
+
+      const res = await DELETE(req);
+      const json = await res.json();
+
+      expect(res.status).toBe(200);
+      expect(json.message).toBe('ลบสำเร็จ');
+      
+      // ✅ หัวใจสำคัญ: เช็คว่ามันคือการ Update deletedAt (Soft Delete)
+      expect(prisma.projectProposal.update).toHaveBeenCalledWith(expect.objectContaining({
+        where: { id: 1 },
+        data: expect.objectContaining({ deletedAt: expect.any(Date) })
+      }));
+    });
+
+    it('TC-DEL-02: Should return 400 if ID is missing', async () => {
+      const req = new NextRequest('http://localhost:3000/api', { method: 'DELETE' }); // ไม่ส่ง ID
+      const res = await DELETE(req);
+      expect(res.status).toBe(400);
     });
   });
 });
