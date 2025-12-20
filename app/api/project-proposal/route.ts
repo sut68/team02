@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const budgetRoundId = searchParams.get('budgetRoundId');
-    const fiscalYear = searchParams.get('fiscalYear'); // ✅ รับค่าปีงบประมาณ
+    const fiscalYear = searchParams.get('fiscalYear'); 
     const status = searchParams.get('status');
     const trash = searchParams.get('trash');
 
@@ -21,30 +21,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ proposal }, { status: 200 });
     }
 
-    // เงื่อนไขการค้นหา
-    const where: any = {
-        budgetRoundId: { not: null }
-    };
+    const where: any = { budgetRoundId: { not: null } };
     
-    // 1. Trash Filter
     if (trash === 'true') {
         where.deletedAt = { not: null };
     } else {
         where.deletedAt = null;
     }
 
-    // 2. Budget Round ID Filter (ถ้ามี roundId เจาะจง)
     if (budgetRoundId) {
         where.budgetRoundId = parseInt(budgetRoundId);
-    } 
-    // 3. Fiscal Year Filter (ถ้าไม่มี roundId แต่มี year)
-    else if (fiscalYear) {
-        where.budgetRound = {
-            fiscalYear: fiscalYear
-        };
+    } else if (fiscalYear) {
+        where.budgetRound = { fiscalYear: fiscalYear };
     }
 
-    // 4. Status Filter
     if (status) where.status = status;
 
     const proposals = await prisma.projectProposal.findMany({
@@ -72,72 +62,53 @@ export async function POST(request: NextRequest) {
       const body = await request.json();
       const { project, manager } = body;
   
-      // เตรียมตัวแปร roundId และชื่อโครงการเพื่อใช้ตรวจสอบ
       const roundId = project.budgetRoundId ? Number(project.budgetRoundId) : undefined;
       const cleanName = project.projectName ? project.projectName.trim() : '';
 
-      // --- VALIDATION ชื่อโครงการ (projectName) ---
-      
-      // 1. เช็คค่าว่าง (ชื่อโครงการ)
+      // --- VALIDATION ชื่อโครงการ ---
       if (!cleanName) {
         return NextResponse.json({ error: 'ชื่อโครงการห้ามว่าง' }, { status: 400 });
       }
-
-      // 2. เช็คความยาวขั้นต่ำ (3 ตัวอักษร)
       if (cleanName.length < 3) {
         return NextResponse.json({ error: 'ชื่อโครงการสั้นเกินไป (ต้องมีอย่างน้อย 3 ตัวอักษร)' }, { status: 400 });
       }
-
-      // 3. เช็คความยาวสูงสุด (200 ตัวอักษร)
       if (cleanName.length > 200) {
         return NextResponse.json({ error: 'ชื่อโครงการยาวเกินไป (ไม่เกิน 200 ตัวอักษร)' }, { status: 400 });
       }
 
-      // 4. เช็คชื่อซ้ำ (เฉพาะในรอบงบประมาณเดียวกัน)
       if (roundId) {
         const existingProject = await prisma.projectProposal.findFirst({
             where: { 
-                projectName: { equals: cleanName, mode: 'insensitive' }, // ไม่สนตัวพิมพ์เล็กใหญ่
-                budgetRoundId: roundId, // เช็คเฉพาะรอบนี้
-                deletedAt: null // ไม่นับตัวที่ถูกลบไปแล้ว
+                projectName: { equals: cleanName, mode: 'insensitive' },
+                budgetRoundId: roundId,
+                deletedAt: null 
             }
         });
-
         if (existingProject) {
-            return NextResponse.json({ error: 'ชื่อโครงการนี้มีอยู่ในรอบงบประมาณนี้แล้ว' }, { status: 409 }); // 409 Conflict
+            return NextResponse.json({ error: 'ชื่อโครงการนี้มีอยู่ในรอบงบประมาณนี้แล้ว' }, { status: 409 });
         }
       }
 
-      // 5. ตรวจสอบรายละเอียด (ถ้ามี ต้องไม่เกิน 500 ตัวอักษร)
       if (project.description && project.description.length > 500) {
         return NextResponse.json({ error: 'รายละเอียดโครงการต้องไม่เกิน 500 ตัวอักษร' }, { status: 400 });
       }
 
-      // 6. ตรวจสอบ requestedAmount
       if (project.requestedAmount !== undefined && project.requestedAmount !== null) {
         const amount = Number(project.requestedAmount);
-
-        // 1. เช็คว่าไม่ใช่ตัวเลข หรือ น้อยกว่าเท่ากับ 0
         if (isNaN(amount) || amount <= 0) {
           return NextResponse.json({ error: 'งบประมาณที่ขอต้องมากกว่า 0' }, { status: 400 });
         }
-
-        // 2. เช็คทศนิยม (ไม่เกิน 2 ตำแหน่ง)
-        // แปลงเป็น string แล้วเช็คว่าถ้ามีจุดทศนิยม ส่วนหลังจุดต้องยาวไม่เกิน 2
         const amountStr = amount.toString();
         if (amountStr.includes('.') && amountStr.split('.')[1].length > 2) {
           return NextResponse.json({ error: 'งบประมาณต้องมีทศนิยมไม่เกิน 2 ตำแหน่ง' }, { status: 400 });
         }
       }
-      // 7. ตรวจสอบวันเริ่มโครงการ (ถ้ามี ต้องไม่เป็นอดีต)
+
       if (project.projectStartDate) {
             const startDate = new Date(project.projectStartDate);
-            
-            // ✅ เพิ่ม: เช็คว่าเป็นวันที่ที่ถูกต้องหรือไม่ (รองรับ TC-VAL-DATE-17)
             if (isNaN(startDate.getTime())) {
                 return NextResponse.json({ error: 'รูปแบบวันที่ไม่ถูกต้อง' }, { status: 400 });
             }
-
             const today = new Date();
             today.setHours(0, 0, 0, 0); 
 
@@ -145,30 +116,22 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: 'วันเริ่มต้นโครงการต้องไม่เป็นอดีต (ต้องเริ่มตั้งแต่วันนี้เป็นต้นไป)' }, { status: 400 });
             }
 
-            // ✅ เพิ่ม: ตรวจสอบวันสิ้นสุดโครงการ (รองรับ TC-VAL-DATE-15)
             if (project.projectEndDate) {
                 const endDate = new Date(project.projectEndDate);
-
-                // เช็ค format วันสิ้นสุดด้วย
                 if (isNaN(endDate.getTime())) {
                     return NextResponse.json({ error: 'รูปแบบวันที่ไม่ถูกต้อง' }, { status: 400 });
                 }
-
-                // เช็คว่าจบก่อนเริ่มหรือไม่
                 if (endDate < startDate) {
                     return NextResponse.json({ error: 'วันสิ้นสุดโครงการต้องไม่อยู่ก่อนวันเริ่มต้น' }, { status: 400 });
                 }
             }
-        }
-        // กรณีมีแต่วันสิ้นสุด แต่ไม่มีวันเริ่ม (ถ้า Business Logic ยอมให้มีวันสิ้นสุดอย่างเดียวได้ ก็ต้องเช็ค format ตรงนี้ด้วย)
-        else if (project.projectEndDate) {
+        } else if (project.projectEndDate) {
              const endDate = new Date(project.projectEndDate);
              if (isNaN(endDate.getTime())) {
                 return NextResponse.json({ error: 'รูปแบบวันที่ไม่ถูกต้อง' }, { status: 400 });
             }
         }
       
-        // ✅ 8. เพิ่ม: ตรวจสอบไฟล์รูปภาพ (Cover Image)
       if (project.coverFilePath) {
           const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
           const lowerCasePath = project.coverFilePath.toLowerCase();
@@ -176,6 +139,31 @@ export async function POST(request: NextRequest) {
 
           if (!isValidImage) {
               return NextResponse.json({ error: 'ไฟล์ภาพปกต้องเป็นไฟล์รูปภาพเท่านั้น (.jpg, .jpeg, .png, .webp)' }, { status: 400 });
+          }
+      }
+
+      // ✅ 9. ตรวจสอบข้อมูลผู้รับผิดชอบโครงการ (Manager Validation)
+      if (manager && !manager.id) {
+          const managerFirstName = manager.firstName?.trim();
+          const managerLastName = manager.lastName?.trim();
+          const managerEmail = manager.email?.trim();
+
+          // 9.1 เช็คชื่อ-นามสกุล
+          if (!managerFirstName || !managerLastName) {
+              return NextResponse.json({ error: 'ชื่อและนามสกุลผู้รับผิดชอบโครงการห้ามว่าง' }, { status: 400 });
+          }
+
+          // 9.2 เช็ครูปแบบอีเมล
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!managerEmail || !emailRegex.test(managerEmail)) {
+              return NextResponse.json({ error: 'รูปแบบอีเมลผู้รับผิดชอบโครงการไม่ถูกต้อง' }, { status: 400 });
+          }
+
+          // 9.3 เช็คเบอร์โทรศัพท์ (ต้อง 10 หลัก)
+          if (manager.phoneNumber) {
+              if (manager.phoneNumber.length !== 10) {
+                 return NextResponse.json({ error: 'เบอร์โทรศัพท์มือถือต้องมี 10 หลัก' }, { status: 400 });
+              }
           }
       }
 
@@ -194,15 +182,10 @@ export async function POST(request: NextRequest) {
                   }
               ]
           };
-  
           if (manager.email && manager.email.trim() !== "") {
               whereCondition.OR.push({ email: manager.email });
           }
-  
-          const existingManager = await prisma.projectManager.findFirst({
-              where: whereCondition
-          });
-  
+          const existingManager = await prisma.projectManager.findFirst({ where: whereCondition });
           if (existingManager) {
               managerData = { connect: { id: existingManager.id } };
           } else {
@@ -224,7 +207,7 @@ export async function POST(request: NextRequest) {
   
       const newProposal = await prisma.projectProposal.create({
         data: {
-          projectName: cleanName, // ใช้ชื่อที่ trim แล้ว
+          projectName: cleanName, 
           objective: project.objective,
           description: project.description,
           requestedAmount: project.requestedAmount ? Number(project.requestedAmount) : undefined,
@@ -246,7 +229,7 @@ export async function POST(request: NextRequest) {
       console.error('Error:', error);
       return NextResponse.json({ error: 'บันทึกไม่สำเร็จ' }, { status: 500 });
     }
-  }
+}
 
 // PUT: แก้ไขข้อมูล
 export async function PUT(request: NextRequest) {
@@ -265,7 +248,9 @@ export async function PUT(request: NextRequest) {
     if (!id) return NextResponse.json({ error: 'ไม่พบ ID' }, { status: 400 });
 
     if (data.projectName !== undefined) {
-       const cleanName = data.projectName.trim();
+       data.projectName = data.projectName.trim(); // ✅ Fix: Trim และ update กลับเข้า data
+       const cleanName = data.projectName;
+
        if (!cleanName) {
            return NextResponse.json({ error: 'ชื่อโครงการห้ามว่าง' }, { status: 400 });
        }
@@ -275,7 +260,6 @@ export async function PUT(request: NextRequest) {
        if (cleanName.length > 200) {
            return NextResponse.json({ error: 'ชื่อโครงการยาวเกินไป (ไม่เกิน 200 ตัวอักษร)' }, { status: 400 });
        }
-       // การเช็คชื่อซ้ำตอน Edit จะซับซ้อนกว่า ถ้ายังไม่ซีเรียสมาก ข้ามการเช็คชื่อซ้ำใน Edit ไปก่อนได้ครับ
     }
 
     if (data.description && data.description.length > 500) {
@@ -284,20 +268,15 @@ export async function PUT(request: NextRequest) {
 
     if (data.requestedAmount !== undefined && data.requestedAmount !== null) {
       const amount = Number(data.requestedAmount);
-
-      // 1. เช็ค <= 0
       if (isNaN(amount) || amount <= 0) {
         return NextResponse.json({ error: 'งบประมาณที่ขอต้องมากกว่า 0' }, { status: 400 });
       }
-
-      // 2. เช็คทศนิยม
       const amountStr = amount.toString();
       if (amountStr.includes('.') && amountStr.split('.')[1].length > 2) {
          return NextResponse.json({ error: 'งบประมาณต้องมีทศนิยมไม่เกิน 2 ตำแหน่ง' }, { status: 400 });
       }
     }
 
-    // --- เพิ่ม: Validation วันที่ (ถ้ามีการแก้ไขวันที่) ---
     let newStartDate: Date | undefined;
     let newEndDate: Date | undefined;
 
@@ -307,15 +286,12 @@ export async function PUT(request: NextRequest) {
              return NextResponse.json({ error: 'รูปแบบวันเริ่มต้นไม่ถูกต้อง' }, { status: 400 });
         }
     }
-
     if (data.projectEndDate) {
         newEndDate = new Date(data.projectEndDate);
         if (isNaN(newEndDate.getTime())) {
              return NextResponse.json({ error: 'รูปแบบวันสิ้นสุดไม่ถูกต้อง' }, { status: 400 });
         }
     }
-
-    // กรณีที่ส่งมาทั้งคู่ ให้เช็คว่า จบ < เริ่ม หรือไม่
     if (newStartDate && newEndDate) {
         if (newEndDate < newStartDate) {
             return NextResponse.json({ error: 'วันสิ้นสุดโครงการต้องไม่อยู่ก่อนวันเริ่มต้น' }, { status: 400 });
@@ -330,6 +306,27 @@ export async function PUT(request: NextRequest) {
        if (!isValidImage) {
            return NextResponse.json({ error: 'ไฟล์ภาพปกต้องเป็นไฟล์รูปภาพเท่านั้น (.jpg, .jpeg, .png, .webp)' }, { status: 400 });
        }
+    }
+
+    // ✅ ตรวจสอบข้อมูล Manager (เฉพาะกรณีที่มีการส่งมาและไม่ได้ส่ง id)
+    if (manager && !manager.id) {
+         const managerFirstName = manager.firstName?.trim();
+         const managerLastName = manager.lastName?.trim();
+         const managerEmail = manager.email?.trim();
+
+         if (managerFirstName === "" || managerLastName === "") { // เช็คกรณีแก้เป็นค่าว่าง
+             return NextResponse.json({ error: 'ชื่อและนามสกุลผู้รับผิดชอบโครงการห้ามว่าง' }, { status: 400 });
+         }
+         
+         if (managerEmail) {
+             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+             if (!emailRegex.test(managerEmail)) {
+                  return NextResponse.json({ error: 'รูปแบบอีเมลผู้รับผิดชอบโครงการไม่ถูกต้อง' }, { status: 400 });
+             }
+         }
+         if (manager.phoneNumber && manager.phoneNumber.length !== 10) {
+              return NextResponse.json({ error: 'เบอร์โทรศัพท์มือถือต้องมี 10 หลัก' }, { status: 400 });
+         }
     }
 
     let managerUpdate = undefined;
@@ -349,7 +346,7 @@ export async function PUT(request: NextRequest) {
     const updatedProposal = await prisma.projectProposal.update({
       where: { id: Number(id) },
       data: {
-        projectName: data.projectName,
+        projectName: data.projectName, // ✅ ค่านี้ถูก Trim แล้ว
         objective: data.objective,
         description: data.description,
         requestedAmount: data.requestedAmount ? Number(data.requestedAmount) : undefined, 
@@ -360,6 +357,7 @@ export async function PUT(request: NextRequest) {
         status: status, 
         ...(managerUpdate && { manager: managerUpdate })
       },
+      include: { budgetRound: true }
     });
 
     if (status === 'OPEN' && updatedProposal.budgetRoundId) { 
