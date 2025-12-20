@@ -286,6 +286,31 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    // --- เพิ่ม: Validation วันที่ (ถ้ามีการแก้ไขวันที่) ---
+    let newStartDate: Date | undefined;
+    let newEndDate: Date | undefined;
+
+    if (data.projectStartDate) {
+        newStartDate = new Date(data.projectStartDate);
+        if (isNaN(newStartDate.getTime())) {
+             return NextResponse.json({ error: 'รูปแบบวันเริ่มต้นไม่ถูกต้อง' }, { status: 400 });
+        }
+    }
+
+    if (data.projectEndDate) {
+        newEndDate = new Date(data.projectEndDate);
+        if (isNaN(newEndDate.getTime())) {
+             return NextResponse.json({ error: 'รูปแบบวันสิ้นสุดไม่ถูกต้อง' }, { status: 400 });
+        }
+    }
+
+    // กรณีที่ส่งมาทั้งคู่ ให้เช็คว่า จบ < เริ่ม หรือไม่
+    if (newStartDate && newEndDate) {
+        if (newEndDate < newStartDate) {
+            return NextResponse.json({ error: 'วันสิ้นสุดโครงการต้องไม่อยู่ก่อนวันเริ่มต้น' }, { status: 400 });
+        }
+    }
+
     let managerUpdate = undefined;
     if (manager && manager.id) {
         managerUpdate = {
