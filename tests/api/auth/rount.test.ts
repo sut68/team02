@@ -1,16 +1,16 @@
-import { POST as LoginPOST } from './login/route';
-import { POST as RegisterPOST } from './register/route';
-import { GET as MeGET } from './me/route';
-import { POST as ForgotPasswordPOST } from './forgot-password/route';
-import { POST as ResetPasswordPOST } from './reset-password/route';
-import { POST as LogoutPOST } from './logout/route';
-import { prisma } from '../../lib/prisma';
+import { POST as LoginPOST } from '../../../app/api/auth/login/route';
+import { POST as RegisterPOST } from '../../../app/api/auth/register/route';
+import { GET as MeGET } from '../../../app/api/auth/me/route';
+import { POST as ForgotPasswordPOST } from '../../../app/api/auth/forgot-password/route';
+import { POST as ResetPasswordPOST } from '../../../app/api/auth/reset-password/route';
+import { POST as LogoutPOST } from '../../../app/api/auth/logout/route';
+import { prisma } from '../../../app/lib/prisma';
 import { NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 // Mock Dependencies
-jest.mock('../../lib/prisma', () => ({
+jest.mock('@/app/lib/prisma', () => ({
   prisma: {
     user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
     educationRecord: { findUnique: jest.fn(), create: jest.fn() },
@@ -27,12 +27,12 @@ jest.mock('../../lib/prisma', () => ({
 
 jest.mock('bcryptjs');
 jest.mock('jsonwebtoken');
-jest.mock('../../lib/rate-limit', () => ({
+jest.mock('@/app/lib/rate-limit', () => ({
   loginLimiter: jest.fn().mockResolvedValue(null),
   registerLimiter: jest.fn().mockResolvedValue(null),
 }));
 // Mock nodemailer to prevent actual email sending
-jest.mock('../../lib/nodemailer', () => ({
+jest.mock('@/app/lib/nodemailer', () => ({
   transporter: { sendMail: jest.fn().mockResolvedValue(true) },
   mailOptions: {},
 }));

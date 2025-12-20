@@ -605,7 +605,7 @@ model ProjectProposal {
   id                 Int       @id @default(autoincrement())
   projectName        String
   objective          String?
-  description        String?   @db.Text
+  description        String?
   requestedAmount    Float?
   projectStartDate   DateTime?
   projectEndDate     DateTime?
@@ -721,7 +721,7 @@ model Category {
 model Topic {
   id               Int         @id @default(autoincrement())
   title            String
-  content          String      @db.Text
+  content          String
   topicImage       String?
   status           TopicStatus @default(ACTIVE)
   createddate      DateTime    @default(now())
@@ -746,7 +746,7 @@ model Topic {
 // ควาศคิดเห็น
 model Comment {
   id           Int           @id @default(autoincrement())
-  content      String        @db.Text
+  content      String
   createddate  DateTime      @default(now())
   status       CommentStatus @default(ACTIVE)
   commentcount Int           @default(0)
@@ -766,7 +766,7 @@ model Comment {
 model TopicEditHistory {
   id             Int      @id @default(autoincrement())
   editedByUserID String
-  oldcontent     String   @db.Text
+  oldcontent     String
   editdate       DateTime @default(now())
 
   staffuser_id Int?
