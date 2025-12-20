@@ -112,6 +112,25 @@ describe("Content API - Validation Tests (like project-proposal style)", () => {
     expect(res.status).toBe(400);
     expect(json.error).toBe("ต้องระบุ categories");
   });
+
+  // ---------- Picture validation ----------
+  it("TC-VAL-06: Should return 400 if no valid pictures uploaded", async () => {
+    // ส่งฟอร์มที่ไม่มีฟิลด์ pictures หรือเป็น Array ว่าง
+    const req = makeReq({ 
+      form: { 
+        title: "Hello", 
+        categories: "NEWS", 
+        pictures: [] // ไม่มีรูป
+      } 
+    });
+
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.error).toBe("ต้องอัปโหลดรูปอย่างน้อย 1 รูป");
+  });
+  
   // ---------- POS: create success ----------
   it("TC-POS-01: Should create content successfully", async () => {
     (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
