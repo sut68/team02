@@ -114,21 +114,59 @@ export async function POST(request: NextRequest) {
       }
 
       // 6. ตรวจสอบ requestedAmount
-    if (project.requestedAmount !== undefined && project.requestedAmount !== null) {
-      const amount = Number(project.requestedAmount);
+      if (project.requestedAmount !== undefined && project.requestedAmount !== null) {
+        const amount = Number(project.requestedAmount);
 
-      // 1. เช็คว่าไม่ใช่ตัวเลข หรือ น้อยกว่าเท่ากับ 0
-      if (isNaN(amount) || amount <= 0) {
-        return NextResponse.json({ error: 'งบประมาณที่ขอต้องมากกว่า 0' }, { status: 400 });
-      }
+        // 1. เช็คว่าไม่ใช่ตัวเลข หรือ น้อยกว่าเท่ากับ 0
+        if (isNaN(amount) || amount <= 0) {
+          return NextResponse.json({ error: 'งบประมาณที่ขอต้องมากกว่า 0' }, { status: 400 });
+        }
 
-      // 2. เช็คทศนิยม (ไม่เกิน 2 ตำแหน่ง)
-      // แปลงเป็น string แล้วเช็คว่าถ้ามีจุดทศนิยม ส่วนหลังจุดต้องยาวไม่เกิน 2
-      const amountStr = amount.toString();
-      if (amountStr.includes('.') && amountStr.split('.')[1].length > 2) {
-         return NextResponse.json({ error: 'งบประมาณต้องมีทศนิยมไม่เกิน 2 ตำแหน่ง' }, { status: 400 });
+        // 2. เช็คทศนิยม (ไม่เกิน 2 ตำแหน่ง)
+        // แปลงเป็น string แล้วเช็คว่าถ้ามีจุดทศนิยม ส่วนหลังจุดต้องยาวไม่เกิน 2
+        const amountStr = amount.toString();
+        if (amountStr.includes('.') && amountStr.split('.')[1].length > 2) {
+          return NextResponse.json({ error: 'งบประมาณต้องมีทศนิยมไม่เกิน 2 ตำแหน่ง' }, { status: 400 });
+        }
       }
-    }
+      // 7. ตรวจสอบวันเริ่มโครงการ (ถ้ามี ต้องไม่เป็นอดีต)
+      if (project.projectStartDate) {
+            const startDate = new Date(project.projectStartDate);
+            
+            // ✅ เพิ่ม: เช็คว่าเป็นวันที่ที่ถูกต้องหรือไม่ (รองรับ TC-VAL-DATE-17)
+            if (isNaN(startDate.getTime())) {
+                return NextResponse.json({ error: 'รูปแบบวันที่ไม่ถูกต้อง' }, { status: 400 });
+            }
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); 
+
+            if (startDate < today) {
+                return NextResponse.json({ error: 'วันเริ่มต้นโครงการต้องไม่เป็นอดีต (ต้องเริ่มตั้งแต่วันนี้เป็นต้นไป)' }, { status: 400 });
+            }
+
+            // ✅ เพิ่ม: ตรวจสอบวันสิ้นสุดโครงการ (รองรับ TC-VAL-DATE-15)
+            if (project.projectEndDate) {
+                const endDate = new Date(project.projectEndDate);
+
+                // เช็ค format วันสิ้นสุดด้วย
+                if (isNaN(endDate.getTime())) {
+                    return NextResponse.json({ error: 'รูปแบบวันที่ไม่ถูกต้อง' }, { status: 400 });
+                }
+
+                // เช็คว่าจบก่อนเริ่มหรือไม่
+                if (endDate < startDate) {
+                    return NextResponse.json({ error: 'วันสิ้นสุดโครงการต้องไม่อยู่ก่อนวันเริ่มต้น' }, { status: 400 });
+                }
+            }
+        }
+        // กรณีมีแต่วันสิ้นสุด แต่ไม่มีวันเริ่ม (ถ้า Business Logic ยอมให้มีวันสิ้นสุดอย่างเดียวได้ ก็ต้องเช็ค format ตรงนี้ด้วย)
+        else if (project.projectEndDate) {
+             const endDate = new Date(project.projectEndDate);
+             if (isNaN(endDate.getTime())) {
+                return NextResponse.json({ error: 'รูปแบบวันที่ไม่ถูกต้อง' }, { status: 400 });
+            }
+        }
 
       let managerData = undefined;
       if (manager) {
@@ -246,6 +284,31 @@ export async function PUT(request: NextRequest) {
       if (amountStr.includes('.') && amountStr.split('.')[1].length > 2) {
          return NextResponse.json({ error: 'งบประมาณต้องมีทศนิยมไม่เกิน 2 ตำแหน่ง' }, { status: 400 });
       }
+    }
+
+    // --- เพิ่ม: Validation วันที่ (ถ้ามีการแก้ไขวันที่) ---
+    let newStartDate: Date | undefined;
+    let newEndDate: Date | undefined;
+
+    if (data.projectStartDate) {
+        newStartDate = new Date(data.projectStartDate);
+        if (isNaN(newStartDate.getTime())) {
+             return NextResponse.json({ error: 'รูปแบบวันเริ่มต้นไม่ถูกต้อง' }, { status: 400 });
+        }
+    }
+
+    if (data.projectEndDate) {
+        newEndDate = new Date(data.projectEndDate);
+        if (isNaN(newEndDate.getTime())) {
+             return NextResponse.json({ error: 'รูปแบบวันสิ้นสุดไม่ถูกต้อง' }, { status: 400 });
+        }
+    }
+
+    // กรณีที่ส่งมาทั้งคู่ ให้เช็คว่า จบ < เริ่ม หรือไม่
+    if (newStartDate && newEndDate) {
+        if (newEndDate < newStartDate) {
+            return NextResponse.json({ error: 'วันสิ้นสุดโครงการต้องไม่อยู่ก่อนวันเริ่มต้น' }, { status: 400 });
+        }
     }
 
     let managerUpdate = undefined;

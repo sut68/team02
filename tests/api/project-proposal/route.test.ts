@@ -284,4 +284,101 @@ describe('Project Proposal API - Validation Tests', () => {
 
     expect(res.status).toBe(201);
   });
+
+  it('TC-VAL-DATE-14: Should return 400 if Start Date is in the PAST', async () => {
+      // หาวันเมื่อวาน (Yesterday)
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      const body = {
+        project: { 
+            projectName: 'Past Project', 
+            budgetRoundId: 1,
+            projectStartDate: yesterday.toISOString(), // ห้ามเป็นอดีต
+            projectEndDate: new Date().toISOString()
+        },
+        manager: { firstName: 'Test' }
+      };
+
+      const req = new NextRequest('http://localhost:3000/api', { method: 'POST', body: JSON.stringify(body) });
+      const res = await POST(req);
+      const json = await res.json();
+
+      expect(res.status).toBe(400);
+      expect(json.error).toMatch(/วันเริ่มต้นโครงการต้องไม่เป็นอดีต/);
+    });
+
+    it('TC-VAL-DATE-15: Should return 400 if End Date is BEFORE Start Date', async () => {
+      // Setup: Start = อีก 2 วัน, End = พรุ่งนี้ (ซึ่งจบก่อนเริ่ม -> ผิดเงื่อนไข)
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() + 2); // เริ่มมะรืนนี้
+      
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + 1);     // จบพรุ่งนี้ (ผิด!)
+
+      const body = {
+        project: { 
+            projectName: 'Time Traveler', 
+            budgetRoundId: 1,
+            projectStartDate: startDate.toISOString().split('T')[0],
+            projectEndDate: endDate.toISOString().split('T')[0]
+        },
+        manager: { firstName: 'Test' }
+      };
+
+      const req = new NextRequest('http://localhost:3000/api', { method: 'POST', body: JSON.stringify(body) });
+      const res = await POST(req);
+      const json = await res.json();
+
+      expect(res.status).toBe(400);
+      expect(json.error).toBe('วันสิ้นสุดโครงการต้องไม่อยู่ก่อนวันเริ่มต้น');
+    });
+
+    // แก้ไข TC-VAL-DATE-16: ใช้วันที่เป็นอนาคต
+    it('TC-VAL-DATE-16: Should ALLOW if End Date is SAME as Start Date (1 Day Project)', async () => {
+      // Setup: Start = พรุ่งนี้, End = พรุ่งนี้ (วันเดียวจบ -> ถูกต้อง)
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 1); // พรุ่งนี้
+
+      const dateStr = futureDate.toISOString().split('T')[0];
+
+      const body = {
+        project: { 
+            projectName: 'One Day Project', 
+            budgetRoundId: 1,
+            projectStartDate: dateStr,
+            projectEndDate: dateStr // วันเดียวกัน
+        },
+        manager: { firstName: 'Test' }
+      };
+
+      // Mock ให้ผ่าน (Prisma create)
+      (prisma.projectProposal.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.projectProposal.create as jest.Mock).mockResolvedValue({ id: 1, ...body.project });
+
+      const req = new NextRequest('http://localhost:3000/api', { method: 'POST', body: JSON.stringify(body) });
+      const res = await POST(req);
+
+      expect(res.status).toBe(201); // Created
+    });
+
+    it('TC-VAL-DATE-17: Should return 400 if Date Format is invalid', async () => {
+      const body = {
+        project: { 
+            projectName: 'Invalid Date Project', 
+            budgetRoundId: 1,
+            projectStartDate: 'Not-A-Date', //วันที่มั่ว
+            projectEndDate: '2024-01-01' 
+        },
+        manager: { firstName: 'Test' }
+      };
+
+      const req = new NextRequest('http://localhost:3000/api', { method: 'POST', body: JSON.stringify(body) });
+      const res = await POST(req);
+      const json = await res.json();
+
+      expect(res.status).toBe(400);
+      expect(json.error).toBe('รูปแบบวันที่ไม่ถูกต้อง');
+    });
+
 });
