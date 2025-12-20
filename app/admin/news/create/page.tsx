@@ -87,6 +87,9 @@ function EditPostPageInner() {
   };
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
   const [extraImageFiles, setExtraImageFiles] = useState<File[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
 
   // รูปหลัก (กล่องใหญ่ตรงกลาง)
   const handleMainImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -105,6 +108,9 @@ function EditPostPageInner() {
 
   // ถ้าไม่มีภาพอื่น ให้เพิ่มเข้า extraImageFiles ด้วย
   setExtraImageFiles((prev) => (prev.length ? prev : [file]));
+
+  // เคลียร์ข้อความเออเร่อถ้ามีภาพถูกอัปโหลด
+  setErrorMsg(null);
 };
 
 
@@ -123,55 +129,55 @@ function EditPostPageInner() {
     extraImages: [...prev.extraImages, ...urls],
     coverImageUrl: prev.coverImageUrl || urls[0],
   }));
+
+  // เคลียร์ข้อความเออเร่อถ้ามีภาพถูกอัปโหลด
+  setErrorMsg(null);
 };
 
 
   const handlePublish = async () => {
-  
+  // client-side: require at least one image before submitting
+  if (extraImageFiles.length === 0 && !mainImageFile && postData.extraImages.length === 0) {
+    setErrorMsg("ต้องอัปโหลดรูปอย่างน้อย 1 รูป");
+    alert("❌ ต้องอัปโหลดรูปอย่างน้อย 1 รูป");
+    return;
+  }
+  setErrorMsg(null);
 
   const formData = new FormData();
-  formData.append("title", postData.title); 
+
+  formData.append("title", postData.title);
   formData.append("description", postData.body);
   formData.append("categories", postData.categories);
   formData.append("booking", postData.Booking);
   formData.append("userId", String(currentUserId));
-  formData.append("bookingFormId", String(bookingFormIdFromQuery));
 
-  // รูปหลายรูป
-  extraImageFiles.forEach((file) => {
-    formData.append("pictures", file); 
-  });
-  if (bookingFormIdFromQuery) {
-    formData.append("bookingFormId", String(bookingFormIdFromQuery));
+  // ✅ ส่ง bookingFormId เฉพาะตอน "ต้องลงทะเบียน"
+  if (postData.Booking === "HAVE") {
+    if (!bookingFormIdFromQuery) {
+      alert("ต้องกรอก/เลือก Booking Form ก่อน (ยังไม่มี bookingFormId)");
+      return;
+    }
+    formData.append("bookingFormId", bookingFormIdFromQuery);
   }
+  // ❌ ถ้า NOT: ไม่ต้อง append bookingFormId เลย
 
-  // ถ้าภาพหลักไม่อยู่ใน extra ให้เพิ่ม
+  extraImageFiles.forEach((file) => formData.append("pictures", file));
   if (mainImageFile && !extraImageFiles.includes(mainImageFile)) {
     formData.append("pictures", mainImageFile);
   }
 
-  try {
-    const res = await fetch("/api/content", {
-      method: "POST",
-      body: formData, // ❌ ห้ามใส่ Content-Type
-    });
+  const res = await fetch("/api/content", { method: "POST", body: formData });
+  const data = await res.json().catch(() => null);
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      alert("❌ สร้างเนื้อหาไม่สำเร็จ: " + data.error);
-      return;
-    }
-
-    alert("🎉 เผยแพร่โพสต์สำเร็จ!");
-    router.push("/admin/news");
-
-  } catch (err) {
-    console.error(err);
-    alert("เกิดข้อผิดพลาดขณะเผยแพร่โพสต์");
+  if (!res.ok) {
+    alert("❌ สร้างเนื้อหาไม่สำเร็จ: " + (data?.error || "Bad Request"));
+    return;
   }
-};
 
+  alert("🎉 เผยแพร่โพสต์สำเร็จ!");
+  router.push("/admin/news");
+};
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-10">
@@ -305,6 +311,11 @@ function EditPostPageInner() {
                       onChange={handleExtraImagesUpload}
                     />
                   </label>
+
+                  {/* ข้อความเออเร่อถ้ามี */}
+                  {errorMsg && (
+                    <p className="text-sm text-red-600 mt-2">{errorMsg}</p>
+                  )}
 
                   {/* แสดง thumbnail หลายรูป */}
                   {postData.extraImages.length > 0 && (
