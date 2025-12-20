@@ -9,6 +9,7 @@ function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
+  const email = searchParams.get('email');
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -39,7 +40,8 @@ function ResetPasswordForm() {
       return;
     }
 
-    if (!token) {
+
+    if (!token || !email) {
       setError('ลิงก์รีเซ็ตรหัสผ่านไม่ถูกต้อง');
       return;
     }
@@ -47,10 +49,11 @@ function ResetPasswordForm() {
     setLoading(true);
 
     try {
+
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, newPassword }),
+        body: JSON.stringify({ email, token, newPassword }),
       });
 
       const data = await response.json();
