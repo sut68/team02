@@ -1,103 +1,83 @@
-'use client';
+// app/admin/budget_report/edit/[id]/page.tsx
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { FileText, X, CloudUpload, Upload, Plus, AlertCircle, Trash2, Save } from 'lucide-react';
-import { PrimaryButton, CancelButton } from '@/app/components/ui/Button';
-import { Input } from '@/app/components/ui/Input';
+import React, { useState, useEffect, useRef } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { 
+  FileText, X, CloudUpload, AlertCircle, 
+  Trash2, Save, Calendar, Eye, CheckCircle2
+} from "lucide-react";
 
-// --- Types ---
-interface ApprovedProject {
+// Components
+import { PrimaryButton, CancelButton } from "@/app/components/ui/Button";
+import { Input } from "@/app/components/ui/Input";
+import { Textarea } from "@/app/components/ui/InputTextArea";
+import SuccessModal from "@/app/components/ui/SuccessModal";
+
+// Types
+import { SummarySubmission } from "@/app/types/budget_report";
+
+// Interface
+interface ExistingImageUI {
   id: number;
-  projectName: string;
-  organization: string;
-  objective: string;
-  requestedBudget: number;
-  startDate: string;
-  endDate: string;
-}
-
-interface ExistingFile {
-  id: string;
   url: string;
-  name: string;
-  size: number;
 }
 
-interface BudgetReportData {
-  projectId: number;
-  actualExpense: number;
-  evidenceFiles: ExistingFile[];
-  activityImages: ExistingFile[];
-}
-
-// --- Mock Database ---
-const mockProjectsDB: Record<number, ApprovedProject> = {
-  101: {
-    id: 101,
-    projectName: "โครงการทุนการศึกษา ภาค 1/2568",
-    organization: "สำนักวิชาวิศวกรรมศาสตร์",
-    objective: "เพื่อมอบโอกาสต่อยอดทางการเรียนให้กับนักศึกษา",
-    requestedBudget: 25500,
-    startDate: "2025-11-01", 
-    endDate: "2025-11-07",
-  }
-};
-
-const mockExistingReport: Record<number, BudgetReportData> = {
-  101: {
-    projectId: 101,
-    actualExpense: 24500,
-    evidenceFiles: [
-      { id: 'ev-1', url: '#', name: 'สรุปผลโครงการ_เดิม.pdf', size: 1024 * 1024 * 1.5 }
-    ],
-    activityImages: [
-      { id: 'img-1', url: 'https://placehold.co/600x400', name: 'รูปกิจกรรม_1.jpg', size: 1024 * 500 },
-      { id: 'img-2', url: 'https://placehold.co/600x400/orange/white', name: 'รูปกิจกรรม_2.jpg', size: 1024 * 600 }
-    ]
-  }
+// Helper: แปลงขนาดไฟล์
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
 export default function EditBudgetReportPage() {
   const router = useRouter();
-  const params = useParams();
-  const projectId = params.id; 
-  
+  const { id } = useParams();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
   // --- State ---
-  const [projectInfo, setProjectInfo] = useState<ApprovedProject | null>(null); // แยก State ข้อมูลโครงการ (Read-only)
-  const [actualExpense, setActualExpense] = useState(''); // Field 1: เงิน
-
-  // Field 2: ไฟล์เอกสาร
-  const [existingEvidence, setExistingEvidence] = useState<ExistingFile[]>([]);
-  const [newEvidenceFiles, setNewEvidenceFiles] = useState<File[]>([]);
-  
-  // Field 3: รูปภาพ
-  const [existingImages, setExistingImages] = useState<ExistingFile[]>([]);
-  const [newActivityImages, setNewActivityImages] = useState<File[]>([]);
-
-  const [deletedFileIds, setDeletedFileIds] = useState<string[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [reportData, setReportData] = useState<SummarySubmission | null>(null);
+  
+  // Form Fields
+  const [actualExpense, setActualExpense] = useState("");
+  const [existingEvidence, setExistingEvidence] = useState<string | null>(null);
+  const [newEvidenceFile, setNewEvidenceFile] = useState<File | null>(null);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
+  const [existingImages, setExistingImages] = useState<ExistingImageUI[]>([]);
+  const [newActivityImages, setNewActivityImages] = useState<File[]>([]);
+  const [deletedImageIds, setDeletedImageIds] = useState<number[]>([]);
 
-  // --- Load Data ---
+  // --- Fetch Data ---
   useEffect(() => {
-    if (projectId) {
-      const pId = Number(projectId);
-      const project = mockProjectsDB[pId];
-      const existingReport = mockExistingReport[pId];
+    if (!id) return;
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`/api/budget-report?id=${id}`);
+        if (!res.ok) throw new Error("Failed to fetch");
+        const data = await res.json();
+        const report = data.report;
 
-      if (project) setProjectInfo(project);
-
-      if (existingReport) {
-        setActualExpense(existingReport.actualExpense.toString());
-        setExistingEvidence(existingReport.evidenceFiles);
-        setExistingImages(existingReport.activityImages);
+        setReportData(report);
+        setActualExpense(report.totalActualExpense?.toString() || "");
+        if (report.summaryFilePath) setExistingEvidence(report.summaryFilePath);
+        if (report.images?.length) setExistingImages(report.images.map((img: any) => ({ id: img.id, url: img.imagePath })));
+      } catch (err) {
+        console.error(err);
+        router.push("/admin/budget_report");
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
-    }
-  }, [projectId]);
+    };
+    fetchData();
+  }, [id, router]);
 
   // --- Handlers ---
   const handleExpenseChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,217 +85,229 @@ export default function EditBudgetReportPage() {
     if (errors.actualExpense) setErrors(prev => { const n = { ...prev }; delete n.actualExpense; return n; });
   };
 
-  // Files Handlers
-  const handleNewEvidenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.length) {
-      setNewEvidenceFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
-      if (errors.evidenceFiles) setErrors(prev => { const n = { ...prev }; delete n.evidenceFiles; return n; });
+  const processFile = (file: File) => {
+    if (file.size > 20 * 1024 * 1024) { alert("ขนาดไฟล์เกิน 20MB"); return; }
+    const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!validTypes.includes(file.type) && !/\.(pdf|doc|docx)$/i.test(file.name)) {
+      alert("รับเฉพาะไฟล์ PDF หรือ Word เท่านั้น"); return;
     }
-  };
-  const removeNewEvidence = (index: number) => setNewEvidenceFiles(prev => prev.filter((_, i) => i !== index));
-  const removeExistingEvidence = (id: string) => {
-    setExistingEvidence(prev => prev.filter(f => f.id !== id));
-    setDeletedFileIds(prev => [...prev, id]);
+    setNewEvidenceFile(file);
+    if (errors.evidenceFiles) setErrors(prev => { const n = { ...prev }; delete n.evidenceFiles; return n; });
   };
 
-  // Images Handlers
+  const handleNewEvidenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) processFile(e.target.files[0]);
+  };
+  
   const handleNewImagesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
       setNewActivityImages(prev => [...prev, ...Array.from(e.target.files || [])]);
       if (errors.activityImages) setErrors(prev => { const n = { ...prev }; delete n.activityImages; return n; });
     }
   };
-  const removeNewImage = (index: number) => setNewActivityImages(prev => prev.filter((_, i) => i !== index));
-  const removeExistingImage = (id: string) => {
-    setExistingImages(prev => prev.filter(f => f.id !== id));
-    setDeletedFileIds(prev => [...prev, id]);
-  };
 
-  // --- Validation ---
+  const removeNewEvidence = () => { setNewEvidenceFile(null); if(fileInputRef.current) fileInputRef.current.value = ""; };
+  const removeNewImage = (i: number) => setNewActivityImages(prev => prev.filter((_, idx) => idx !== i));
+  const removeExistingImage = (id: number) => { setExistingImages(prev => prev.filter(f => f.id !== id)); setDeletedImageIds(prev => [...prev, id]); };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    
-    // Check 1: Expense
-    if (!actualExpense) newErrors.actualExpense = 'กรุณาระบุจำนวนเงินที่ใช้จ่ายจริง';
-    else if (parseFloat(actualExpense) < 0) newErrors.actualExpense = 'จำนวนเงินต้องไม่ต่ำกว่า 0';
-
-    // Check 2: Evidence Files
-    const totalEvidence = existingEvidence.length + newEvidenceFiles.length;
-    if (totalEvidence < 1) newErrors.evidenceFiles = 'กรุณาแนบไฟล์หลักฐานอย่างน้อย 1 ไฟล์';
-
-    // Check 3: Activity Images
-    const totalImages = existingImages.length + newActivityImages.length;
-    if (totalImages < 2) newErrors.activityImages = 'กรุณาแนบภาพกิจกรรมอย่างน้อย 2 ภาพ';
-
+    if (!actualExpense || parseFloat(actualExpense) < 0) newErrors.actualExpense = "กรุณาระบุจำนวนเงินที่ใช้จ่ายจริง";
+    if (!existingEvidence && !newEvidenceFile) newErrors.evidenceFiles = "กรุณาแนบไฟล์หลักฐาน";
+    if (existingImages.length + newActivityImages.length < 2) newErrors.activityImages = "กรุณาแนบภาพกิจกรรมอย่างน้อย 2 ภาพ";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async () => {
-    if (!validateForm()) return;
+    if (!validateForm()) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
     setIsSubmitting(true);
-    
-    // API Payload simulation
-    console.log({
-        projectId,
-        actualExpense,
-        deletedFileIds,
-        newEvidenceFiles,
-        newActivityImages
-    });
+    try {
+        const formData = new FormData();
+        formData.append("id", id as string); 
+        formData.append("projectId", reportData?.proposalId.toString() || "");
+        formData.append("actualExpense", actualExpense);
+        if (newEvidenceFile) formData.append("newEvidenceFiles", newEvidenceFile);
+        newActivityImages.forEach(f => formData.append("newActivityImages", f));
+        if (deletedImageIds.length > 0) formData.append("deletedFileIds", deletedImageIds.join(","));
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    alert("บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว");
-    router.push('/admin/budget_report');
-    setIsSubmitting(false);
+        const res = await fetch("/api/budget-report", { method: "PUT", body: formData });
+        if (!res.ok) throw new Error((await res.json()).error || "Failed");
+        setShowSuccessModal(true);
+    } catch (e:any) { alert(e.message); } finally { setIsSubmitting(false); }
   };
 
-  // Styles
-  const labelStyle = "block text-sm font-semibold text-gray-700 mb-2";
-  const headerPillStyle = "w-full bg-[#F3F4F6] rounded-full py-3 text-center text-gray-600 font-bold text-lg border border-gray-200 shadow-sm mb-8";
-  const errorTextStyle = "text-red-500 text-xs mt-1.5 ml-1 font-medium flex items-center animate-in fade-in slide-in-from-top-1";
-  const readOnlyInputClass = "bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed focus:ring-0 focus:border-gray-200";
-  const formatFileSize = (size: number) => (size / 1024 / 1024).toFixed(2) + " MB";
+  // --- Styles ---
+  const headerPillStyle = "w-full bg-[#F3F4F6] rounded-lg py-3 text-center mb-6 border border-gray-200 mt-8 first:mt-0";
+  const headerTextStyle = "text-gray-600 font-semibold text-lg";
+  const labelStyle = "block text-sm text-gray-600 mb-2 ml-1 font-medium";
+  const readOnlyInputClass = "bg-gray-50 text-gray-500 border-gray-200 cursor-not-allowed focus:ring-0 focus:border-gray-200";
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (isLoading || !reportData) return <div className="min-h-screen flex items-center justify-center text-gray-500">กำลังโหลดข้อมูล...</div>;
+  const project = reportData.proposal;
+  // @ts-ignore
+  const manager = project?.manager; 
 
   return (
-    <div className="min-h-screen bg-white py-10 px-4 font-sans">
-      <div className="max-w-7xl mx-auto">
-        
-        <h1 className="text-2xl font-bold text-gray-800 mb-8 pl-1">แก้ไขรายงานโครงการ</h1>
+    <div className="min-h-screen bg-white py-10 px-4 font-sans relative">
+      <SuccessModal show={showSuccessModal} onClose={() => { setShowSuccessModal(false); router.push("/admin/budget_report"); }} message="บันทึกการแก้ไขเรียบร้อยแล้ว" />
 
-        {/* --- Section 1: ข้อมูลโครงการ (Read Only) --- */}
-        <div className={headerPillStyle}>ข้อมูลโครงการ</div>
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-3xl font-semibold text-gray-700 mt-4 mb-8 text-center">แก้ไขรายงานโครงการ</h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 mb-10 px-2 opacity-90">
-            <div>
-                <label className={labelStyle}>ชื่อโครงการ</label>
-                <Input value={projectInfo?.projectName || ''} readOnly disabled className={readOnlyInputClass} radius="full" />
-            </div>
-            <div>
-                <label className={labelStyle}>ชื่อหน่วยงาน/องค์กร</label>
-                <Input value={projectInfo?.organization || ''} readOnly disabled className={readOnlyInputClass} radius="full" />
-            </div>
-            <div><label className={labelStyle}>วัตถุประสงค์</label><Input value={projectInfo?.objective || ''} readOnly disabled className={readOnlyInputClass} radius="full" /></div>
-            <div><label className={labelStyle}>งบประมาณที่ขอ (บาท)</label><Input value={projectInfo?.requestedBudget || ''} readOnly disabled className={readOnlyInputClass} radius="full" /></div>
-            <div><label className={labelStyle}>วันเริ่มโครงการ</label><Input type="date" value={projectInfo?.startDate || ''} readOnly disabled className={readOnlyInputClass} radius="full" /></div>
-            <div><label className={labelStyle}>วันสิ้นสุดโครงการ</label><Input type="date" value={projectInfo?.endDate || ''} readOnly disabled className={readOnlyInputClass} radius="full" /></div>
+        {/* SECTION 1: ข้อมูลโครงการ */}
+        <div className={headerPillStyle}><h2 className={headerTextStyle}>ส่วนที่ 1: ข้อมูลโครงการ</h2></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 mb-10 px-2">
+            <div className="md:col-span-2"><label className={labelStyle}>ชื่อโครงการ</label><Input value={project?.projectName || '-'} readOnly disabled className={readOnlyInputClass} radius="md" /></div>
+            <div><label className={labelStyle}>ชื่อหน่วยงาน/องค์กร</label><Input value={project?.responsibilityUnit || '-'} readOnly disabled className={readOnlyInputClass} radius="md" /></div>
+            <div><label className={labelStyle}>งบประมาณที่ขอ (บาท)</label><Input value={project?.requestedAmount?.toLocaleString() || '0'} readOnly disabled className={readOnlyInputClass} radius="md" /></div>
+            <div><label className={labelStyle}>วันเริ่มโครงการ</label><div className="relative"><Calendar className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" /><Input value={project?.projectStartDate ? new Date(project.projectStartDate).toLocaleDateString('th-TH') : '-'} readOnly disabled className={`${readOnlyInputClass} pl-10`} radius="md" /></div></div>
+            <div><label className={labelStyle}>วันสิ้นสุดโครงการ</label><div className="relative"><Calendar className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" /><Input value={project?.projectEndDate ? new Date(project.projectEndDate).toLocaleDateString('th-TH') : '-'} readOnly disabled className={`${readOnlyInputClass} pl-10`} radius="md" /></div></div>
+            <div className="md:col-span-2"><label className={labelStyle}>วัตถุประสงค์</label><Textarea value={project?.objective || '-'} readOnly disabled className={`${readOnlyInputClass} min-h-[80px]`} /></div>
         </div>
 
-        {/* --- Section 2: รายงานผล (Editable: 3 Fields Only) --- */}
-        <div className={headerPillStyle}>แก้ไขรายการใช้จ่ายและหลักฐาน</div>
+        {/* SECTION 2: ผู้รับผิดชอบ */}
+        <div className={headerPillStyle}><h2 className={headerTextStyle}>ส่วนที่ 2: ข้อมูลผู้รับผิดชอบโครงการ</h2></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 mb-10 px-2">
+            <div><label className={labelStyle}>ชื่อ-นามสกุล</label><Input value={manager ? `${manager.firstName} ${manager.lastName}` : '-'} readOnly disabled className={readOnlyInputClass} radius="md" /></div>
+            <div><label className={labelStyle}>ตำแหน่ง</label><Input value={manager?.position || '-'} readOnly disabled className={readOnlyInputClass} radius="md" /></div>
+            <div><label className={labelStyle}>สังกัด/หน่วยงาน</label><Input value={manager?.department || '-'} readOnly disabled className={readOnlyInputClass} radius="md" /></div>
+            <div><label className={labelStyle}>เบอร์โทรศัพท์</label><Input value={manager?.phoneNumber || '-'} readOnly disabled className={readOnlyInputClass} radius="md" /></div>
+            <div className="md:col-span-2"><label className={labelStyle}>อีเมล</label><Input value={manager?.email || '-'} readOnly disabled className={readOnlyInputClass} radius="md" /></div>
+        </div>
 
-        <div className="space-y-12 px-2 bg-white rounded-xl">
+        {/* ================= SECTION 3: EDITABLE ================= */}
+        <div className={headerPillStyle}><h2 className={headerTextStyle}>ส่วนที่ 3: แก้ไขรายการใช้จ่ายและหลักฐาน</h2></div>
+
+        <div className="space-y-8 px-2 mb-10">
             
-            {/* FIELD 1: จำนวนเงิน */}
+            {/* 1. Expense */}
             <div>
-                <label className={labelStyle}>
-                    จำนวนเงินที่ใช้จ่ายตามจริง <span className="text-red-500">*</span>
-                </label>
+                <label className={labelStyle}>จำนวนเงินที่ใช้จ่ายตามจริง <span className="text-red-500">*</span></label>
                 <div className="relative max-w-md">
-                    <Input 
-                        type="number" 
-                        value={actualExpense}
-                        onChange={handleExpenseChange}
-                        size="lg"
-                        radius="full"
-                        className={`w-full text-lg ${errors.actualExpense ? 'border-red-500' : 'border-gray-300 focus:border-orange-500'}`}
-                        placeholder="ระบุจำนวนเงิน"
-                    />
-                    <span className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 font-medium pointer-events-none">บาท</span>
+                    <Input type="number" value={actualExpense} onChange={handleExpenseChange} radius="md" className={`w-full pr-12 ${errors.actualExpense ? 'border-red-500' : 'border-gray-300'}`} placeholder="ระบุจำนวนเงิน" />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">บาท</span>
                 </div>
-                {errors.actualExpense && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.actualExpense}</p>}
+                {errors.actualExpense && <p className="text-red-500 text-xs mt-1.5 flex items-center"><AlertCircle className="w-3 h-3 mr-1" />{errors.actualExpense}</p>}
             </div>
 
-            {/* FIELD 2: เอกสารแนบหลักฐาน */}
+            {/* 2. File Upload (No Card Wrapper, Viewable) */}
             <div>
                 <label className={labelStyle}>
-                    เอกสารแนบหลักฐาน <span className="text-gray-400 font-normal">(ไฟล์เดิม + ไฟล์ใหม่)</span> <span className="text-red-500">*</span>
+                    เอกสารแนบหลักฐาน <span className="text-gray-400 font-normal">(ไฟล์สรุปผล/ใบเสร็จ)</span> <span className="text-red-500">*</span>
                 </label>
-                
-                <div className="space-y-3 mb-4">
-                    {/* Existing Files */}
-                    {existingEvidence.map((file) => (
-                         <div key={file.id} className="flex items-center justify-between p-4 border border-blue-100 bg-blue-50/30 rounded-xl">
-                            <div className="flex items-center gap-4 overflow-hidden">
-                                <div className="p-2.5 bg-white rounded-lg shadow-sm border border-blue-100 shrink-0 text-blue-500">
-                                    <FileText className="w-6 h-6" />
-                                </div>
-                                <div className="min-w-0">
-                                    <a href={file.url} className="text-sm font-medium text-blue-700 truncate hover:underline">{file.name}</a>
-                                    <p className="text-xs text-gray-500 mt-0.5">ไฟล์เดิม • {formatFileSize(file.size)}</p>
-                                </div>
-                            </div>
-                            <button onClick={() => removeExistingEvidence(file.id)} className="text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition">
-                                <Trash2 className="w-4 h-4" />
-                            </button>
-                        </div>
-                    ))}
-                    {/* New Files */}
-                    {newEvidenceFiles.map((file, idx) => (
-                        <div key={`new-${idx}`} className="flex items-center justify-between p-4 border border-orange-100 bg-[#FFF8F0] rounded-xl">
-                            <div className="flex items-center gap-4 overflow-hidden">
-                                <div className="p-2.5 bg-white rounded-lg shadow-sm border border-orange-100 shrink-0 text-[#F26522]">
-                                    <Upload className="w-6 h-6" />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-sm font-medium text-gray-800 truncate">{file.name}</p>
-                                    <p className="text-xs text-orange-500 mt-0.5">ไฟล์ใหม่ • {formatFileSize(file.size)}</p>
-                                </div>
-                            </div>
-                            <button onClick={() => removeNewEvidence(idx)} className="text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-red-50 transition"><X className="w-4 h-4" /></button>
-                        </div>
-                    ))}
-                    <label className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-lg shadow-sm cursor-pointer hover:bg-gray-50 hover:border-orange-300 hover:text-orange-600 transition-all text-sm text-gray-600 font-medium mt-2">
-                        <Plus className="w-4 h-4" /> เพิ่มไฟล์เอกสารใหม่
-                        <input type="file" className="hidden" accept=".pdf,.doc,.docx" multiple onChange={handleNewEvidenceUpload} />
-                    </label>
+
+                {/* Dropzone */}
+                <div 
+                    onDragOver={(e) => { e.preventDefault(); setIsDraggingFile(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); setIsDraggingFile(false); }}
+                    onDrop={(e) => { e.preventDefault(); setIsDraggingFile(false); if(e.dataTransfer.files?.[0]) processFile(e.dataTransfer.files[0]); }}
+                    className={`mt-2 border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isDraggingFile ? 'border-orange-500 bg-orange-50/50' : 'border-gray-200 bg-white hover:border-gray-300'}`}
+                    onClick={() => fileInputRef.current?.click()}
+                >
+                    <CloudUpload className="w-10 h-10 text-gray-300 mb-3" />
+                    <p className="text-gray-700 font-medium mb-1">คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</p>
+                    <p className="text-gray-400 text-xs mb-4">รองรับ PDF, DOCX ขนาดไม่เกิน 20 MB</p>
+                    <button type="button" className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 shadow-sm pointer-events-none">เลือกไฟล์</button>
+                    <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx" onChange={handleNewEvidenceUpload} />
                 </div>
-                {errors.evidenceFiles && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.evidenceFiles}</p>}
+
+                {/* File List */}
+                <div className="space-y-3 mt-4">
+                    {/* A. Existing File */}
+                    {existingEvidence && !newEvidenceFile && (
+                        <div className="flex items-center justify-between p-3 border border-gray-200 rounded-xl bg-white group hover:shadow-sm hover:border-orange-200 transition-all">
+                            <div className="flex items-center gap-3 overflow-hidden">
+                                <div className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-lg flex-shrink-0"><FileText className="w-5 h-5 text-gray-500" /></div>
+                                <div className="min-w-0">
+                                    <a href={existingEvidence} target="_blank" className="text-sm font-semibold text-gray-800 truncate hover:text-orange-600 hover:underline">{existingEvidence.split('/').pop()}</a>
+                                    <div className="flex items-center gap-2 text-xs text-gray-500"><span>ไฟล์ปัจจุบัน</span><span className="w-1 h-1 bg-gray-300 rounded-full" /><span className="text-green-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> มีอยู่แล้ว</span></div>
+                                </div>
+                            </div>
+                            <a href={existingEvidence} target="_blank" className="p-2 text-gray-400 hover:text-orange-500 transition-colors" title="ดูไฟล์"><Eye className="w-5 h-5" /></a>
+                        </div>
+                    )}
+                    {/* B. New File */}
+                    {newEvidenceFile && (
+                        <div className="flex items-center justify-between p-3 border border-orange-200 rounded-xl bg-orange-50 shadow-sm">
+                            <div className="flex items-center gap-3 overflow-hidden">
+                                <div className="w-10 h-10 flex items-center justify-center bg-white rounded-lg border border-orange-100 flex-shrink-0"><FileText className="w-5 h-5 text-orange-600" /></div>
+                                <div className="min-w-0">
+                                    <a href={URL.createObjectURL(newEvidenceFile)} target="_blank" className="text-sm font-semibold text-gray-800 truncate hover:text-orange-600 hover:underline" title="คลิกเพื่อดูตัวอย่าง">{newEvidenceFile.name}</a>
+                                    <div className="flex items-center gap-2 text-xs text-gray-500"><span>{formatFileSize(newEvidenceFile.size)}</span><span className="w-1 h-1 bg-gray-300 rounded-full" /><span className="text-orange-600 font-medium flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> ไฟล์ใหม่</span></div>
+                                </div>
+                            </div>
+                            <button onClick={removeNewEvidence} className="p-2 text-gray-400 hover:text-red-500 transition-colors"><X className="w-5 h-5" /></button>
+                        </div>
+                    )}
+                </div>
+                {errors.evidenceFiles && <p className="text-red-500 text-xs mt-2 flex items-center"><AlertCircle className="w-3 h-3 mr-1" />{errors.evidenceFiles}</p>}
             </div>
 
-            {/* FIELD 3: ภาพกิจกรรม */}
-            <div className="pb-4">
+            {/* 3. ภาพกิจกรรม (No Card Wrapper, Viewable) */}
+            <div>
                 <label className={labelStyle}>
                     ภาพกิจกรรม <span className="text-gray-400 font-normal">(อย่างน้อยรวม 2 ภาพ)</span> <span className="text-red-500">*</span>
                 </label>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {/* Upload Dropzone */}
+                <div 
+                    onDragOver={(e) => { e.preventDefault(); setIsDraggingImage(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); setIsDraggingImage(false); }}
+                    onDrop={(e) => { 
+                        e.preventDefault(); 
+                        setIsDraggingImage(false); 
+                        if(e.dataTransfer.files?.length) {
+                            const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+                            setNewActivityImages(prev => [...prev, ...files]);
+                        }
+                    }}
+                    className={`mt-2 border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all cursor-pointer mb-6 ${isDraggingImage ? 'border-orange-500 bg-orange-50/50' : 'border-gray-200 bg-white hover:border-gray-300'}`}
+                    onClick={() => imageInputRef.current?.click()}
+                >
+                    <CloudUpload className="w-10 h-10 text-gray-300 mb-3" />
+                    <p className="text-gray-700 font-medium mb-1">คลิกเพื่อเลือกรูปภาพ หรือลากไฟล์มาวางที่นี่</p>
+                    <p className="text-gray-400 text-xs mb-4">รองรับไฟล์ภาพ JPEG, PNG (เลือกได้หลายไฟล์)</p>
+                    <button type="button" className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 shadow-sm pointer-events-none">เลือกภาพ</button>
+                    <input ref={imageInputRef} type="file" className="hidden" accept="image/*" multiple onChange={handleNewImagesUpload} />
+                </div>
+
+                {/* Image Grid */}
+                <div className="grid grid-cols-2 gap-6 [&>div:last-child:nth-child(odd)]:col-span-2 [&>div:last-child:nth-child(odd)]:w-[calc(50%-0.75rem)] [&>div:last-child:nth-child(odd)]:justify-self-center">
                     {/* Existing Images */}
-                    {existingImages.map((file) => (
-                        <div key={file.id} className="relative aspect-4/3 rounded-xl overflow-hidden border-2 border-blue-100 shadow-sm group bg-gray-50">
-                            <img src={file.url} alt="existing" className="w-full h-full object-cover" />
-                            <span className="absolute bottom-2 left-2 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded shadow-sm font-medium">ภาพเดิม</span>
-                            <button onClick={() => removeExistingImage(file.id)} className="absolute top-2 right-2 bg-white/90 p-1.5 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-all shadow-sm hover:bg-red-50"><Trash2 className="w-3 h-3" /></button>
+                    {existingImages.map((f) => (
+                        <div key={f.id} className="relative aspect-video rounded-xl overflow-hidden border border-gray-200 group shadow-sm">
+                            {/* Make image clickable to view */}
+                            <a href={f.url} target="_blank" className="block w-full h-full cursor-zoom-in">
+                                <img src={f.url} alt="img" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                            </a>
+                            <div className="absolute bottom-2 left-2 px-3 py-1 bg-black/50 text-white text-xs rounded-lg backdrop-blur-md pointer-events-none">ภาพเดิม</div>
+                            <button onClick={() => removeExistingImage(f.id)} className="absolute top-2 right-2 p-2 bg-white/90 rounded-full text-red-500 opacity-0 group-hover:opacity-100 shadow-md transition-all hover:bg-red-50"><X className="w-4 h-4" /></button>
                         </div>
                     ))}
                     {/* New Images */}
-                    {newActivityImages.map((file, idx) => (
-                        <div key={`new-img-${idx}`} className="relative aspect-4/3 rounded-xl overflow-hidden border-2 border-orange-200 shadow-sm group bg-gray-50">
-                            <img src={URL.createObjectURL(file)} alt="new preview" className="w-full h-full object-cover" />
-                            <span className="absolute bottom-2 left-2 text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded shadow-sm font-medium">ภาพใหม่</span>
-                            <button onClick={() => removeNewImage(idx)} className="absolute top-2 right-2 bg-white/90 p-1.5 rounded-full text-gray-600 hover:text-red-500 shadow-sm"><X className="w-3 h-3" /></button>
+                    {newActivityImages.map((f, i) => (
+                        <div key={i} className="relative aspect-video rounded-xl overflow-hidden border-2 border-orange-200 group shadow-sm animate-in fade-in zoom-in-95">
+                            {/* Make new image clickable to view preview */}
+                            <a href={URL.createObjectURL(f)} target="_blank" className="block w-full h-full cursor-zoom-in">
+                                <img src={URL.createObjectURL(f)} alt="new" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                            </a>
+                            <div className="absolute bottom-2 left-2 px-3 py-1 bg-orange-500 text-white text-xs rounded-lg shadow-md pointer-events-none">ภาพใหม่</div>
+                            <button onClick={() => removeNewImage(i)} className="absolute top-2 right-2 p-2 bg-white/90 rounded-full text-gray-500 hover:text-red-500 shadow-md transition-all"><X className="w-4 h-4" /></button>
                         </div>
                     ))}
-                    <label className="flex flex-col items-center justify-center aspect-4/3 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-orange-400 hover:bg-orange-50/50 transition-all group bg-white">
-                        <div className="bg-orange-50 p-3 rounded-full mb-2 group-hover:bg-orange-100 transition-colors"><CloudUpload className="w-5 h-5 text-orange-500" /></div>
-                        <span className="text-xs text-gray-500 font-medium group-hover:text-orange-600">เพิ่มรูปภาพใหม่</span>
-                        <input type="file" className="hidden" accept="image/*" multiple onChange={handleNewImagesUpload} />
-                    </label>
                 </div>
-                {errors.activityImages && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.activityImages}</p>}
+                {errors.activityImages && <p className="text-red-500 text-xs mt-2 flex items-center"><AlertCircle className="w-3 h-3 mr-1" />{errors.activityImages}</p>}
             </div>
         </div>
 
-        {/* Buttons */}
-        <div className="flex justify-end gap-4 mt-12 pt-8 border-t border-gray-100">
-            <CancelButton onClick={() => router.back()} style={{ borderRadius: '9999px', height: '48px', paddingLeft: '2rem', paddingRight: '2rem' }}>ยกเลิก</CancelButton>
-            <PrimaryButton onClick={handleSubmit} disabled={isSubmitting} style={{ borderRadius: '9999px', height: '48px', paddingLeft: '2.5rem', paddingRight: '2.5rem' }} className="shadow-lg shadow-orange-200/50 hover:shadow-orange-200 transition-all transform hover:-translate-y-0.5 flex items-center gap-2">
-                {isSubmitting ? 'กำลังบันทึก...' : (<><Save className="w-4 h-4" /> บันทึกการเปลี่ยนแปลง</>)}
+        {/* Action Buttons */}
+        <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-gray-100">
+            <CancelButton onClick={() => router.back()} style={{ borderRadius: '8px', height: '40px', width: '140px' }}>ย้อนกลับ</CancelButton>
+            <PrimaryButton onClick={handleSubmit} disabled={isSubmitting} style={{ borderRadius: '8px', height: '40px', minWidth: '140px' }} className="flex items-center justify-center gap-2">
+                {isSubmitting ? 'กำลังบันทึก...' : <><Save className="w-4 h-4" /> บันทึกการแก้ไข</>}
             </PrimaryButton>
         </div>
-
       </div>
     </div>
   );

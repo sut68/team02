@@ -1,3 +1,4 @@
+// app/api/budget-report/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
 import path from "path";
@@ -42,10 +43,9 @@ export async function GET(req: NextRequest) {
     const id = searchParams.get("id");
     const projectId = searchParams.get("projectId");
     const status = searchParams.get("status");
-    // ✅ เพิ่ม: รับค่า trash เพื่อดูรายการในถังขยะ
     const showTrash = searchParams.get("trash") === "true"; 
 
-    // 1. กรณีดึงรายการเดียว (Detail) - อนุญาตให้ดูได้แม้จะถูกลบ (เผื่อ Admin เช็ค)
+    // 1. กรณีดึงรายการเดียว (Detail)
     if (id) {
       const report = await prisma.summarySubmission.findUnique({
         where: { id: Number(id) },
@@ -64,14 +64,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ report }, { status: 200 });
     }
 
-    // 2. กรณีดึงเป็น List (พร้อม Filter)
+    // 2. กรณีดึงเป็น List
     const where: any = {};
 
-    // ✅ Logic การกรอง DeletedAt
     if (showTrash) {
-      where.deletedAt = { not: null }; // ถ้าดูถังขยะ -> เอาที่มีวันที่ลบ
+      where.deletedAt = { not: null };
     } else {
-      where.deletedAt = null;          // ถ้าดูปกติ -> เอาที่ยังไม่ลบ
+      where.deletedAt = null;
     }
 
     if (projectId) where.proposalId = Number(projectId);
@@ -84,7 +83,7 @@ export async function GET(req: NextRequest) {
             select: { id: true, projectName: true, responsibilityUnit: true }
         },
         images: {
-            take: 1 // เอาแค่รูปแรกไปแสดงเป็นปกในการ์ด
+            take: 1 
         },
         submitter: { select: { fullName: true } }
       },
@@ -98,7 +97,7 @@ export async function GET(req: NextRequest) {
         status: r.status,
         updatedAt: r.updatedAt,
         createdAt: r.createdAt,
-        deletedAt: r.deletedAt, // ส่งกลับไปด้วยเผื่อใช้แสดงผล
+        deletedAt: r.deletedAt,
         imageSrc: r.images[0]?.imagePath || null,
         totalExpense: r.totalActualExpense,
         unit: r.proposal?.responsibilityUnit
@@ -196,7 +195,11 @@ export async function PUT(req: NextRequest) {
 
     // 2. FormData Request (แก้ไขเนื้อหา)
     const formData = await req.formData();
-    const id = formData.get("projectId") || formData.get("id");
+    
+    // FIX: ใช้ 'id' (Report ID) เป็นหลัก ไม่ใช่ projectId
+    // ถ้ามีทั้ง id และ projectId เราต้องเอา id ที่เป็น Primary Key ของตาราง SummarySubmission
+    const id = formData.get("id"); 
+    
     const actualExpense = formData.get("actualExpense");
     const newEvidenceFiles = formData.getAll("newEvidenceFiles") as File[];
     const newActivityImages = formData.getAll("newActivityImages") as File[];
@@ -207,21 +210,25 @@ export async function PUT(req: NextRequest) {
     const updatePayload: any = {};
     if (actualExpense) updatePayload.totalActualExpense = Number(actualExpense);
 
+    // อัปโหลดไฟล์หลักฐานใหม่ (ถ้ามี)
     if (newEvidenceFiles.length > 0 && newEvidenceFiles[0].size > 0) {
         const path = await saveFile(newEvidenceFiles[0], "evidence");
         updatePayload.summaryFilePath = path;
     }
 
     await prisma.$transaction(async (tx) => {
+        // ลบรูปภาพเดิม
         if (deletedFileIds) {
             const idsToDelete = String(deletedFileIds).split(',').map(Number).filter(n => !isNaN(n));
             if (idsToDelete.length > 0) {
+                // ต้องระบุ submissionId เพื่อความปลอดภัยว่าลบรูปของ report นี้จริงๆ
                 await tx.submissionImage.deleteMany({
                     where: { id: { in: idsToDelete }, submissionId: Number(id) }
                 });
             }
         }
 
+        // เพิ่มรูปภาพใหม่
         if (newActivityImages.length > 0) {
             for (const file of newActivityImages) {
                 if (file.size > 0) {
@@ -233,6 +240,7 @@ export async function PUT(req: NextRequest) {
             }
         }
 
+        // อัปเดตข้อมูล Text และ File Path
         await tx.summarySubmission.update({
             where: { id: Number(id) },
             data: updatePayload
@@ -243,6 +251,7 @@ export async function PUT(req: NextRequest) {
 
   } catch (error) {
     console.error("PUT Error:", error);
+    // เพิ่มการ Log เพิ่มเติมถ้าจำเป็น
     return NextResponse.json({ error: "เกิดข้อผิดพลาดในการแก้ไขข้อมูล" }, { status: 500 });
   }
 }
@@ -260,7 +269,6 @@ export async function DELETE(req: NextRequest) {
 
     if (!id) return NextResponse.json({ error: "ไม่พบ ID" }, { status: 400 });
 
-    // ✅ Soft Delete: ใส่วันที่ใน deletedAt แทนการลบจริง
     await prisma.summarySubmission.update({
         where: { id: Number(id) },
         data: { deletedAt: new Date() }
