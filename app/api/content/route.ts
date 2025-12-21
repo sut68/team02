@@ -91,11 +91,6 @@ export async function POST(req: NextRequest) {
     if (tooLong(title, 200)) {
       return NextResponse.json({ error: "ชื่อหัวเรื่องยาวเกินไป" }, { status: 400 });
     }
-
-    if (description && tooLong(description, 1000)) {
-      return NextResponse.json({ error: "รายละเอียดต้องไม่เกิน 1000 ตัวอักษร" }, { status: 400 });
-    }
-
     if (!categoriesRaw) {
       return NextResponse.json({ error: "ต้องระบุ categories" }, { status: 400 });
     }
@@ -104,6 +99,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "categories ไม่ถูกต้อง" }, { status: 400 });
     }
     const category = categoriesRaw as ContentCategoryType;
+
+    // Description length check: if provided and too long -> fail early
+    if (typeof descriptionRaw === "string" && tooLong(descriptionRaw, 1000)) {
+      return NextResponse.json({ error: "รายละเอียดต้องไม่เกิน 1000 ตัวอักษร" }, { status: 400 });
+    }
+
+    // Picture validation: ต้องมีรูปอย่างน้อย 1 รูป ก่อนสร้าง
+    const pictureFiles = formData.getAll("pictures") as File[];
+    const validPictureFiles = pictureFiles.filter(
+      (f) =>
+        f &&
+        typeof f !== "string" &&
+        // support Node-side fake files used in tests (they expose arrayBuffer)
+        typeof (f as any).arrayBuffer === "function"
+    );
+
+    if (validPictureFiles.length === 0) {
+      return NextResponse.json({ error: "ต้องอัปโหลดรูปอย่างน้อย 1 รูป" }, { status: 400 });
+    }
 
     let booking: Option | null = null;
     if (bookingRaw) {
@@ -118,18 +132,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "userId ไม่ถูกต้อง" }, { status: 400 });
     }
 
-    const bookingFormId = bookingFormIdRaw ? Number(bookingFormIdRaw) : null;
-    if (bookingFormIdRaw !== null && (!Number.isFinite(bookingFormId!) || bookingFormId! <= 0)) {
-      return NextResponse.json({ error: "bookingFormId ไม่ถูกต้อง" }, { status: 400 });
-    }
+    let bookingFormId: number | null = null;
 
-    const pictureFiles = formData.getAll("pictures") as File[];
+if (bookingFormIdRaw !== null && bookingFormIdRaw !== "") {
+  const parsed = Number(bookingFormIdRaw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return NextResponse.json({ error: "bookingFormId ไม่ถูกต้อง" }, { status: 400 });
+  }
+  bookingFormId = parsed;
+}
+
 
     const uploadDir = path.join(process.cwd(), "public", "uploads", "content");
     await fs.mkdir(uploadDir, { recursive: true });
 
     const picturePaths: string[] = [];
-    for (const file of pictureFiles) {
+    for (const file of validPictureFiles) {
       if (!file || typeof file === "string") continue;
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
