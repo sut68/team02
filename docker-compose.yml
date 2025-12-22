@@ -85,6 +85,25 @@ services:
       - app-network
     env_file:
       - .env
+  
+  # ============================================
+  # API Backend
+  # ============================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: api
+    restart: always
+    environment:
+      # บังคับให้ใช้ชื่อ container ในการต่อ DB
+      DATABASE_URL: postgresql://postgres:postgres@next-db:5432/mydb
+    env_file:
+      - .env
+    depends_on:
+      - db
+    networks:
+      - app-network
 
 volumes:
   db_data:
