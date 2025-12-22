@@ -1,29 +1,4 @@
-version: "3.9"
-
 services:
-  # ============================================
-  # Frontend + Backend (Next.js)
-  # ============================================
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: production
-    container_name: next-app
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgres://postgres:postgres@db:5432/mydb
-      NODE_ENV: production
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - app-network
-
   # ============================================
   # PostgreSQL Database
   # ============================================
@@ -47,10 +22,73 @@ services:
     networks:
       - app-network
 
+  # ============================================
+  # Reverse Proxy (Nginx)
+  # ============================================
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - certs:/etc/nginx/certs:ro
+      - /etc/nginx/vhost.d:/etc/nginx/vhost.d
+      - /usr/share/nginx/html:/usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./config/client_max_body_size.conf:/etc/nginx/conf.d/client_max_body_size.conf
+    restart: always
+    networks:
+      - app-network
+    depends_on:
+      - db
+
+  nginx-proxy-letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    container_name: nginx-proxy-letsencrypt
+    depends_on:
+      - nginx-proxy
+    volumes:
+      - certs:/etc/nginx/certs:rw
+      - /etc/nginx/vhost.d:/etc/nginx/vhost.d
+      - /usr/share/nginx/html:/usr/share/nginx/html
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      DEFAULT_EMAIL: sutalumniconnect@gmail.com
+    restart: always
+    networks:
+      - app-network
+
+  # ============================================
+  # Frontend (Next.js with API routes)
+  # ============================================
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: web
+    expose:
+      - "80"
+    ports:
+      - ":3000:3000"
+    environment:
+      VIRTUAL_HOST: www.sut-alumniconnect.me
+      LETSENCRYPT_HOST: www.sut-alumniconnect.me
+      NEXT_PUBLIC_API_URL: http://localhost:3000
+      API_URL: http://localhost:3000
+      NODE_ENV: production
+    depends_on:
+      - db
+    restart: always
+    networks:
+      - app-network
+    env_file:
+      - .env
+
 volumes:
   db_data:
+  certs:
 
 networks:
   app-network:
     driver: bridge
-

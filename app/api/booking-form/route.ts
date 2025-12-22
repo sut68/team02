@@ -16,13 +16,6 @@ export async function GET(req: NextRequest) {
             },
           },
         },
-        bookings: {
-          select: {
-            id: true,
-            transactionStatus: true,
-            Date: true,
-          },
-        },
       },
     });
 
