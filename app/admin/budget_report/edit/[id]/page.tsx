@@ -2,10 +2,11 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Image from 'next/image';
 import { useRouter, useParams } from "next/navigation";
 import { 
   FileText, X, CloudUpload, AlertCircle, 
-  Trash2, Save, Calendar, Eye, CheckCircle2
+  Save, Calendar, Eye, CheckCircle2
 } from "lucide-react";
 
 // Components
@@ -163,7 +164,7 @@ export default function EditBudgetReportPage() {
             <div><label className={labelStyle}>งบประมาณที่ขอ (บาท)</label><Input value={project?.requestedAmount?.toLocaleString() || '0'} readOnly disabled className={readOnlyInputClass} radius="md" /></div>
             <div><label className={labelStyle}>วันเริ่มโครงการ</label><div className="relative"><Calendar className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" /><Input value={project?.projectStartDate ? new Date(project.projectStartDate).toLocaleDateString('th-TH') : '-'} readOnly disabled className={`${readOnlyInputClass} pl-10`} radius="md" /></div></div>
             <div><label className={labelStyle}>วันสิ้นสุดโครงการ</label><div className="relative"><Calendar className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" /><Input value={project?.projectEndDate ? new Date(project.projectEndDate).toLocaleDateString('th-TH') : '-'} readOnly disabled className={`${readOnlyInputClass} pl-10`} radius="md" /></div></div>
-            <div className="md:col-span-2"><label className={labelStyle}>วัตถุประสงค์</label><Textarea value={project?.objective || '-'} readOnly disabled className={`${readOnlyInputClass} min-h-[80px]`} /></div>
+            <div className="md:col-span-2"><label className={labelStyle}>วัตถุประสงค์</label><Textarea value={project?.objective || '-'} readOnly disabled className={`${readOnlyInputClass} min-h-20`} /></div>
         </div>
 
         {/* SECTION 2: ผู้รับผิดชอบ */}
@@ -218,7 +219,7 @@ export default function EditBudgetReportPage() {
                     {existingEvidence && !newEvidenceFile && (
                         <div className="flex items-center justify-between p-3 border border-gray-200 rounded-xl bg-white group hover:shadow-sm hover:border-orange-200 transition-all">
                             <div className="flex items-center gap-3 overflow-hidden">
-                                <div className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-lg flex-shrink-0"><FileText className="w-5 h-5 text-gray-500" /></div>
+                                <div className="w-10 h-10 flex items-center justify-center bg-gray-50 rounded-lg shrink-0"><FileText className="w-5 h-5 text-gray-500" /></div>
                                 <div className="min-w-0">
                                     <a href={existingEvidence} target="_blank" className="text-sm font-semibold text-gray-800 truncate hover:text-orange-600 hover:underline">{existingEvidence.split('/').pop()}</a>
                                     <div className="flex items-center gap-2 text-xs text-gray-500"><span>ไฟล์ปัจจุบัน</span><span className="w-1 h-1 bg-gray-300 rounded-full" /><span className="text-green-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> มีอยู่แล้ว</span></div>
@@ -231,7 +232,7 @@ export default function EditBudgetReportPage() {
                     {newEvidenceFile && (
                         <div className="flex items-center justify-between p-3 border border-orange-200 rounded-xl bg-orange-50 shadow-sm">
                             <div className="flex items-center gap-3 overflow-hidden">
-                                <div className="w-10 h-10 flex items-center justify-center bg-white rounded-lg border border-orange-100 flex-shrink-0"><FileText className="w-5 h-5 text-orange-600" /></div>
+                                <div className="w-10 h-10 flex items-center justify-center bg-white rounded-lg border border-orange-100 shrink-0"><FileText className="w-5 h-5 text-orange-600" /></div>
                                 <div className="min-w-0">
                                     <a href={URL.createObjectURL(newEvidenceFile)} target="_blank" className="text-sm font-semibold text-gray-800 truncate hover:text-orange-600 hover:underline" title="คลิกเพื่อดูตัวอย่าง">{newEvidenceFile.name}</a>
                                     <div className="flex items-center gap-2 text-xs text-gray-500"><span>{formatFileSize(newEvidenceFile.size)}</span><span className="w-1 h-1 bg-gray-300 rounded-full" /><span className="text-orange-600 font-medium flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> ไฟล์ใหม่</span></div>
@@ -279,7 +280,15 @@ export default function EditBudgetReportPage() {
                         <div key={f.id} className="relative aspect-video rounded-xl overflow-hidden border border-gray-200 group shadow-sm">
                             {/* Make image clickable to view */}
                             <a href={f.url} target="_blank" className="block w-full h-full cursor-zoom-in">
-                                <img src={f.url} alt="img" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                              <div className="relative w-full h-full ... (class อื่นๆ ของคอนเทนเนอร์)">
+                                <Image
+                                  src={f.url}
+                                  alt="img"
+                                  fill // ใช้ fill เพื่อให้เต็มพื้นที่
+                                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                  sizes="(max-width: 768px) 100vw, 50vw"
+                                />
+                              </div>                            
                             </a>
                             <div className="absolute bottom-2 left-2 px-3 py-1 bg-black/50 text-white text-xs rounded-lg backdrop-blur-md pointer-events-none">ภาพเดิม</div>
                             <button onClick={() => removeExistingImage(f.id)} className="absolute top-2 right-2 p-2 bg-white/90 rounded-full text-red-500 opacity-0 group-hover:opacity-100 shadow-md transition-all hover:bg-red-50"><X className="w-4 h-4" /></button>
@@ -290,8 +299,15 @@ export default function EditBudgetReportPage() {
                         <div key={i} className="relative aspect-video rounded-xl overflow-hidden border-2 border-orange-200 group shadow-sm animate-in fade-in zoom-in-95">
                             {/* Make new image clickable to view preview */}
                             <a href={URL.createObjectURL(f)} target="_blank" className="block w-full h-full cursor-zoom-in">
-                                <img src={URL.createObjectURL(f)} alt="new" className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                            </a>
+                              <div className="relative w-full h-full ... (class อื่นๆ ของคอนเทนเนอร์)">
+                                <Image
+                                  src={URL.createObjectURL(f)}
+                                  alt="new"
+                                  fill // ใช้ fill เพื่อให้เต็มพื้นที่
+                                  unoptimized // สำคัญมากสำหรับ local blob url
+                                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                />
+                              </div>                            </a>
                             <div className="absolute bottom-2 left-2 px-3 py-1 bg-orange-500 text-white text-xs rounded-lg shadow-md pointer-events-none">ภาพใหม่</div>
                             <button onClick={() => removeNewImage(i)} className="absolute top-2 right-2 p-2 bg-white/90 rounded-full text-gray-500 hover:text-red-500 shadow-md transition-all"><X className="w-4 h-4" /></button>
                         </div>
