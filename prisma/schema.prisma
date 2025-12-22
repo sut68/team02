@@ -17,10 +17,14 @@ model PasswordResetToken {
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
 generator client {
   provider = "prisma-client-js"
 }
-
 // ========================================
 // Enums
 // ========================================
@@ -627,7 +631,7 @@ model ProjectProposal {
   manager     ProjectManager? @relation(fields: [managerId], references: [id])
   staff       User?           @relation("StaffProposals", fields: [staffId], references: [id])
 
-  summarySubmissions SummarySubmission[]
+  summarySubmission SummarySubmission?
   votes              ProjectVote[]
 }
 
@@ -644,7 +648,7 @@ model SummarySubmission {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  proposalId  Int
+  proposalId  Int   @unique
   submitterId Int?
 
   proposal  ProjectProposal   @relation(fields: [proposalId], references: [id], onDelete: Cascade)

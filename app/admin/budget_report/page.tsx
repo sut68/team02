@@ -284,7 +284,7 @@ export default function BudgetReportPage() {
           {activeFilter !== "ถังขยะ" && (
             <button
                 onClick={() => setIsSelectModalOpen(true)}
-                className="w-full md:w-auto h-10 px-6 rounded-lg bg-orange-500 text-white flex items-center justify-center gap-2 hover:bg-orange-600 transition-colors shadow-sm whitespace-nowrap"
+                className="w-full md:w-auto h-10 px-6 rounded-lg bg-orange-500 text-sm text-white flex items-center justify-center gap-2 hover:bg-orange-600 transition-colors shadow-sm whitespace-nowrap"
             >
                 <CirclePlus className="w-5 h-5" />
                 เพิ่มรายงาน
