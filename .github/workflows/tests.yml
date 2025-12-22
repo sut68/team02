@@ -43,7 +43,7 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mydb
 
       - name: Run migrations
-        run: npx prisma migrate deploy --skip-generate
+        run: npx prisma migrate deploy
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mydb
 
