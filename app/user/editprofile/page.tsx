@@ -134,7 +134,7 @@ export default function ProfileEditForm() {
 
 
   return (
-    <div className="min-h-[85vh] px-8 pt-20 pb-1">
+    <div className="min-h-[92vh] px-8 pt-20 pb-1">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-medium text-gray-800">แก้ไขข้อมูลส่วนตัว</h2>
