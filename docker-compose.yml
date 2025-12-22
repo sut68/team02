@@ -55,6 +55,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       DEFAULT_EMAIL: sutalumniconnect@gmail.com
+      # 👇 เพิ่มบรรทัดนี้แล้ว (สำคัญมาก)
+      NGINX_PROXY_CONTAINER: nginx-proxy
     restart: always
     networks:
       - app-network
@@ -68,13 +70,12 @@ services:
       dockerfile: Dockerfile.web
     container_name: web
     expose:
-      - "80"
-    ports:
-      - ":3000:3000"
+      - "3000"
     environment:
-      VIRTUAL_HOST: www.sut-alumniconnect.me
-      LETSENCRYPT_HOST: www.sut-alumniconnect.me
-      NEXT_PUBLIC_API_URL: http://localhost:3000
+      LETSENCRYPT_HOST: sut-alumniconnect.me,www.sut-alumniconnect.me
+      VIRTUAL_HOST: sut-alumniconnect.me,www.sut-alumniconnect.me
+      VIRTUAL_PORT: 3000
+      NEXT_PUBLIC_API_URL: https://www.sut-alumniconnect.me
       API_URL: http://localhost:3000
       NODE_ENV: production
     depends_on:

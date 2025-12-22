@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, ci/github-actions ]
   pull_request:
     branches: [ main, develop ]
 
@@ -49,11 +49,9 @@ jobs:
 
       - name: Run lint
         run: npm run lint --if-present
-        continue-on-error: true
 
       - name: Run tests
         run: npm test --if-present
-        continue-on-error: true
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mydb
           NODE_ENV: test
