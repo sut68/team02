@@ -207,7 +207,6 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
     <div className="grid grid-cols-2 gap-16">
       <div className="space-y-6">
         <h2 className="text-2xl font-medium text-gray-800 mb-8">ข้อมูลส่วนตัว</h2>
-
         <div>
           <label className="block text-sm text-gray-500 mb-2">
             ชื่อ-นามสกุล <span className="text-red-500">*</span>
@@ -215,15 +214,13 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
           <Input
             name="name"
             defaultValue={formData.name}
-            // onChange={handleInputChange}
-            onBlur={handleInputBlur} 
-            placeholder="ธนวา กุวัสต"
+            onBlur={handleInputBlur}
+            placeholder="ระบุชื่อและนามสกุล"
             required
             size="md"
             radius="md"
           />
         </div>
-
         <div>
           <label className="block text-sm text-gray-500 mb-2">
             อีเมล <span className="text-red-500">*</span>
@@ -232,15 +229,13 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
             name="email"
             type="email"
             defaultValue={formData.email}
-            // onChange={handleInputChange}
             onBlur={handleInputBlur}
-            placeholder="thanwa.eng@sut.ac.th"
+            placeholder="ระบุอีเมล (เช่น name@example.com)"
             required
             size="md"
             radius="md"
           />
         </div>
-
         <div>
           <label className="block text-sm text-gray-500 mb-2">
             รหัสผ่าน <span className="text-red-500">*</span>
@@ -249,15 +244,13 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
             name="password"
             type="password"
             defaultValue={formData.password}
-            // onChange={handleInputChange}
             onBlur={handleInputBlur}
-            placeholder="ต้องมีอย่างน้อย 8 ตัวอักษร (เช่น Thanwa2025)"
+            placeholder="ความยาว 8 ตัวอักษรขึ้นไป (A-Z, a-z, 0-9)"
             required
             size="md"
             radius="md"
           />
         </div>
-
         <div>
           <label className="block text-sm text-gray-500 mb-2">
             ยืนยันรหัสผ่าน <span className="text-red-500">*</span>
@@ -266,19 +259,16 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
             name="confirmPassword"
             type="password"
             defaultValue={formData.confirmPassword}
-            // onChange={handleInputChange}
             onBlur={handleInputBlur}
-            placeholder="พิมพ์รหัสผ่านอีกครั้ง"
+            placeholder="ยืนยันรหัสผ่านอีกครั้ง"
             required
             size="md"
             radius="md"
           />
         </div>
       </div>
-
       <div className="space-y-6">
         <h2 className="text-2xl font-medium text-gray-800 mb-8 invisible">ที่อยู่</h2>
-
         <div>
           <label className="block text-sm text-gray-500 mb-2">
             ที่อยู่ <span className="text-red-500">*</span>
@@ -286,15 +276,13 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
           <Input
             name="addressLine"
             defaultValue={formData.addressLine}
-            // onChange={handleInputChange}
             onBlur={handleInputBlur}
-            placeholder="199 หมู่ 9 ถนนมิตรภาพ"
+            placeholder="บ้านเลขที่ หมู่ อาคาร ซอย ถนน"
             required
             size="md"
             radius="md"
           />
         </div>
-
         <div className="grid grid-cols-2 gap-6">
           <div>
             <label className="block text-sm text-gray-500 mb-2">
@@ -303,9 +291,8 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
             <Input
               name="subdistrict"
               defaultValue={formData.subdistrict}
-              // onChange={handleInputChange}
               onBlur={handleInputBlur}
-              placeholder="สุรนารี"
+              placeholder="ระบุตำบล/แขวง"
               required
               size="md"
               radius="md"
@@ -318,16 +305,14 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
             <Input
               name="district"
               defaultValue={formData.district}
-              // onChange={handleInputChange}
               onBlur={handleInputBlur}
-              placeholder="เมืองนครราชสีมา"
+              placeholder="ระบุอำเภอ/เขต"
               required
               size="md"
               radius="md"
             />
           </div>
         </div>
-
         <div className="grid grid-cols-2 gap-6">
           <div>
             <label className="block text-sm text-gray-500 mb-2">
@@ -336,9 +321,8 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
             <Input
               name="province"
               defaultValue={formData.province}
-              // onChange={handleInputChange}
               onBlur={handleInputBlur}
-              placeholder="นครราชสีมา"
+              placeholder="ระบุจังหวัด"
               required
               size="md"
               radius="md"
@@ -351,16 +335,14 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
             <Input
               name="postalCode"
               defaultValue={formData.postalCode}
-              // onChange={handleInputChange}
               onBlur={handleInputBlur}
-              placeholder="30000"
+              placeholder="รหัสไปรษณีย์ 5 หลัก"
               required
               size="md"
               radius="md"
             />
           </div>
         </div>
-
         <div>
           <label className="block text-sm text-gray-500 mb-2">
             เบอร์โทรศัพท์ <span className="text-red-500">*</span>
@@ -368,9 +350,8 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
           <Input
             name="phone"
             defaultValue={formData.phone}
-            // onChange={handleInputChange}
             onBlur={handleInputBlur}
-            placeholder="086-245-7930"
+            placeholder="0xx-xxx-xxxx"
             required
             size="md"
             radius="md"
@@ -427,7 +408,6 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
     <div className="grid grid-cols-2 gap-16">
       <div className="space-y-6">
         <h2 className="text-2xl font-medium text-gray-800 mb-8">ประวัติการศึกษา</h2>
-
         <div>
           <label className="block text-sm text-gray-500 mb-2">
             รหัสนักศึกษา <span className="text-red-500">*</span>
@@ -435,15 +415,13 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
           <Input
             name="studentCode"
             defaultValue={formData.studentCode}
-            // onChange={handleInputChange}
             onBlur={handleInputBlur}
-            placeholder="B6610456"
+            placeholder="ระบุรหัสนักศึกษา (เช่น Bxxxxxxx)"
             required
             size="md"
             radius="md"
           />
         </div>
-
         <div>
           <label className="block text-sm text-gray-500 mb-2">
             สาขาวิชา <span className="text-red-500">*</span>
@@ -451,19 +429,16 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
           <Input
             name="major"
             defaultValue={formData.major}
-            // onChange={handleInputChange}
             onBlur={handleInputBlur}
-            placeholder="วิศวกรรมคอมพิวเตอร์"
+            placeholder="ระบุชื่อสาขาวิชา"
             required
             size="md"
             radius="md"
           />
         </div>
       </div>
-
       <div className="flex flex-col">
         <h2 className="text-2xl font-medium text-gray-800 mb-8 invisible">ข้อมูลเพิ่มเติม</h2>
-
         <div className="flex-1">
           <label className="block text-sm text-gray-500 mb-2">
             ไฟล์หลักฐานการศึกษา <span className="text-red-500">*</span>
@@ -493,7 +468,6 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
     <div className="grid grid-cols-2 gap-16">
       <div className="space-y-6">
         <h2 className="text-2xl font-medium text-gray-800 mb-8">ประวัติการศึกษา</h2>
-
         <div>
           <label className="block text-sm text-gray-500 mb-2">
             รหัสนักศึกษา <span className="text-red-500">*</span>
@@ -501,15 +475,13 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
           <Input
             name="studentCode"
             defaultValue={formData.studentCode}
-            // onChange={handleInputChange}
             onBlur={handleInputBlur}
-            placeholder="B6610456"
+            placeholder="ระบุรหัสนักศึกษา (เช่น Bxxxxxxx)"
             required
             size="md"
             radius="md"
           />
         </div>
-
         <div>
           <label className="block text-sm text-gray-500 mb-2">
             ปีที่จบการศึกษา <span className="text-red-500">*</span>
@@ -517,15 +489,13 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
           <Input
             name="gradYear"
             defaultValue={formData.gradYear}
-            // onChange={handleInputChange}
             onBlur={handleInputBlur}
-            placeholder="2568"
+            placeholder="ระบุปี พ.ศ. (เช่น 2567)"
             required
             size="md"
             radius="md"
           />
         </div>
-
         <div>
           <label className="block text-sm text-gray-500 mb-2">
             สาขาวิชา <span className="text-red-500">*</span>
@@ -533,19 +503,16 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
           <Input
             name="major"
             defaultValue={formData.major}
-            // onChange={handleInputChange}
             onBlur={handleInputBlur}
-            placeholder="วิศวกรรมคอมพิวเตอร์"
+            placeholder="ระบุชื่อสาขาวิชา"
             required
             size="md"
             radius="md"
           />
         </div>
       </div>
-
       <div className="flex flex-col">
         <h2 className="text-2xl font-medium text-gray-800 mb-8 invisible">ข้อมูลเพิ่มเติม</h2>
-
         <div className="flex-1">
           <label className="block text-sm text-gray-500 mb-2">
             ไฟล์หลักฐานการศึกษา <span className="text-red-500">*</span>
