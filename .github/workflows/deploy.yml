@@ -88,9 +88,9 @@ jobs:
           script: |
             cd /opt/alumni-connect
             git pull origin main
-            docker-compose pull
-            docker-compose up -d --force-recreate
-            docker-compose exec -T api npx prisma migrate deploy
+            docker compose pull
+            docker compose up -d --force-recreate
+            docker compose exec -T api npx prisma migrate deploy
 
       - name: Run health check
         uses: appleboy/ssh-action@master
