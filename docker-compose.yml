@@ -65,6 +65,7 @@ services:
   # Frontend (Next.js with API routes)
   # ============================================
   web:
+    image: ghcr.io/sut68/team02-web:latest
     build:
       context: .
       dockerfile: Dockerfile.web
@@ -90,6 +91,7 @@ services:
   # API Backend
   # ============================================
   api:
+    image: ghcr.io/sut68/team02-api:latest
     build:
       context: .
       dockerfile: Dockerfile.api
