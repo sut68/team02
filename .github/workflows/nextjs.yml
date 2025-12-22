@@ -1,9 +1,0 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  output: 'export',   // <--- บรรทัดนี้แหละที่ขาดไป!
-  images: {
-    unoptimized: true, // <--- บรรทัดนี้จำเป็นสำหรับ GitHub Pages
-  },
-};
-
-module.exports = nextConfig;
