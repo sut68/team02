@@ -219,6 +219,7 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
             required
             size="md"
             radius="md"
+            autoComplete="name"
           />
         </div>
         <div>
@@ -234,6 +235,7 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
             required
             size="md"
             radius="md"
+            autoComplete="email"
           />
         </div>
         <div>
@@ -249,6 +251,7 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
             required
             size="md"
             radius="md"
+            autoComplete="new-password"
           />
         </div>
         <div>
@@ -264,6 +267,7 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
             required
             size="md"
             radius="md"
+            autoComplete="new-password"
           />
         </div>
       </div>
@@ -281,6 +285,7 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
             required
             size="md"
             radius="md"
+            autoComplete="street-address"
           />
         </div>
         <div className="grid grid-cols-2 gap-6">
@@ -296,6 +301,7 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
               required
               size="md"
               radius="md"
+              autoComplete="address-level3"
             />
           </div>
           <div>
@@ -310,6 +316,7 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
               required
               size="md"
               radius="md"
+              autoComplete="address-level2"
             />
           </div>
         </div>
@@ -326,6 +333,7 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
               required
               size="md"
               radius="md"
+              autoComplete="address-level1"
             />
           </div>
           <div>
@@ -340,6 +348,7 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
               required
               size="md"
               radius="md"
+              autoComplete="postal-code"
             />
           </div>
         </div>
@@ -355,6 +364,7 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
             required
             size="md"
             radius="md"
+            autoComplete="tel"
           />
         </div>
       </div>
@@ -420,6 +430,7 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
             required
             size="md"
             radius="md"
+            autoComplete="off"
           />
         </div>
         <div>
@@ -434,6 +445,7 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
             required
             size="md"
             radius="md"
+            autoComplete="off"
           />
         </div>
       </div>
@@ -494,6 +506,7 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
             required
             size="md"
             radius="md"
+            autoComplete="off"
           />
         </div>
         <div>
@@ -562,7 +575,7 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
   };
 
   const RegistrationForm = () => (
-    <form onSubmit={handleSubmit} className="pt-24 pb-24 px-8">
+    <form onSubmit={handleSubmit} className="pt-24 pb-24 px-8" autoComplete="on" name="register">
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-center mb-8">
           {stepLabels.map((label, i) => {
