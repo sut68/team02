@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Layers, RefreshCw, CheckCircle, XCircle, Search, ChevronDown } from 'lucide-react';
 import { Card, CardContent } from '@/app/components/ui/Card';
 import { Input } from '@/app/components/ui/Input';
@@ -109,7 +109,6 @@ export default function UserManagementClient({ initialUsers }: Props) {
         });
 
         if (response.ok) {
-          // Refresh the page to get updated data
           window.location.reload();
         } else {
           const data = await response.json();
@@ -280,33 +279,37 @@ export default function UserManagementClient({ initialUsers }: Props) {
                           </td>
                           <td className="px-6 py-4">
                             <div className="relative inline-block">
-                              <select
-                                value={verifyStatus}
-                                onChange={(e) =>
-                                  handleStatusChange(user.id, e.target.value as VerifyStatus)
-                                }
-                                className={`appearance-none px-3 py-1 pr-8 rounded-full text-xs font-medium border-0 outline-none cursor-pointer transition-colors ${
-                                  verifyStatus === 'PENDING'
-                                    ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                    : verifyStatus === 'APPROVED'
-                                    ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-                                    : 'bg-red-100 text-red-700 hover:bg-red-200'
-                                }`}
-                              >
-                                <option value="PENDING">รอดำเนินการ</option>
-                                <option value="APPROVED">อนุมัติแล้ว</option>
-                                <option value="REJECTED">ไม่อนุมัติ</option>
-                              </select>
+                              {verifyStatus === 'PENDING' ? (
+                                <select
+                                  value={verifyStatus}
+                                  onChange={(e) =>
+                                    handleStatusChange(user.id, e.target.value as VerifyStatus)
+                                  }
+                                  // แก้ไข: ลดความกว้างเป็น 110px และใส่ text-center
+                                  className={`w-[110px] appearance-none px-3 py-1 pr-6 rounded-full text-xs font-medium border-0 outline-none transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300 cursor-pointer text-center`}
+                                >
+                                  <option value="PENDING">รอดำเนินการ</option>
+                                  <option value="APPROVED">อนุมัติแล้ว</option>
+                                  <option value="REJECTED">ไม่อนุมัติ</option>
+                                </select>
+                              ) : (
+                                <div
+                                  // แก้ไข: ใช้ div + flex เพื่อ justify-center อย่างสมบูรณ์ในกรอบ 110px
+                                  className={`w-[110px] px-3 py-1 rounded-full text-xs font-medium border-0 flex items-center justify-center ${
+                                    verifyStatus === 'APPROVED'
+                                      ? 'bg-orange-100 text-orange-700'
+                                      : 'bg-red-100 text-red-700'
+                                  }`}
+                                >
+                                  {verifyStatus === 'APPROVED' ? 'อนุมัติแล้ว' : 'ไม่อนุมัติ'}
+                                </div>
+                              )}
 
-                              <ChevronDown
-                                className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 ${
-                                  verifyStatus === 'PENDING'
-                                    ? 'text-gray-700'
-                                    : verifyStatus === 'APPROVED'
-                                    ? 'text-orange-700'
-                                    : 'text-red-700'
-                                }`}
-                              />
+                              {verifyStatus === 'PENDING' && (
+                                <ChevronDown
+                                  className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-700"
+                                />
+                              )}
                             </div>
                           </td>
                         </tr>
