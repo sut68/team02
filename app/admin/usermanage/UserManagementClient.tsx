@@ -238,7 +238,7 @@ export default function UserManagementClient({ initialUsers }: Props) {
                     <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">รหัสนักศึกษา</th>
                     <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">สาขาวิชา</th>
                     <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">สถานะการศึกษา</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">อีเมลล์</th>
+                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">อีเมล</th>
                     <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">เอกสารแนบ</th>
                     <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">สถานะ</th>
                   </tr>
