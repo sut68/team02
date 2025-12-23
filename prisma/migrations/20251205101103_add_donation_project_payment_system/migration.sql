@@ -1,5 +1,5 @@
--- CreateEnum
-CREATE TYPE "ProjectStatus" AS ENUM ('OPEN', 'CLOSED', 'COMPLETED');
+-- Note: ProjectStatus enum already created in migration 20251205043711_create_donation_models
+-- CREATE TYPE "ProjectStatus" AS ENUM ('OPEN', 'CLOSED', 'COMPLETED');
 
 -- CreateEnum
 CREATE TYPE "PaymentMethodType" AS ENUM ('PROMPTPAY', 'CREDIT_CARD', 'BANK_TRANSFER');
@@ -7,24 +7,8 @@ CREATE TYPE "PaymentMethodType" AS ENUM ('PROMPTPAY', 'CREDIT_CARD', 'BANK_TRANS
 -- CreateEnum
 CREATE TYPE "PaymentStatusType" AS ENUM ('CONFIRMED', 'CANCELLED', 'REFUNDED');
 
--- CreateTable
-CREATE TABLE "DonationProject" (
-    "id" SERIAL NOT NULL,
-    "title" TEXT NOT NULL,
-    "description" TEXT NOT NULL,
-    "goalAmount" DOUBLE PRECISION NOT NULL,
-    "currentAmount" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "startDate" TIMESTAMP(3) NOT NULL,
-    "endDate" TIMESTAMP(3) NOT NULL,
-    "ownerName" TEXT NOT NULL,
-    "contact" TEXT NOT NULL,
-    "status" "ProjectStatus" NOT NULL DEFAULT 'OPEN',
-    "posterUrl" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "DonationProject_pkey" PRIMARY KEY ("id")
-);
+-- Note: DonationProject table already created in migration 20251205043711_create_donation_models
+-- CREATE TABLE "DonationProject" ...
 
 -- CreateTable
 CREATE TABLE "PaymentMethodRecord" (
@@ -54,66 +38,56 @@ CREATE TABLE "PaymentRecord" (
     CONSTRAINT "PaymentRecord_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "DonationTransaction" (
-    "id" SERIAL NOT NULL,
-    "amount" DOUBLE PRECISION NOT NULL,
-    "status" "TransactionStatus" NOT NULL DEFAULT 'PENDING',
-    "message" TEXT,
-    "isPublic" BOOLEAN NOT NULL DEFAULT true,
-    "donorName" TEXT,
-    "donorEmail" TEXT,
-    "donorPhone" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "userId" INTEGER,
-    "projectId" INTEGER NOT NULL,
-    "paymentId" INTEGER,
+-- Note: DonationTransaction table already created in migration 20251205043711_create_donation_models
+-- Add new columns to existing DonationTransaction table
+ALTER TABLE "DonationTransaction" 
+    ADD COLUMN IF NOT EXISTS "message" TEXT,
+    ADD COLUMN IF NOT EXISTS "isPublic" BOOLEAN NOT NULL DEFAULT true,
+    ADD COLUMN IF NOT EXISTS "donorPhone" TEXT,
+    ADD COLUMN IF NOT EXISTS "paymentId" INTEGER;
 
-    CONSTRAINT "DonationTransaction_pkey" PRIMARY KEY ("id")
-);
+-- Drop the old omiseChargeId unique constraint if it exists and column if needed
+-- (keeping omiseChargeId column for backward compatibility, but making it nullable)
+ALTER TABLE "DonationTransaction" 
+    ALTER COLUMN "omiseChargeId" DROP NOT NULL;
 
--- CreateIndex
-CREATE INDEX "DonationProject_status_idx" ON "DonationProject"("status");
+-- CreateIndex (using IF NOT EXISTS for safety)
+CREATE INDEX IF NOT EXISTS "DonationProject_status_idx" ON "DonationProject"("status");
 
--- CreateIndex
-CREATE INDEX "DonationProject_startDate_idx" ON "DonationProject"("startDate");
+CREATE INDEX IF NOT EXISTS "DonationProject_startDate_idx" ON "DonationProject"("startDate");
 
--- CreateIndex
-CREATE INDEX "DonationProject_endDate_idx" ON "DonationProject"("endDate");
+CREATE INDEX IF NOT EXISTS "DonationProject_endDate_idx" ON "DonationProject"("endDate");
 
--- CreateIndex
-CREATE UNIQUE INDEX "PaymentRecord_paymentRefId_key" ON "PaymentRecord"("paymentRefId");
+-- CreateIndex (using IF NOT EXISTS for safety)
+CREATE UNIQUE INDEX IF NOT EXISTS "PaymentRecord_paymentRefId_key" ON "PaymentRecord"("paymentRefId");
 
--- CreateIndex
-CREATE INDEX "PaymentRecord_paymentStatus_idx" ON "PaymentRecord"("paymentStatus");
+CREATE INDEX IF NOT EXISTS "PaymentRecord_paymentStatus_idx" ON "PaymentRecord"("paymentStatus");
 
--- CreateIndex
-CREATE INDEX "PaymentRecord_createdAt_idx" ON "PaymentRecord"("createdAt");
+CREATE INDEX IF NOT EXISTS "PaymentRecord_createdAt_idx" ON "PaymentRecord"("createdAt");
 
--- CreateIndex
-CREATE UNIQUE INDEX "DonationTransaction_paymentId_key" ON "DonationTransaction"("paymentId");
+CREATE UNIQUE INDEX IF NOT EXISTS "DonationTransaction_paymentId_key" ON "DonationTransaction"("paymentId");
 
--- CreateIndex
-CREATE INDEX "DonationTransaction_userId_idx" ON "DonationTransaction"("userId");
+CREATE INDEX IF NOT EXISTS "DonationTransaction_userId_idx" ON "DonationTransaction"("userId");
 
--- CreateIndex
-CREATE INDEX "DonationTransaction_projectId_idx" ON "DonationTransaction"("projectId");
+CREATE INDEX IF NOT EXISTS "DonationTransaction_projectId_idx" ON "DonationTransaction"("projectId");
 
--- CreateIndex
-CREATE INDEX "DonationTransaction_status_idx" ON "DonationTransaction"("status");
+CREATE INDEX IF NOT EXISTS "DonationTransaction_status_idx" ON "DonationTransaction"("status");
 
--- CreateIndex
-CREATE INDEX "DonationTransaction_createdAt_idx" ON "DonationTransaction"("createdAt");
+CREATE INDEX IF NOT EXISTS "DonationTransaction_createdAt_idx" ON "DonationTransaction"("createdAt");
 
 -- AddForeignKey
 ALTER TABLE "PaymentRecord" ADD CONSTRAINT "PaymentRecord_paymentMethodId_fkey" FOREIGN KEY ("paymentMethodId") REFERENCES "PaymentMethodRecord"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "DonationTransaction" ADD CONSTRAINT "DonationTransaction_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "DonationTransaction" ADD CONSTRAINT "DonationTransaction_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "DonationProject"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "DonationTransaction" ADD CONSTRAINT "DonationTransaction_paymentId_fkey" FOREIGN KEY ("paymentId") REFERENCES "PaymentRecord"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+-- Note: DonationTransaction foreign keys for userId and projectId already exist from migration 20251205043711_create_donation_models
+-- Only add the new paymentId foreign key
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint 
+        WHERE conname = 'DonationTransaction_paymentId_fkey'
+    ) THEN
+        ALTER TABLE "DonationTransaction" 
+        ADD CONSTRAINT "DonationTransaction_paymentId_fkey" 
+        FOREIGN KEY ("paymentId") REFERENCES "PaymentRecord"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+    END IF;
+END $$;

@@ -10,8 +10,8 @@ CREATE TYPE "ContentCategoryType" AS ENUM ('NEWS', 'EVENT', 'ANNOUNCEMENT', 'ACT
 -- CreateEnum
 CREATE TYPE "SouvenirOption" AS ENUM ('HAVE', 'NOT');
 
--- CreateEnum
-CREATE TYPE "TransactionStatus" AS ENUM ('PENDING', 'SUCCESS', 'FAILED');
+-- Note: TransactionStatus enum already created in migration 20251205043711_create_donation_models
+-- CREATE TYPE "TransactionStatus" AS ENUM ('PENDING', 'SUCCESS', 'FAILED');
 
 -- CreateTable
 CREATE TABLE "BookingForm" (

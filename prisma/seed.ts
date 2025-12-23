@@ -1,6 +1,7 @@
 // prisma/seed.ts
+import 'dotenv/config';
 import { PrismaClient, Role, StudyStatus, VerifyStatus } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -266,6 +267,20 @@ async function main() {
   }
 
   console.log('✅ Seeded verifications');
+
+  // -----------------------------
+  // 4) JOB TYPE
+  // -----------------------------
+  const jobTypes: Array<'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERNSHIP'> =
+    ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERNSHIP'];
+  for (const typename of jobTypes) {
+    await prisma.jobType.upsert({
+      where: { typename },
+      update: {},
+      create: { typename },
+    });
+  }
+  console.log('✅ Seeded job types');
 
   console.log('\n🎉 All seed data inserted successfully.');
   console.log('\n📋 Login credentials (password: sut12345):');

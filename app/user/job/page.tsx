@@ -5,56 +5,50 @@ import Image from 'next/image';
 
 interface Job {
   id: number;
-  jobTitle: string;
   title: string;
-  position: string;
-  jobType: string;
-  education: string;
-  salary: string;
-  companyName: string;
-  positions: string;
-  address: string;
-  contact: string;
-  transportation: string;
-  previews?: {
-    attachment: string | null;
-    logo: string | null;
-    image: string | null;
-  };
+  namejob: string;
+  position: string | null;
+  qualification: string | null;
+  location: string | null;
+  salarydetail: string | null;
+  numpositions: number | null;
+  contactInfo: string | null;
+  JobPosterPath: string | null;
+  educationlevel: string | null;
   status: string;
-  date: string;
   createdAt: string;
+  user?: {
+    id: number;
+    fullName: string;
+    email: string;
+  };
+  jobType?: {
+    id: number;
+    typename: string;
+  } | null;
+  company?: {
+    id: number;
+    companyname: string;
+    companyaddress: string | null;
+    CompanyLogoPath: string | null;
+    CompanyPicturePath: string | null;
+  } | null;
 }
 
 export default function JobListPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [displayedJobs, setDisplayedJobs] = useState<Job[]>([]);
   const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const itemsPerPage = 3;
 
   useEffect(() => {
     loadJobs();
-    
-    const handleStorageChange = () => {
-      loadJobs();
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    const interval = setInterval(loadJobs, 2000);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
   }, []);
 
   useEffect(() => {
-    const approvedJobs = jobs.filter(job => 
-      job.status === 'อนุมัติแล้ว' && 
-      job.previews?.attachment && 
-      job.previews.attachment.trim() !== ''
-    );
-    setDisplayedJobs(approvedJobs.slice(0, page * itemsPerPage));
+    setDisplayedJobs(jobs.slice(0, page * itemsPerPage));
   }, [jobs, page]);
 
   useEffect(() => {
@@ -66,23 +60,36 @@ export default function JobListPage() {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [jobs, page]);
+  }, [jobs, page, displayedJobs]);
 
-  const loadJobs = () => {
-    const storedJobs = JSON.parse(localStorage.getItem('jobs') || '[]');
-    const sortedJobs = storedJobs.sort((a: Job, b: Job) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-    setJobs(sortedJobs);
+  const loadJobs = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch('/api/job?limit=100');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'เกิดข้อผิดพลาดในการดึงข้อมูล');
+      }
+
+      // Show all approved jobs (not filtering by JobPosterPath anymore)
+      // Jobs without poster will show placeholder
+      if (data.jobs && Array.isArray(data.jobs)) {
+        setJobs(data.jobs);
+      } else {
+        setJobs([]);
+      }
+    } catch (err: any) {
+      setError(err.message || 'เกิดข้อผิดพลาดในการดึงข้อมูล');
+      console.error('Error loading jobs:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadMore = () => {
-    const approvedJobs = jobs.filter(job => 
-      job.status === 'อนุมัติแล้ว' && 
-      job.previews?.attachment && 
-      job.previews.attachment.trim() !== ''
-    );
-    if (displayedJobs.length < approvedJobs.length) {
+    if (displayedJobs.length < jobs.length) {
       setPage(prev => prev + 1);
     }
   };
@@ -93,6 +100,15 @@ export default function JobListPage() {
 
   const handleViewDetail = (jobId: number) => {
     window.location.href = `/user/job/detail/${jobId}`;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
   };
 
   return (
@@ -109,7 +125,22 @@ export default function JobListPage() {
       </div>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        {displayedJobs.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-16">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-orange-500 border-t-transparent"></div>
+            <p className="text-gray-500 mt-2">กำลังโหลดข้อมูล...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-16">
+            <p className="text-red-500 text-lg mb-4">{error}</p>
+            <button
+              onClick={loadJobs}
+              className="px-6 py-3 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors"
+            >
+              ลองอีกครั้ง
+            </button>
+          </div>
+        ) : displayedJobs.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-gray-500 text-lg mb-4">ยังไม่มีประกาศงาน</p>
             <button
@@ -129,10 +160,10 @@ export default function JobListPage() {
                 <div className="flex flex-col md:flex-row gap-6">
                   {/* Image Section */}
                   <div className="w-full md:w-56 h-64 bg-[#FFFFFF] rounded-lg flex-shrink-0 overflow-hidden relative">
-                    {job.previews?.attachment && !job.previews.attachment.includes('placehold.co') ? (
+                    {job.JobPosterPath && !job.JobPosterPath.includes('placehold.co') ? (
                       <img
-                        src={job.previews.attachment}
-                        alt={job.jobTitle}
+                        src={job.JobPosterPath}
+                        alt={job.title || job.namejob}
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -147,11 +178,11 @@ export default function JobListPage() {
                     <div>
                       {/* Title */}
                       <h3 className="text-2xl font-semibold text-[#111827] mb-2">
-                        {job.jobTitle || job.title || 'ไม่มีชื่องาน'}
+                        {job.title || job.namejob || 'ไม่มีชื่องาน'}
                       </h3>
                       {/* Subtitle / Company Name could go here if you want it prominent */}
                       <p className="text-lg text-orange-600 font-medium">
-                        {job.companyName}
+                        {job.company?.companyname || 'ไม่ระบุบริษัท'}
                       </p>
                     </div>
 
@@ -160,11 +191,11 @@ export default function JobListPage() {
                       <div className="flex items-center gap-4 text-sm text-[#4B5563]">
                         <div className="flex items-center gap-1.5">
                           <Calendar className="w-4 h-4" />
-                          <span>{job.date}</span>
+                          <span>{formatDate(job.createdAt)}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <User className="w-4 h-4" />
-                          <span>{job.companyName || 'ไม่ระบุ'}</span>
+                          <span>{job.company?.companyname || 'ไม่ระบุ'}</span>
                         </div>
                       </div>
 
@@ -181,11 +212,7 @@ export default function JobListPage() {
             ))}
 
             {/* Loading More Indicator */}
-            {displayedJobs.length < jobs.filter(j => 
-              j.status === 'อนุมัติแล้ว' && 
-              j.previews?.attachment && 
-              j.previews.attachment.trim() !== ''
-            ).length && (
+            {displayedJobs.length < jobs.length && (
               <div className="text-center py-8">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-orange-500 border-t-transparent"></div>
                 <p className="text-gray-500 mt-2">กำลังโหลดเพิ่มเติม...</p>
@@ -193,11 +220,7 @@ export default function JobListPage() {
             )}
 
             {/* End of List */}
-            {displayedJobs.length === jobs.filter(j => 
-              j.status === 'อนุมัติแล้ว' && 
-              j.previews?.attachment && 
-              j.previews.attachment.trim() !== ''
-            ).length && 
+            {displayedJobs.length === jobs.length && 
              displayedJobs.length > itemsPerPage && (
               <div className="text-center py-8">
                 <p className="text-gray-500">ไม่มีข้อมูลเพิ่มเติม</p>
