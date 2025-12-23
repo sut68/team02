@@ -100,12 +100,18 @@ services:
     environment:
       # บังคับให้ใช้ชื่อ container ในการต่อ DB
       DATABASE_URL: postgresql://postgres:postgres@next-db:5432/mydb
+      PORT: 3000
     env_file:
       - .env
     depends_on:
       - db
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   db_data:
