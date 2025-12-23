@@ -17,7 +17,7 @@ env:
 
 jobs:
   quality-check:
-    uses: ./.github/workflows/Tests.yml
+    uses: ./.github/workflows/tests.yml
     secrets: inherit # ส่งความลับไปให้ test ใช้ด้วย (ถ้าจำเป็น)
 
   build:
