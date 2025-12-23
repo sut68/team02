@@ -10,7 +10,7 @@ API_HEALTH_URL="http://localhost/api/health"
 DB_HOST="db"
 DB_USER="postgres"
 DB_NAME="mydb"
-LOG_FILE="/var/log/alumni-connect-health.log"
+LOG_FILE="/tmp/alumni-connect-health.log"
 ALERT_EMAIL="sutalumniconnect@gmail.com"
 
 # Colors
