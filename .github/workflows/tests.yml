@@ -5,6 +5,7 @@ on:
     branches: [ main, develop, ci/github-actions ]
   pull_request:
     branches: [ main, develop ]
+  workflow_call:
 
 jobs:
   test:
