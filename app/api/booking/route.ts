@@ -85,12 +85,11 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 2) Booking (ผูก bookingFormId จาก content เท่านั้น)
+      // 2) Booking (ผูก BookingFieldID)
       const newBooking = await tx.booking.create({
         data: {
           Userid: Number(userId),
           ContentID: Number(contentId),
-          bookingFormId: realBookingFormId,
           BookingFieldID: bookingFieldRecord.id,
           // transactionStatus ไม่ต้อง set ก็ได้ เพราะ schema default(PENDING) อยู่แล้ว
           attendees: {
@@ -105,7 +104,6 @@ export async function POST(request: NextRequest) {
           content: true,
           bookingField: true,
           attendees: true,
-          bookingForm: true,
         },
       });
 

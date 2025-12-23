@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ImageUp, Search as SearchIcon } from "lucide-react";
-import { ProjectProposal, ProjectManager } from "@/app/types/budget_approval";
+import { ProjectManager } from "@/app/types/budget_approval";
 
 // เรียกใช้ Components
 import { Input } from "@/app/components/ui/Input";
