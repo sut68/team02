@@ -45,11 +45,11 @@ check_database() {
     echo ""
     log "Checking database connectivity..." "$YELLOW"
     
-    if docker-compose exec -T db pg_isready -U "$DB_USER" &>/dev/null; then
+    if docker-compose exec -T next_db pg_isready -U "$DB_USER" &>/dev/null; then
         log "✓ Database is responding" "$GREEN"
         
         # Check database size
-        SIZE=$(docker-compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT pg_size_pretty(pg_database_size(current_database()));")
+        SIZE=$(docker-compose exec -T next_db psql -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT pg_size_pretty(pg_database_size(current_database()));")
         log "  Database size: $SIZE" "$GREEN"
         return 0
     else
