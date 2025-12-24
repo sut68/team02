@@ -898,8 +898,10 @@ model PaymentRecord {
   transaction           DonationTransaction? @relation(fields: [donationTransactionId], references: [id])
   donationTransactionId Int?
   bookings              Booking[]
+  
+  budgetDonationId      Int?
   budgetDonations       BudgetDonation[]
-  budgetDonation        BudgetDonation?
+  budgetDonation        BudgetDonation? @relation(fields: [budgetDonationId], references: [id])
 
   @@index([paymentStatus])
   @@index([createdAt])
