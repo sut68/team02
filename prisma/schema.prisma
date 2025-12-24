@@ -675,12 +675,8 @@ model BudgetDonation {
   donorName     String? // ชื่อที่ผู้ใช้ระบุในฟอร์ม (ถ้าไม่ Login)
   donorEmail    String?
   donorPhone    String?
-  isPublic      Boolean           @default(true) // แสดงชื่อผู้บริจาคสาธารณะหรือไม่
-  // paymentRecords    PaymentRecord[] @relation("MainDonation") 
-  
-  // คู่กับ budgetDonations ใน PaymentRecord (สมมติว่าเป็น Many-to-One หรือ Many-to-Many)
-  relatedPayments   PaymentRecord?  @relation("RelatedDonations", fields: [relatedPaymentId], references: [id]) 
-  relatedPaymentId  Int?
+  isPublic      Boolean           @default(true) // แสดงชื่อผู้บริจาคสาธารณะหรือไม่  
+  paymentRecords    PaymentRecord[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
@@ -903,7 +899,6 @@ model PaymentRecord {
   bookings              Booking[]
 
   budgetDonationId      Int?
-  // budgetDonations       BudgetDonation[]
   budgetDonation        BudgetDonation? @relation(fields: [budgetDonationId], references: [id])
 
   @@index([paymentStatus])
