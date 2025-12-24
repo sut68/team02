@@ -10,7 +10,7 @@ import { prisma } from '@/app/lib/prisma';
 // ดึงรายละเอียดโครงการเดียว (Admin/Edit View)
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   // 💡 TODO: ตรวจสอบสิทธิ์ Admin
   /*
@@ -19,7 +19,7 @@ export async function GET(
     return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 });
   }
   */
-  
+  const params = await props.params;
   // robust parsing: prefer params.id, but fallback to parsing request URL if missing
   let projectId = NaN;
   if (params?.id) {
@@ -84,7 +84,7 @@ export async function GET(
 // แก้ไขข้อมูลโครงการ (Admin Only)
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   // 💡 TODO: ตรวจสอบสิทธิ์ Admin
   /*
@@ -93,7 +93,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 });
   }
   */
-  
+  const params = await props.params;
   let projectId = NaN;
   if (params?.id) {
     projectId = parseInt(String(params.id), 10);
@@ -153,8 +153,7 @@ export async function PATCH(
 // ลบโครงการ (Admin Only)
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
-) {
+  props: { params: Promise<{ id: string }> }) {
   // 💡 TODO: ตรวจสอบสิทธิ์ Admin
   /*
   const session = await getServerSession(authOptions);
@@ -162,7 +161,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 403 });
   }
   */
-  
+  const params = await props.params;
   let projectId = NaN;
   if (params?.id) {
     projectId = parseInt(String(params.id), 10);
