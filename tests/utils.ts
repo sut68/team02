@@ -32,14 +32,14 @@ export function createMockRequest(
 
   // Mock formData if FormData is provided
   if (body instanceof FormData) {
-    // @ts-ignore - Mock formData method
-    request.formData = async () => body;
+    // ใช้ (request as any) เพื่อข้าม Type check โดยไม่ต้องใช้ comment
+    (request as any).formData = async () => body;
   }
 
   // Mock json if object is provided
   if (body && !(body instanceof FormData)) {
-    // @ts-ignore - Mock json method
-    request.json = async () => body;
+    // ใช้ (request as any) เพื่อข้าม Type check โดยไม่ต้องใช้ comment
+    (request as any).json = async () => body;
   }
 
   return request;
@@ -61,4 +61,3 @@ export function createMockFile(
   const blob = new Blob(['test content'], { type });
   return new File([blob], name, { type });
 }
-
