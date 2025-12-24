@@ -49,27 +49,6 @@ export default function SUTNewsUI() {
             <h1 className="text-3xl font-bold text-orange-500">
               Topic 5 คอมเม้นยอะสุด
             </h1>
-            <button 
-              onClick={() => router.push('/user/talk/create')}
-              className="rounded-full"
-            >
-              <div
-                className={
-                  "relative flex items-center gap-2 px-6 py-3 rounded-full overflow-hidden " +
-                  "backdrop-blur-md bg-white/10 border border-white/20 shadow-lg " +
-                  "hover:scale-[1.03] transition-transform duration-200"
-                }
-                style={{
-                  WebkitBackdropFilter: "blur(8px) saturate(120%)",
-                  backdropFilter: "blur(8px) saturate(120%)",
-                }}
-              >
-                <span className="absolute inset-0 pointer-events-none bg-gradient-to-r from-white/6 via-white/12 to-white/4 mix-blend-screen" />
-                <span className="absolute -left-6 -top-6 w-20 h-20 rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(249,115,22,0.18),transparent_30%)] blur-xl opacity-80 pointer-events-none" />
-                <Plus className="w-5 h-5 text-[#F97316] z-10" />
-                <span className="text-[#F97316] font-medium z-10">ตั้งกระทู้ใหม่</span>
-              </div>
-            </button>
           </div>
 
           {/* News Grid */}
