@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, ChangeEvent } from 'react'; // ✅ เพิ่ม ChangeEvent
 import { X, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -8,12 +8,14 @@ export default function CreateTopicForm() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('');
-  const [image, setImage] = useState(null);
+  // กำหนด Type ให้ state image (อาจจะเป็น File หรือ null)
+  const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
   const router = useRouter();
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
+  // ✅ แก้ไข: ระบุ Type ของ e ให้ชัดเจนว่าเป็น ChangeEvent ของ input
+  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; // ใช้ ? เพื่อกัน Error กรณี files เป็น null
     if (file) {
       setImage(file);
       const reader = new FileReader();
