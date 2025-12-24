@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 import { test as base, Page, BrowserContext } from '@playwright/test';
 import { cleanupTestData } from './test-container';
 import { loginAndSetCookies } from './utils/auth';

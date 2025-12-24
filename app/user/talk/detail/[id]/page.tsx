@@ -3,6 +3,8 @@
 import React from 'react';
 import { ArrowLeft, MessageCircle, Eye, Share2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+// แนะนำให้ใช้ Image ของ Next.js เพื่อประสิทธิภาพและแก้ Warning
+import Image from 'next/image'; 
 
 export default function TopicDetailPage() {
   const router = useRouter();
@@ -61,11 +63,14 @@ export default function TopicDetailPage() {
           {/* Images */}
           <div className="p-8 space-y-6">
             <div className="grid grid-cols-1 gap-4">
+              {/* ใช้ img ธรรมดาไปก่อนเพื่อความชัวร์เรื่อง Domain Config */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img 
                 src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&h=500&fit=crop"
                 alt="Award ceremony 1"
                 className="w-full rounded-lg shadow-md"
               />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img 
                 src="https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=800&h=500&fit=crop"
                 alt="Award ceremony 2"
@@ -81,10 +86,11 @@ export default function TopicDetailPage() {
                 จากการประกวดผลงาน สหกิจศึกษาและการศึกษาเชิงบูรณาการกับการทำงาน (Cooperative and Work-Integrated Education: CWIE) ดีเด่นระดับชาติ ประจำปี พ.ศ. 2567
               </p>
 
+              {/* ✅ จุดที่แก้: เปลี่ยน ' เป็น &apos; เพื่อแก้ Error */}
               <p className="text-gray-700 leading-relaxed mb-4">
                 ความสำเร็จครั้งนี้ถือเป็นเครื่องพิสูจน์ถึงความมุ่งมั่นและวิสัยทัศน์ของ มทส. ที่ให้ความสำคัญกับการจัดการศึกษาที่เน้นการเรียนรู้จากการปฏิบัติงานจริง 
                 (Work-Integrated Learning) ซึ่งเป็นหัวใจสำคัญของหลักสูตรสหกิจศึกษาเหมาดีเหมือนต้นหน้าวิทยาลัย โดยการศึกษาแบบ CWIE ของ มทส. 
-                มุ่งเน้นการผสมผสานนักศึกษา' สมรรถนะสูง' (High Competency) และ 'พร้อมใช้' (Work Ready)
+                มุ่งเน้นการผสมผสานนักศึกษา&apos; สมรรถนะสูง&apos; (High Competency) และ &apos;พร้อมใช้&apos; (Work Ready)
               </p>
 
               <p className="text-gray-700 leading-relaxed mb-4">
@@ -111,18 +117,11 @@ export default function TopicDetailPage() {
 
             {/* Tags */}
             <div className="flex flex-wrap gap-2 pt-4 border-t">
-              <span className="px-3 py-1 bg-orange-100 text-orange-600 rounded-full text-sm font-medium">
-                มทส.
-              </span>
-              <span className="px-3 py-1 bg-orange-100 text-orange-600 rounded-full text-sm font-medium">
-                รางวัล
-              </span>
-              <span className="px-3 py-1 bg-orange-100 text-orange-600 rounded-full text-sm font-medium">
-                สหกิจศึกษา
-              </span>
-              <span className="px-3 py-1 bg-orange-100 text-orange-600 rounded-full text-sm font-medium">
-                CWIE
-              </span>
+              {['มทส.', 'รางวัล', 'สหกิจศึกษา', 'CWIE'].map((tag) => (
+                <span key={tag} className="px-3 py-1 bg-orange-100 text-orange-600 rounded-full text-sm font-medium">
+                  {tag}
+                </span>
+              ))}
             </div>
 
             {/* Share and Actions */}
