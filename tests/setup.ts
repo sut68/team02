@@ -1,44 +1,44 @@
-import { vi } from 'vitest';
+import '@testing-library/jest-dom';
 
 // Mock Prisma Client
 const mockPrisma = {
   jobPosting: {
-    create: vi.fn(),
-    findMany: vi.fn(),
-    findUnique: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-    count: vi.fn(),
+    create: jest.fn(), // เปลี่ยน vi -> jest
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    count: jest.fn(),
   },
   jobType: {
-    findUnique: vi.fn(),
-    create: vi.fn(),
-    upsert: vi.fn(),
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    upsert: jest.fn(),
   },
   company: {
-    create: vi.fn(),
+    create: jest.fn(),
   },
   approvalLog: {
-    create: vi.fn(),
+    create: jest.fn(),
   },
 };
 
-vi.mock('@/app/lib/prisma', () => ({
+// เปลี่ยน vi.mock -> jest.mock
+jest.mock('@/app/lib/prisma', () => ({
   prisma: mockPrisma,
 }));
 
 // Mock file system operations
-vi.mock('fs', () => ({
+jest.mock('fs', () => ({
   promises: {
-    mkdir: vi.fn(),
-    writeFile: vi.fn(),
+    mkdir: jest.fn(),
+    writeFile: jest.fn(),
   },
 }));
 
 // Mock path module
-vi.mock('path', () => ({
+jest.mock('path', () => ({
   default: {
     join: (...args: string[]) => args.join('/'),
   },
 }));
-

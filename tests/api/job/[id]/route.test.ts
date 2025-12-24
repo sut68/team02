@@ -2,10 +2,7 @@ import { GET } from '@/app/api/job/[id]/route';
 import { prisma } from '@/app/lib/prisma';
 import { createMockRequest } from '../../../utils';
 
-// ============================================================================
-// 1. MOCKING DEPENDENCIES
-// ============================================================================
-
+// 1. Mock Prisma
 jest.mock('@/app/lib/prisma', () => ({
   prisma: {
     jobPosting: {
@@ -14,10 +11,7 @@ jest.mock('@/app/lib/prisma', () => ({
   },
 }));
 
-// ============================================================================
-// 2. TEST SUITE
-// ============================================================================
-
+// 2. Test Suite
 describe('/api/job/[id]', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -25,6 +19,7 @@ describe('/api/job/[id]', () => {
 
   describe('GET', () => {
     it('should return approved job by id', async () => {
+      // Mock Data
       const mockJob = {
         id: 1,
         title: 'Software Engineer',
@@ -39,15 +34,18 @@ describe('/api/job/[id]', () => {
 
       (prisma.jobPosting.findUnique as jest.Mock).mockResolvedValue(mockJob);
 
+      // Create Request
       const request = createMockRequest({
         method: 'GET',
         url: 'http://localhost:3000/api/job/1',
       });
 
+      // Call API
       const params = Promise.resolve({ id: '1' });
       const response = await GET(request, { params } as any);
       const data = await response.json();
 
+      // Assertions
       expect(response.status).toBe(200);
       expect(data.job).toBeDefined();
       expect(data.job.id).toBe(1);
