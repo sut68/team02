@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 import {
   Table,
   TableHeader,
@@ -9,9 +8,9 @@ import {
   TableRow,
   TableHead,
   TableCell,
-} from '../../../components/tables/Table';
-import { Card, CardHeader, CardContent } from '../../../components/ui/Card';
-import { PrimaryButton,CancelButton } from '../../../components/ui/Button';
+} from "../../../components/tables/Table";
+import { Card, CardHeader, CardContent } from "../../../components/ui/Card";
+import { PrimaryButton, CancelButton } from "../../../components/ui/Button";
 
 type VerifyStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -29,30 +28,38 @@ interface Submission {
   remark?: string | null;
 }
 
-export  function AdminSubmissionPage() {
+export function AdminSubmissionPage() {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [title, setTitle] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
-
   const [error, setError] = useState("");
-  const [submitLoading, setSubmitLoading] = useState(false);
+  const [updateLoadingId, setUpdateLoadingId] = useState<number | null>(null);
 
-  // 🎯 โหลดข้อมูลจาก API ตอนเปิดหน้า
+  // state สำหรับค่าที่กำลังแก้ (ต่อแถว)
+  const [editStatus, setEditStatus] = useState<Record<number, VerifyStatus>>(
+    {}
+  );
+  const [editRemark, setEditRemark] = useState<Record<number, string>>({});
+
+  // helper: แถวนี้กำลังอยู่โหมดแก้ไขไหม
+  const isEditing = (id: number) =>
+    editStatus[id] !== undefined || editRemark[id] !== undefined;
+
+  // โหลดข้อมูลตอนเปิดหน้า
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch("/api/news/submissions");
+        const res = await fetch("/api/admin/news/submission");
+        const data = await res.json();
         if (!res.ok) {
-          setLoading(false);
+          setError(data.error || "ไม่สามารถโหลดข้อมูลได้");
+          setSubmissions([]);
           return;
         }
-        const data = await res.json();
         setSubmissions(data.submissions || []);
       } catch (e) {
         console.error(e);
+        setError("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
       } finally {
         setLoading(false);
       }
@@ -61,191 +68,275 @@ export  function AdminSubmissionPage() {
     load();
   }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    setFile(f || null);
-    setFileName(f?.name || null);
-  };
 
   const statusLabel = (status: VerifyStatus) => {
     switch (status) {
       case "APPROVED":
-        return "ผ่าน";
+        return "อนุมัติแล้ว";
       case "REJECTED":
-        return "ไม่ผ่าน";
+        return "ไม่อนุมัติ";
       default:
-        return "รอตรวจสอบ";
+        return "รอดำเนินการ";
     }
   };
 
+  // 🎨 สีเม็ดสถานะแบบในรูป
   const statusColor = (status: VerifyStatus) => {
     switch (status) {
       case "APPROVED":
-        return "bg-orange-500";
+        return "bg-orange-100 text-orange-700 border border-orange-300";
       case "REJECTED":
-        return "bg-gray-500";
-      default:
-        return "bg-yellow-400";
+        return "bg-red-100 text-red-700 border border-red-300";
+      default: // PENDING
+        return "bg-gray-100 text-gray-700 border border-gray-300";
     }
   };
 
-  const handleSubmit = async () => {
-    if (!title.trim()) {
-      setError("กรุณากรอกชื่อหัวเรื่อง");
-      return;
-    }
-    if (!file) {
-      setError("กรุณาอัปโหลดไฟล์รายละเอียด");
-      return;
-    }
+  const handleChangeStatus = (id: number, value: VerifyStatus) => {
+    setEditStatus((prev) => ({
+      ...prev,
+      [id]: value,
+    }));
+  };
+
+  const handleChangeRemark = (id: number, value: string) => {
+    setEditRemark((prev) => ({
+      ...prev,
+      [id]: value,
+    }));
+  };
+
+  const handleResetEdit = (id: number) => {
+    setEditStatus((prev) => {
+      const clone = { ...prev };
+      delete clone[id];
+      return clone;
+    });
+    setEditRemark((prev) => {
+      const clone = { ...prev };
+      delete clone[id];
+      return clone;
+    });
+  };
+
+  const handleUpdateSubmission = async (id: number) => {
+    const submission = submissions.find((s) => s.id === id);
+    if (!submission) return;
+
+    const newStatus: VerifyStatus =
+      editStatus[id] !== undefined ? editStatus[id] : submission.status;
+
+    const newRemark: string =
+      editRemark[id] !== undefined ? editRemark[id] : submission.remark ?? "";
 
     setError("");
-    setSubmitLoading(true);
+    setUpdateLoadingId(id);
 
     try {
-      const formData = new FormData();
-      formData.append("title", title);
-      formData.append("file", file);
-
-      const res = await fetch("/api/news/submissions", {
-        method: "POST",
-        body: formData,
+      const res = await fetch("/api/admin/news/submission", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id, // ส่ง id ไปใน body
+          status: newStatus,
+          remark: newRemark,
+        }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "เกิดข้อผิดพลาดในการยื่นเรื่อง");
+        setError(data.error || "ไม่สามารถบันทึกผลการอนุมัติได้");
         return;
       }
 
-      // ✅ เอา submission ที่เพิ่งสร้างมาแทรกในตารางเลย
-      setSubmissions((prev) => [data.submission, ...prev]);
+      // อัปเดต state ให้ตรงกับข้อมูลใหม่
+      setSubmissions((prev) =>
+        prev.map((s) =>
+          s.id === id ? { ...s, status: newStatus, remark: newRemark } : s
+        )
+      );
 
-      // reset form
-      setTitle("");
-      setFile(null);
-      setFileName(null);
+      // ✅ ปิดโหมดแก้ไขของแถวนี้ → ปุ่มจะหาย
+      handleResetEdit(id);
     } catch (e) {
       console.error(e);
       setError("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
     } finally {
-      setSubmitLoading(false);
+      setUpdateLoadingId(null);
     }
   };
 
   return (
     <div className="space-y-6">
+      <Card className="shadow-sm rounded-xl">
+        <CardHeader className="flex items-center justify-between">
+          <h2 className="text-2xl font-medium text-gray-800">
+            คำขอยื่นเรื่อง
+          </h2>
+        </CardHeader>
 
-  {/* ==================== ตารางคำยื่นร้องขอ ==================== */}
-  <Card className="shadow-sm rounded-xl">
-    <CardHeader className="flex items-center justify-between">
-      <h2 className="text-2xl font-medium text-gray-800">คำยื่นร้องขอ</h2>
+        <CardContent className="space-y-4">
+          {error && (
+            <div className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2">
+              {error}
+            </div>
+          )}
 
-      
-    </CardHeader>
-
-    <CardContent className="space-y-4">
-
-      
-
-      
-
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-gray-50">
-              <TableHead>ลำดับ</TableHead>
-              <TableHead>วัน/เดือน/ปี</TableHead>
-              <TableHead>ชื่อ</TableHead>
-              <TableHead>รายละเอียด</TableHead>
-              <TableHead>ผลการอนุมัติ</TableHead>
-              <TableHead>หมายเหตุ</TableHead>
-            </TableRow>
-          </TableHeader>
-
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell className="py-4" colSpan={6}>
-                  กำลังโหลดข้อมูล...
-                </TableCell>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50">
+                <TableHead>ลำดับ</TableHead>
+                <TableHead>วัน/เดือน/ปี</TableHead>
+                <TableHead>ชื่อ</TableHead>
+                <TableHead>รายละเอียด</TableHead>
+                <TableHead>สถานะ</TableHead>
+                <TableHead>หมายเหตุ</TableHead>
               </TableRow>
-            ) : submissions.length === 0 ? (
-              <TableRow>
-                <TableCell className="py-4 text-gray-500" colSpan={6}>
-                  ยังไม่มีคำยื่นเรื่อง
-                </TableCell>
-              </TableRow>
-            ) : (
-              submissions.map((item, index) => {
-                const dateStr = new Date(item.Date).toLocaleDateString(
-                  "th-TH",
-                  {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                  }
-                );
+            </TableHeader>
 
-                const fileName = item.file?.Path
-                  ? item.file.Path.split("/").pop()
-                  : null;
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell className="py-4" colSpan={6}>
+                    กำลังโหลดข้อมูล...
+                  </TableCell>
+                </TableRow>
+              ) : submissions.length === 0 ? (
+                <TableRow>
+                  <TableCell className="py-4 text-gray-500" colSpan={6}>
+                    ยังไม่มีคำยื่นเรื่อง
+                  </TableCell>
+                </TableRow>
+              ) : (
+                submissions.map((item, index) => {
+                  const dateStr = new Date(item.Date).toLocaleDateString(
+                    "th-TH",
+                    {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    }
+                  );
 
-                return (
-                  <TableRow key={item.id}>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell>{dateStr}</TableCell>
-                    <TableCell>{item.Name}</TableCell>
+                  const fileName = item.file?.Path
+                    ? item.file.Path.split("/").pop()
+                    : null;
 
-                    {/* ไฟล์รายละเอียด */}
-                    <TableCell>
-                      {fileName ? (
-                        <a
-                          href={item.file!.Path}
-                          target="_blank"
-                          className="text-orange-500 underline text-sm"
-                        >
-                          {fileName}
-                        </a>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
+                  const currentStatus: VerifyStatus =
+                    editStatus[item.id] ?? item.status;
 
-                    {/* สถานะ */}
-                    <TableCell>
-                      <span
-                        className={`px-3 py-1 text-white rounded-full text-xs inline-block ${statusColor(
-                          item.status
-                        )}`}
-                      >
-                        {statusLabel(item.status)}
-                      </span>
-                    </TableCell>
+                  const currentRemark: string =
+                    editRemark[item.id] ?? item.remark ?? "";
 
-                    {/* หมายเหตุ */}
-                    <TableCell className="text-gray-600 text-sm">
-                      {item.remark ||
-                        (item.status === "REJECTED"
-                          ? "ไม่มีสถานที่จัดงานและไฟล์รูปภาพประกอบ"
-                          : "")}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell>{dateStr}</TableCell>
+                      <TableCell>{item.Name}</TableCell>
 
-        {/* แถบลูกศรล่าง */}
-        <div className="flex justify-end  px-4 py-1 text-xs text-gray-400">
-          &raquo;
-        </div>
-      
-    </CardContent>
-  </Card>
+                      {/* ไฟล์รายละเอียด */}
+                      <TableCell>
+                        {fileName ? (
+                          <a
+                            href={item.file!.Path}
+                            target="_blank"
+                            className="text-orange-500 underline text-sm"
+                          >
+                            เปิดดูรายละเอียด
+                          </a>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
 
+                      {/* สถานะ = select แบบเม็ดสี */}
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <div className="relative inline-block">
+                            <select
+                              className={`pl-4 pr-8 py-1 rounded-full text-sm appearance-none cursor-pointer ${statusColor(
+                                currentStatus
+                              )}`}
+                              value={currentStatus}
+                              onChange={(e) =>
+                                handleChangeStatus(
+                                  item.id,
+                                  e.target.value as VerifyStatus
+                                )
+                              }
+                            >
+                              <option value="PENDING">
+                                {statusLabel("PENDING")}
+                              </option>
+                              <option value="APPROVED">
+                                {statusLabel("APPROVED")}
+                              </option>
+                              <option value="REJECTED">
+                                {statusLabel("REJECTED")}
+                              </option>
+                            </select>
+                            {/* เล็กๆ ทำไอคอนลูกศรขวา */}
+                            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-gray-500">
+                              ▾
+                            </span>
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      {/* หมายเหตุ + ปุ่มบันทึก */}
+                      <TableCell className="text-gray-600 text-sm">
+                        <div className="flex flex-col gap-2">
+                          <textarea
+                            className="w-full border rounded-lg px-2 py-1 text-sm min-h-[60px]"
+                            placeholder="ระบุสาเหตุ เช่น ขาดไฟล์ประกอบ, เนื้อหาไม่ตรงรูปแบบ ฯลฯ"
+                            value={currentRemark}
+                            onChange={(e) =>
+                              handleChangeRemark(item.id, e.target.value)
+                            }
+                          />
+
+                          {/* แสดงปุ่มเฉพาะตอนกำลังแก้ไข */}
+                          {isEditing(item.id) && (
+                            <div className="flex gap-2">
+                              <PrimaryButton
+                                type="button"
+                                onClick={() =>
+                                  handleUpdateSubmission(item.id)
+                                }
+                                disabled={updateLoadingId === item.id}
+                              >
+                                {updateLoadingId === item.id
+                                  ? "กำลังบันทึก..."
+                                  : "บันทึก"}
+                              </PrimaryButton>
+
+                              <CancelButton
+                                type="button"
+                                onClick={() => handleResetEdit(item.id)}
+                              >
+                                ล้างค่า
+                              </CancelButton>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+
+          <div className="flex justify-end px-4 py-1 text-xs text-gray-400">
+            &raquo;
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
 export default AdminSubmissionPage;

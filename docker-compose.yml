@@ -1,23 +1,7 @@
-version: "3.9"
-
 services:
-  # web:
-  #   build: .
-  #   container_name: next-app
-  #   ports:
-  #     - "3000:3000"
-  #   env_file:
-  #     - .env
-  #   environment:
-  #     # Make sure this matches what your app expects (e.g. Prisma, Drizzle, etc.)
-  #     DATABASE_URL: postgres://postgres:postgres@db:5432/mydb
-  #   depends_on:
-  #     - db
-  #   command: npm run dev
-  #   # For production switch to:
-  #   # command: npm run start
-  #   # and make sure you build in the Dockerfile
-
+  # ============================================
+  # PostgreSQL Database
+  # ============================================
   db:
     image: postgres:16-alpine
     container_name: next-db
@@ -27,11 +11,112 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      # Optional: expose to host for direct access (pgAdmin, DBeaver, etc.)
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  # ============================================
+  # Reverse Proxy (Nginx)
+  # ============================================
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - certs:/etc/nginx/certs:ro
+      - /etc/nginx/vhost.d:/etc/nginx/vhost.d
+      - /usr/share/nginx/html:/usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./config/client_max_body_size.conf:/etc/nginx/conf.d/client_max_body_size.conf
+    restart: always
+    networks:
+      - app-network
+    depends_on:
+      - db
+
+  nginx-proxy-letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    container_name: nginx-proxy-letsencrypt
+    depends_on:
+      - nginx-proxy
+    volumes:
+      - certs:/etc/nginx/certs:rw
+      - /etc/nginx/vhost.d:/etc/nginx/vhost.d
+      - /usr/share/nginx/html:/usr/share/nginx/html
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      DEFAULT_EMAIL: sutalumniconnect@gmail.com
+      # 👇 เพิ่มบรรทัดนี้แล้ว (สำคัญมาก)
+      NGINX_PROXY_CONTAINER: nginx-proxy
+    restart: always
+    networks:
+      - app-network
+
+  # ============================================
+  # Frontend (Next.js with API routes)
+  # ============================================
+  web:
+    image: ghcr.io/sut68/team02-web:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: web
+    expose:
+      - "3000"
+    environment:
+      LETSENCRYPT_HOST: sut-alumniconnect.me,www.sut-alumniconnect.me
+      VIRTUAL_HOST: sut-alumniconnect.me,www.sut-alumniconnect.me
+      VIRTUAL_PORT: 3000
+      NEXT_PUBLIC_API_URL: https://www.sut-alumniconnect.me
+      API_URL: http://localhost:3000
+      NODE_ENV: production
+    depends_on:
+      - db
+    restart: always
+    networks:
+      - app-network
+    env_file:
+      - .env
+  
+  # ============================================
+  # API Backend
+  # ============================================
+  api:
+    image: ghcr.io/sut68/team02-api:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: api
+    restart: always
+    environment:
+      # บังคับให้ใช้ชื่อ container ในการต่อ DB
+      DATABASE_URL: postgresql://postgres:postgres@next-db:5432/mydb
+      PORT: 3000
+    env_file:
+      - .env
+    depends_on:
+      - db
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   db_data:
+  certs:
 
+networks:
+  app-network:
+    driver: bridge

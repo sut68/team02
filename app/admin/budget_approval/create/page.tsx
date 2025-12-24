@@ -1,296 +1,769 @@
-// app/create-project/page.tsx
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Image as ImageIcon } from 'lucide-react';
-import { ProjectProposal, ProjectManager } from '@/app/types/budget_approval';
-import { createProjectProposal, createProjectManager } from '@/app/lib/actions';
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { ImageUp, Search as SearchIcon } from "lucide-react"; // แก้ import ให้กระชับ
+import { ProjectManager } from "@/app/types/budget_approval";
 
-import { Input } from '@/app/components/ui/Input';
-import { InputIcon } from '@/app/components/ui/InputIcon';
-import { Textarea } from '@/app/components/ui/InputTextArea';
-import { CancelButton, PrimaryButton } from '@/app/components/ui/Button';
-import SuccessModal from '@/app/components/ui/SuccessModal';
+// เรียกใช้ Components
+import { Input } from "@/app/components/ui/Input";
+import { InputIcon } from "@/app/components/ui/InputIcon";
+import { Textarea } from "@/app/components/ui/InputTextArea";
+import { CancelButton, PrimaryButton } from "@/app/components/ui/Button";
+import SuccessModal from "@/app/components/ui/SuccessModal";
 
-export default function CreateProjectPage() {
+export default function CreateBudgetProjectPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Modal State
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-
+  // Fetch IDs
+  const [staffId, setStaffId] = useState<number | null>(null);
+  const [budgetRoundId, setBudgetRoundId] = useState<number | null>(null);
   // Error State
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [projectData, setProjectData] = useState<ProjectProposal>({
-    projectName: '', objective: '', description: '', requestedAmount: 0,
-    projectStartDate: '', projectEndDate: '', responsibilityUnit: '', coverFilePath: ''
+  // --- Step 1: Project Data ---
+  const [projectData, setProjectData] = useState({
+    projectName: "",
+    responsibilityUnit: "",
+    objective: "",
+    requestedAmount: 0,
+    projectStartDate: "",
+    projectEndDate: "",
+    description: "",
+    coverFilePath: "",
   });
   const [coverFilePreview, setCoverFilePreview] = useState<string | null>(null);
 
-  const [managerData, setManagerData] = useState<ProjectManager>({
-    firstName: '', lastName: '', department: '', position: '', phoneNumber: '', email: ''
+  // --- Step 2: Manager Data ---
+  const [managerData, setManagerData] = useState({
+    id: null as number | null,
+    firstName: "",
+    lastName: "",
+    department: "",
+    position: "",
+    phoneNumber: "",
+    email: "",
   });
 
-  // Styles
-  const headerPillStyle = "w-full bg-[#F3F4F6] rounded-full py-3 text-center mb-6 border border-gray-200";
-  const headerTextStyle = "text-gray-600 font-bold text-lg";
-  const labelStyle = "block text-sm text-gray-600 mb-2 ml-4";
+  // --- Search State ---
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResult, setSearchResult] = useState<ProjectManager[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
-  // Helper for Input Styles
+  // Styles
+  const headerPillStyle =
+    "w-full bg-[#F3F4F6] rounded-lg py-3 text-center mb-6 border border-gray-200";
+  const headerTextStyle = "text-gray-600 font-semibold text-lg";
+  const labelStyle = "block text-sm text-gray-600 mb-2 ml-4 font-medium";
+
   const getInputClass = (fieldName: string) => {
-    const baseClass = "border-gray-300 focus-visible:border-orange-500 focus-visible:ring-orange-500";
-    const errorClass = "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500";
+    const baseClass =
+      "border-gray-300 focus-visible:border-orange-500 focus-visible:ring-orange-500";
+    const errorClass =
+      "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500";
     return errors[fieldName] ? errorClass : baseClass;
   };
 
-  const handleProjectChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  // ✅ FIX: ใช้ Local Time แทน UTC เพื่อป้องกันบั๊กวันที่ผิดเพี้ยนตอนเช้า
+  const getTodayString = () => {
+    const date = new Date();
+    // ปรับ Format เป็น YYYY-MM-DD แบบ Local
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  useEffect(() => {
+    // 1.1 ดึง User ID
+    const fetchUser = async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          setStaffId(data.id);
+        }
+      } catch (err) {
+        console.error("Error fetching user:", err);
+      }
+    };
+
+    // 1.2 ดึงรอบงบประมาณปัจจุบัน
+    const fetchActiveRound = async () => {
+      try {
+        const res = await fetch("/api/budget-round");
+        if (res.ok) {
+          const data = await res.json();
+          const rounds = data.budgetRounds || [];
+          // const now = new Date();
+          
+          // หา active round ที่ status เป็น 'OPEN'
+          const active = rounds.find((r: any) => r.status === 'OPEN');
+
+          if (active) {
+            setBudgetRoundId(active.id);
+            console.log("Active Budget Round ID:", active.id);
+          } else {
+            console.warn("No active budget round found.");
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching budget rounds:", err);
+      }
+    };
+
+    fetchUser();
+    fetchActiveRound();
+  }, []);
+
+  // --- Handlers ---
+  const handleProjectChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setProjectData(prev => ({ ...prev, [name]: name === 'requestedAmount' ? parseFloat(value) || 0 : value }));
-    if (errors[name]) setErrors(prev => { const n = { ...prev }; delete n[name]; return n; });
+    setProjectData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => {
+        const n = { ...prev };
+        delete n[name];
+        return n;
+      });
+    }
   };
 
   const handleManagerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setManagerData(prev => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors(prev => { const n = { ...prev }; delete n[name]; return n; });
+    setManagerData((prev) => ({ ...prev, [name]: value, id: null }));
+    if (errors[name]) {
+      setErrors((prev) => {
+        const n = { ...prev };
+        delete n[name];
+        return n;
+      });
+    }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setCoverFilePreview(reader.result as string);
-        setProjectData(prev => ({ ...prev, coverFilePath: `/uploads/${file.name}` }));
-        if (errors.coverFilePath) setErrors(prev => { const n = {...prev}; delete n.coverFilePath; return n; });
-      };
-      reader.readAsDataURL(file);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "budget/upload");
+
+      try {
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || "Upload failed");
+        }
+
+        const data = await res.json();
+        setProjectData((prev) => ({ ...prev, coverFilePath: data.url }));
+        setCoverFilePreview(data.url);
+
+        if (errors.coverFilePath) {
+          setErrors((prev) => {
+            const n = { ...prev };
+            delete n.coverFilePath;
+            return n;
+          });
+        }
+      } catch (error) {
+        console.error("Upload error:", error);
+        alert("อัปโหลดรูปภาพไม่สำเร็จ: " + (error as Error).message);
+      }
     }
   };
 
-  // Validation Step 1
+  // --- Search Logic ---
+ // ฟังก์ชันกลางสำหรับการค้นหา
+  const executeSearch = async (query: string) => {
+    if (!query.trim()) {
+        setSearchResult([]);
+        return;
+    }
+
+    setIsSearching(true);
+    try {
+      const res = await fetch(`/api/project-manager?q=${query}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSearchResult(data);
+      }
+    } catch (error) {
+      console.error("Error searching manager:", error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // 1. Auto Search: ค้นหาอัตโนมัติเมื่อหยุดพิมพ์ 0.5 วินาที
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery) {
+        executeSearch(searchQuery);
+      } else {
+        setSearchResult([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  // 2. Handle Enter Key: ค้นหาทันทีเมื่อกด Enter
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      executeSearch(searchQuery);
+    }
+  };
+
+  // 3. Manual Click: ปุ่มค้นหา
+  const handleManualSearch = () => {
+    executeSearch(searchQuery);
+  };
+
+  const handleSelectManager = (manager: ProjectManager) => {
+    setManagerData({
+      id: manager.id ?? null,
+      firstName: manager.firstName,
+      lastName: manager.lastName,
+      department: manager.department ?? "",
+      position: manager.position ?? "",
+      phoneNumber: manager.phoneNumber ?? "",
+      email: manager.email ?? "",
+    });
+    setSearchResult([]);
+    setSearchQuery("");
+  };
+
+  // --- Validation ---
   const validateStep1 = () => {
     const newErrors: Record<string, string> = {};
-    if (!projectData.projectName.trim()) newErrors.projectName = 'กรุณาระบุชื่อโครงการ';
-    if (!projectData.responsibilityUnit.trim()) newErrors.responsibilityUnit = 'กรุณาระบุหน่วยงาน';
-    if (!projectData.objective.trim()) newErrors.objective = 'กรุณาระบุวัตถุประสงค์';
-    if (!projectData.requestedAmount || projectData.requestedAmount <= 0) newErrors.requestedAmount = 'งบประมาณต้องมากกว่า 0';
-    if (!projectData.projectStartDate) newErrors.projectStartDate = 'กรุณาระบุวันเริ่มต้น';
-    if (!projectData.projectEndDate) newErrors.projectEndDate = 'กรุณาระบุวันสิ้นสุด';
-    if (projectData.projectStartDate && projectData.projectEndDate) {
-        if (new Date(projectData.projectEndDate) < new Date(projectData.projectStartDate)) {
-            newErrors.projectEndDate = 'วันสิ้นสุดต้องไม่ก่อนวันเริ่มต้น';
-        }
+    const todayStr = getTodayString();
+
+    if (!projectData.projectName.trim()) newErrors.projectName = "กรุณาระบุชื่อโครงการ";
+    if (!projectData.responsibilityUnit.trim()) newErrors.responsibilityUnit = "กรุณาระบุหน่วยงาน";
+    if (!projectData.objective.trim()) newErrors.objective = "กรุณาระบุวัตถุประสงค์";
+    if (!projectData.requestedAmount || Number(projectData.requestedAmount) <= 0)
+      newErrors.requestedAmount = "งบประมาณต้องมากกว่า 0";
+
+    if (!projectData.projectStartDate) {
+      newErrors.projectStartDate = "กรุณาระบุวันเริ่มต้น";
+    } else if (projectData.projectStartDate < todayStr) {
+      newErrors.projectStartDate = "วันเริ่มโครงการต้องไม่เป็นวันที่ผ่านมาแล้ว";
     }
-    if (!projectData.description.trim()) newErrors.description = 'กรุณาระบุรายละเอียด';
-    if (!projectData.coverFilePath) newErrors.coverFilePath = 'กรุณาอัปโหลดรูปภาพปก';
+
+    if (!projectData.projectEndDate) {
+      newErrors.projectEndDate = "กรุณาระบุวันสิ้นสุด";
+    } else if (
+      projectData.projectStartDate &&
+      projectData.projectEndDate < projectData.projectStartDate
+    ) {
+      newErrors.projectEndDate = "วันสิ้นสุดต้องไม่ก่อนวันเริ่มต้น";
+    }
+    if (!projectData.coverFilePath) newErrors.coverFilePath = "กรุณาเพิ่มรูปภาพปกโครงการ";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Validation Step 2
   const validateStep2 = () => {
     const newErrors: Record<string, string> = {};
-    if (!managerData.firstName.trim()) newErrors.firstName = 'กรุณาระบุชื่อ';
-    if (!managerData.lastName.trim()) newErrors.lastName = 'กรุณาระบุนามสกุล';
-    if (!managerData.department.trim()) newErrors.department = 'กรุณาระบุสังกัด';
-    if (!managerData.position.trim()) newErrors.position = 'กรุณาระบุตำแหน่ง';
-    if (!managerData.phoneNumber.trim()) newErrors.phoneNumber = 'กรุณาระบุเบอร์โทร';
-    else if (!/^\d{9,10}$/.test(managerData.phoneNumber.replace(/-/g, ''))) newErrors.phoneNumber = 'เบอร์โทรศัพท์ไม่ถูกต้อง';
-    
-    if (!managerData.email.trim()) newErrors.email = 'กรุณาระบุอีเมล';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(managerData.email)) newErrors.email = 'รูปแบบอีเมลไม่ถูกต้อง';
+    if (!managerData.firstName.trim()) newErrors.firstName = "กรุณาระบุชื่อ";
+    if (!managerData.lastName.trim()) newErrors.lastName = "กรุณาระบุนามสกุล";
+    if (!managerData.department.trim()) newErrors.department = "กรุณาระบุสังกัด";
+    if (!managerData.position.trim()) newErrors.position = "กรุณาระบุตำแหน่ง";
+    if (!managerData.phoneNumber.trim()) newErrors.phoneNumber = "กรุณาระบุเบอร์โทร";
+    if (!managerData.email.trim()) newErrors.email = "กรุณาระบุอีเมล";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  // --- Navigation & Submit ---
   const handleNext = () => {
     if (validateStep1()) {
-        setStep(2);
-        window.scrollTo(0, 0);
-    } else {
-        alert('กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง');
+      setStep(2);
+      window.scrollTo(0, 0);
     }
   };
 
   const handleSubmit = async () => {
-    if (!validateStep2()) {
-        alert('กรุณากรอกข้อมูลผู้รับผิดชอบให้ครบถ้วน');
-        return;
-    }
-
+    if (!validateStep2()) return;
     setIsSubmitting(true);
+
     try {
-      const projectRes = await createProjectProposal(projectData);
-      if (projectRes.success && projectRes.ppid) {
-        await createProjectManager(projectRes.ppid, managerData);
-        
-        // เปิด Modal เมื่อสำเร็จ
-        setShowSuccessModal(true); 
+      // ✅ 2. ส่ง staffId และ budgetRoundId ไปด้วย
+      const payload = {
+        project: {
+          ...projectData,
+          requestedAmount: Number(projectData.requestedAmount),
+          staffId: staffId,           // ส่ง ID คนทำรายการ
+          budgetRoundId: budgetRoundId, // ส่ง ID รอบงบประมาณปัจจุบัน
+        },
+        manager: {
+          ...managerData,
+          id: managerData.id ?? null,
+        },
+      };
+
+      const response = await fetch("/api/project-proposal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        setShowSuccessModal(true);
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ");
       }
     } catch (error) {
-      console.error(error);
-      alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      console.error("Submit Error:", error);
+      alert("บันทึกข้อมูลไม่สำเร็จ: " + (error as Error).message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleModalClose = () => {
-      setShowSuccessModal(false);
-      // แก้ไขจาก budget_appoval เป็น budget_approval
-      router.push('/admin/budget_approval'); 
+    setShowSuccessModal(false);
+    router.push("/admin/budget_approval");
   };
 
   return (
     <div className="min-h-screen bg-white py-10 px-4 font-sans relative">
-      {/* เรียกใช้ Modal ตรงนี้ */}
-      <SuccessModal 
-        show={showSuccessModal} 
+      <SuccessModal
+        show={showSuccessModal}
         onClose={handleModalClose}
         message="บันทึกข้อมูลโครงการเรียบร้อยแล้ว"
       />
 
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-600 mb-6 pl-1">เพิ่มโครงการ</h1>
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-3xl font-semibold text-gray-700 mt-4 mb-8 pl-1 text-center">
+          เพิ่มโครงการ
+        </h1>
 
-        {/* STEP 1 */}
+        {!budgetRoundId && !isSearching && (
+           <div className="mb-4 p-3 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg text-sm text-center">
+             ⚠️ ขณะนี้ไม่มีรอบงบประมาณที่เปิดใช้งาน โครงการจะถูกบันทึกโดยไม่มีรอบงบประมาณ
+           </div>
+        )}
+
+        {/* === STEP 1: ข้อมูลโครงการ === */}
         {step === 1 && (
           <div>
             <div className={headerPillStyle}>
               <h2 className={headerTextStyle}>รายละเอียดโครงการ</h2>
             </div>
-            <div className="space-y-5">
+
+            <div className="space-y-6 px-0">
+              {/* Project Name */}
               <div>
-                <label className={labelStyle}>ชื่อโครงการ <span className="text-red-500">*</span></label>
-                <Input name="projectName" value={projectData.projectName} onChange={handleProjectChange} radius="full" className={getInputClass('projectName')} />
-                {errors.projectName && <p className="text-red-500 text-xs mt-1 ml-4">{errors.projectName}</p>}
-              </div>
-              
-              <div>
-                <label className={labelStyle}>ชื่อหน่วยงาน/องค์กร <span className="text-red-500">*</span></label>
-                <Input name="responsibilityUnit" value={projectData.responsibilityUnit} onChange={handleProjectChange} radius="full" className={getInputClass('responsibilityUnit')} />
-                {errors.responsibilityUnit && <p className="text-red-500 text-xs mt-1 ml-4">{errors.responsibilityUnit}</p>}
+                <label className={labelStyle}>
+                  ชื่อโครงการ <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  name="projectName"
+                  value={projectData.projectName}
+                  onChange={handleProjectChange}
+                  radius="md"
+                  className={getInputClass("projectName")}
+                  placeholder="เช่น โครงการทุนการศึกษาวิศวกรรมศาสตร์ ภาค 1/2568"
+                />
+                {errors.projectName && (
+                  <p className="text-red-500 text-xs mt-1 ml-4">{errors.projectName}</p>
+                )}
               </div>
 
+              {/* Unit */}
+              <div>
+                <label className={labelStyle}>
+                  ชื่อหน่วยงาน/องค์กร <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  name="responsibilityUnit"
+                  value={projectData.responsibilityUnit}
+                  onChange={handleProjectChange}
+                  radius="md"
+                  className={getInputClass("responsibilityUnit")}
+                  placeholder="เช่น สำนักวิชาวิศวกรรมศาสตร์"
+                />
+                {errors.responsibilityUnit && (
+                  <p className="text-red-500 text-xs mt-1 ml-4">{errors.responsibilityUnit}</p>
+                )}
+              </div>
+
+              {/* Grid: Objective & Amount */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className={labelStyle}>วัตถุประสงค์ <span className="text-red-500">*</span></label>
-                  <Input name="objective" value={projectData.objective} onChange={handleProjectChange} radius="full" className={getInputClass('objective')} />
-                  {errors.objective && <p className="text-red-500 text-xs mt-1 ml-4">{errors.objective}</p>}
+                  <label className={labelStyle}>
+                    วัตถุประสงค์ <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    name="objective"
+                    value={projectData.objective}
+                    onChange={handleProjectChange}
+                    radius="md"
+                    maxLength={100}
+                    className={getInputClass("objective")}
+                    placeholder="เช่น เพื่อสนับสนุนทุนการศึกษาให้แก่นักศึกษาที่ขาดแคลน"
+                  />
+                  {/* ✅ ส่วน Error + ตัวนับคำ: จัดให้อยู่บรรทัดเดียวกัน */}
+                  <div className="flex justify-between items-start mt-1">
+                    <div className="flex-1">
+                      {errors.objective && (
+                        <p className="text-red-500 text-xs ml-4">{errors.objective}</p>
+                      )}
+                    </div>
+                    <div className="text-right text-xs text-gray-500 whitespace-nowrap ml-2">
+                      {projectData.objective ? projectData.objective.length : 0} / 100 ตัวอักษร
+                    </div>
+                  </div>
                 </div>
+
                 <div>
-                  <label className={labelStyle}>งบประมาณที่ขอ <span className="text-red-500">*</span></label>
-                  <Input type="number" name="requestedAmount" value={projectData.requestedAmount || ''} onChange={handleProjectChange} radius="full" className={getInputClass('requestedAmount')} min="0" />
-                  {errors.requestedAmount && <p className="text-red-500 text-xs mt-1 ml-4">{errors.requestedAmount}</p>}
+                  <label className={labelStyle}>
+                    งบประมาณที่ขอ <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    type="number"
+                    name="requestedAmount"
+                    value={projectData.requestedAmount}
+                    onChange={handleProjectChange}
+                    radius="md"
+                    className={getInputClass("requestedAmount")}
+                    min="0"
+                    placeholder="0.00"
+                  />
+                  {errors.requestedAmount && (
+                    <p className="text-red-500 text-xs mt-1 ml-4">{errors.requestedAmount}</p>
+                  )}
                 </div>
               </div>
 
+              {/* Grid: Dates */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className={labelStyle}>วันเริ่มจัดโครงการ <span className="text-red-500">*</span></label>
-                  <InputIcon type="date" name="projectStartDate" value={projectData.projectStartDate} onChange={handleProjectChange} radius="full" className={`cursor-pointer ${getInputClass('projectStartDate')}`} />
-                  {errors.projectStartDate && <p className="text-red-500 text-xs mt-1 ml-4">{errors.projectStartDate}</p>}
+                  <label className={labelStyle}>
+                    วันเริ่มจัดโครงการ <span className="text-red-500">*</span>
+                  </label>
+                  {/* ✅ FIX: เปลี่ยนจาก InputIcon เป็น Input ธรรมดา (เหมือน End Date) */}
+                  <Input
+                    type="date"
+                    name="projectStartDate"
+                    value={projectData.projectStartDate}
+                    onChange={handleProjectChange}
+                    radius="md"
+                    min={getTodayString()}
+                    className={`cursor-pointer ${getInputClass("projectStartDate")}`}
+                  />
+                  {errors.projectStartDate && (
+                    <p className="text-red-500 text-xs mt-1 ml-4">{errors.projectStartDate}</p>
+                  )}
                 </div>
                 <div>
-                  <label className={labelStyle}>วันสิ้นสุดโครงการ <span className="text-red-500">*</span></label>
-                  <Input type="date" name="projectEndDate" value={projectData.projectEndDate} onChange={handleProjectChange} radius="full" className={`cursor-pointer ${getInputClass('projectEndDate')}`} min={projectData.projectStartDate} />
-                  {errors.projectEndDate && <p className="text-red-500 text-xs mt-1 ml-4">{errors.projectEndDate}</p>}
+                  <label className={labelStyle}>
+                    วันสิ้นสุดโครงการ <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    type="date"
+                    name="projectEndDate"
+                    value={projectData.projectEndDate}
+                    onChange={handleProjectChange}
+                    radius="md"
+                    min={projectData.projectStartDate || getTodayString()}
+                    className={`cursor-pointer ${getInputClass("projectEndDate")}`}
+                  />
+                  {errors.projectEndDate && (
+                    <p className="text-red-500 text-xs mt-1 ml-4">{errors.projectEndDate}</p>
+                  )}
                 </div>
               </div>
 
+              {/* Description */}
               <div>
-                <label className={labelStyle}>รายละเอียดเพิ่มเติม <span className="text-red-500">*</span></label>
-                <Textarea name="description" value={projectData.description} onChange={handleProjectChange} className={`rounded-3xl min-h-[100px] ${errors.description ? 'border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500' : 'border-gray-300 focus-visible:border-orange-500 focus-visible:ring-orange-500'}`} />
-                {errors.description && <p className="text-red-500 text-xs mt-1 ml-4">{errors.description}</p>}
+                <label className={labelStyle}>รายละเอียดเพิ่มเติม</label>
+                <Textarea
+                  name="description"
+                  value={projectData.description}
+                  onChange={handleProjectChange}
+                  maxLength={500}
+                  className={`rounded-2xl min-h-[120px] focus-visible:ring-0 focus-visible:ring-offset-0 border-gray-300 focus:border-gray-400 ${getInputClass("description")}`}
+                  placeholder="สำหรับกรอกข้อมูลเพิ่มเติม เช่น หลักการและเหตุผลของโครงการ สามารถเว้นว่างได้หรือไม่เกิน 500 ตัวอักษร"
+                />
+                <div className="text-right text-xs text-gray-500 mt-1">
+                  {projectData.description ? projectData.description.length : 0} / 500 ตัวอักษร
+                </div>
               </div>
 
+              {/* Upload */}
               <div>
-                <label className={labelStyle}>ภาพปก/ภาพโปสเตอร์กิจกรรม <span className="text-red-500">*</span></label>
-                <div className={`mt-2 border rounded-3xl h-64 flex flex-col items-center justify-center relative overflow-hidden bg-white hover:bg-orange-50 transition-colors cursor-pointer ${errors.coverFilePath ? 'border-red-500 border-2' : 'border-gray-300 hover:border-orange-500'}`}>
+                <label className={labelStyle}>
+                  ภาพปก/ภาพโปสเตอร์กิจกรรม <span className="text-red-500">*</span>
+                </label>
+                <div
+                  className={`mt-2 border rounded-2xl h-64 flex flex-col items-center justify-center relative overflow-hidden bg-white hover:bg-orange-50 transition-colors cursor-pointer ${
+                    errors.coverFilePath
+                      ? "border-red-500 border-2"
+                      : "border-gray-300 border-dashed hover:border-orange-500"
+                  }`}
+                >
                   {coverFilePreview ? (
                     <>
-                      <img src={coverFilePreview} alt="Preview" className="w-full h-full object-contain" />
-                      <button onClick={(e) => { e.stopPropagation(); setCoverFilePreview(null); setProjectData(p => ({...p, coverFilePath: ''})); }} className="absolute top-4 right-4 bg-white rounded-full p-2 shadow-md hover:bg-gray-100 z-10">
-                        <span className="font-bold text-orange-500 px-2">ลบรูปภาพ</span>
+                      <img
+                        src={coverFilePreview}
+                        alt="Preview"
+                        className="w-full h-full object-contain"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCoverFilePreview(null);
+                          setProjectData((p) => ({ ...p, coverFilePath: "" }));
+                        }}
+                        className="absolute top-4 right-4 bg-white/80 rounded-lg p-2 shadow-md hover:bg-red-50 text-red-500 z-10 text-xs font-bold px-3"
+                      >
+                        ลบรูปภาพ
                       </button>
                     </>
                   ) : (
                     <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
-                      <div className="bg-gray-100 p-4 rounded-2xl mb-3">
-                        <ImageIcon className="w-8 h-8 text-gray-400" />
+                      <div className="mb-6">
+                        <ImageUp className="w-8 h-8 text-gray-400" />
                       </div>
-                      <span className="text-gray-500 font-medium">อัปโหลดรูปภาพ</span>
-                      <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                      <span className="text-gray-500 text-[14px] font-medium">
+                        คลิกเพื่ออัปโหลดรูปภาพ
+                      </span>
+                      <span className="text-gray-400 text-xs mt-2">(รองรับ jpg, png, gif)</span>
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                      />
                     </label>
                   )}
                 </div>
-                {errors.coverFilePath && <p className="text-red-500 text-xs mt-1 ml-4">{errors.coverFilePath}</p>}
+                <div className="flex justify-between items-start mt-2 px-1">
+                  <div className="flex-1 text-left">
+                    {errors.coverFilePath && (
+                      <p className="text-red-500 text-xs animate-in slide-in-from-top-1">
+                        {errors.coverFilePath}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right text-xs text-gray-500 ml-2">
+                    ขนาดไฟล์ไม่เกิน 5MB
+                  </div>
+                </div>
               </div>
 
-              <div className="flex justify-end pt-8 pb-10 gap-5">
-                <CancelButton onClick={() => router.back()} style={{ borderRadius: '9999px', width: '160px', height: '40px', fontSize: '16px' }}>ยกเลิก</CancelButton>
-                <PrimaryButton onClick={handleNext} style={{ borderRadius: '9999px', width: '160px', height: '40px', fontSize: '16px' }}>ถัดไป</PrimaryButton>
+              {/* Buttons Step 1 */}
+              <div className="flex justify-end pt-8 pb-10 gap-4">
+                <CancelButton
+                  type="button"
+                  onClick={() => router.back()}
+                  style={{ borderRadius: "8px", width: "140px", height: "40px" }}
+                >
+                  ยกเลิก
+                </CancelButton>
+                <PrimaryButton
+                  type="button"
+                  onClick={handleNext}
+                  style={{ borderRadius: "8px", width: "140px", height: "40px" }}
+                >
+                  ถัดไป
+                </PrimaryButton>
               </div>
             </div>
           </div>
         )}
 
-        {/* STEP 2 */}
+        {/* === STEP 2: ข้อมูลผู้รับผิดชอบ === */}
         {step === 2 && (
           <div>
             <div className={headerPillStyle}>
               <h2 className={headerTextStyle}>รายละเอียดผู้รับผิดชอบโครงการ</h2>
             </div>
-            <div className="space-y-6">
+            <div className="space-y-6 px-0">
+              {/* Search Box */}
+              <div className="bg-orange-50/50 p-6 rounded-2xl border border-orange-100 mb-6">
+                <div className="flex flex-col md:flex-row gap-4 items-end">
+                  <div className="w-full">
+                    <label className="text-sm font-medium text-gray-600 mb-2 flex items-center gap-2">
+                      ค้นหาผู้รับผิดชอบเดิม (ถ้ามี)
+                    </label>
+                    <InputIcon
+                      icon={SearchIcon}
+                      iconPosition="left"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="พิมพ์ชื่อ หรืออีเมล..."
+                      radius="md"
+                      className="bg-white"
+                    />
+                  </div>
+                  <PrimaryButton
+                    type="button"
+                    onClick={handleManualSearch}
+                    disabled={isSearching}
+                    className="mb-0.5"
+                    style={{ borderRadius: "8px", width: "auto", minWidth: "100px", height: "40px" }}
+                  >
+                    {isSearching ? "..." : "ค้นหา"}
+                  </PrimaryButton>
+                </div>
+                {/* Search Result */}
+                {searchResult.length > 0 && (
+                  <div className="mt-3 bg-white rounded-2xl shadow-lg border border-gray-100 max-h-60 overflow-y-auto divide-y divide-gray-100">
+                    {searchResult.map((m) => (
+                      <div
+                        key={m.id}
+                        onClick={() => handleSelectManager(m)}
+                        className="p-3 hover:bg-orange-50 cursor-pointer flex justify-between items-center transition-colors px-6"
+                      >
+                        <div>
+                          <div className="font-semibold text-gray-700">
+                            {m.firstName} {m.lastName}
+                          </div>
+                          <div className="text-xs text-gray-500">{m.email}</div>
+                        </div>
+                        <span className="text-xs bg-gray-100 text-gray-600 px-3 py-1 rounded-full">
+                          {m.department || "ไม่ระบุหน่วยงาน"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Form Fields Step 2 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className={labelStyle}>ชื่อ <span className="text-red-500">*</span></label>
-                  <Input name="firstName" value={managerData.firstName} onChange={handleManagerChange} radius="full" className={getInputClass('firstName')} />
-                  {errors.firstName && <p className="text-red-500 text-xs mt-1 ml-4">{errors.firstName}</p>}
+                  <label className={labelStyle}>
+                    ชื่อ <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    name="firstName"
+                    value={managerData.firstName}
+                    onChange={handleManagerChange}
+                    radius="md"
+                    className={getInputClass("firstName")}
+                  />
+                  {errors.firstName && (
+                    <p className="text-red-500 text-xs mt-1 ml-4">{errors.firstName}</p>
+                  )}
                 </div>
                 <div>
-                  <label className={labelStyle}>นามสกุล <span className="text-red-500">*</span></label>
-                  <Input name="lastName" value={managerData.lastName} onChange={handleManagerChange} radius="full" className={getInputClass('lastName')} />
-                   {errors.lastName && <p className="text-red-500 text-xs mt-1 ml-4">{errors.lastName}</p>}
+                  <label className={labelStyle}>
+                    นามสกุล <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    name="lastName"
+                    value={managerData.lastName}
+                    onChange={handleManagerChange}
+                    radius="md"
+                    className={getInputClass("lastName")}
+                  />
+                  {errors.lastName && (
+                    <p className="text-red-500 text-xs mt-1 ml-4">{errors.lastName}</p>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className={labelStyle}>
+                    สังกัด/หน่วยงาน <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    name="department"
+                    value={managerData.department}
+                    onChange={handleManagerChange}
+                    radius="md"
+                    className={getInputClass("department")}
+                  />
+                  {errors.department && (
+                    <p className="text-red-500 text-xs mt-1 ml-4">{errors.department}</p>
+                  )}
+                </div>
+                <div>
+                  <label className={labelStyle}>
+                    ตำแหน่ง/แผนก <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    name="position"
+                    value={managerData.position}
+                    onChange={handleManagerChange}
+                    radius="md"
+                    className={getInputClass("position")}
+                  />
+                  {errors.position && (
+                    <p className="text-red-500 text-xs mt-1 ml-4">{errors.position}</p>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className={labelStyle}>
+                    เบอร์โทรติดต่อ <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    name="phoneNumber"
+                    value={managerData.phoneNumber}
+                    onChange={handleManagerChange}
+                    radius="md"
+                    className={getInputClass("phoneNumber")}
+                  />
+                  {errors.phoneNumber && (
+                    <p className="text-red-500 text-xs mt-1 ml-4">{errors.phoneNumber}</p>
+                  )}
+                </div>
+                <div>
+                  <label className={labelStyle}>
+                    Email <span className="text-red-500">*</span>
+                  </label>
+                  <Input
+                    name="email"
+                    value={managerData.email}
+                    onChange={handleManagerChange}
+                    radius="md"
+                    className={getInputClass("email")}
+                  />
+                  {errors.email && (
+                    <p className="text-red-500 text-xs mt-1 ml-4">{errors.email}</p>
+                  )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className={labelStyle}>สังกัด/หน่วยงาน <span className="text-red-500">*</span></label>
-                  <Input name="department" value={managerData.department} onChange={handleManagerChange} radius="full" className={getInputClass('department')} />
-                   {errors.department && <p className="text-red-500 text-xs mt-1 ml-4">{errors.department}</p>}
-                </div>
-                <div>
-                  <label className={labelStyle}>แผนก/ฝ่าย <span className="text-red-500">*</span></label>
-                  <Input name="position" value={managerData.position} onChange={handleManagerChange} radius="full" className={getInputClass('position')} />
-                   {errors.position && <p className="text-red-500 text-xs mt-1 ml-4">{errors.position}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className={labelStyle}>เบอร์โทรติดต่อ <span className="text-red-500">*</span></label>
-                  <Input name="phoneNumber" value={managerData.phoneNumber} onChange={handleManagerChange} radius="full" className={getInputClass('phoneNumber')} />
-                   {errors.phoneNumber && <p className="text-red-500 text-xs mt-1 ml-4">{errors.phoneNumber}</p>}
-                </div>
-                <div>
-                  <label className={labelStyle}>Email <span className="text-red-500">*</span></label>
-                  <Input name="email" value={managerData.email} onChange={handleManagerChange} radius="full" className={getInputClass('email')} />
-                   {errors.email && <p className="text-red-500 text-xs mt-1 ml-4">{errors.email}</p>}
-                </div>
-              </div>
-
-              <div className="flex flex-col md:flex-row justify-end gap-4 pt-6 pb-10 items-center">
-                 <CancelButton onClick={() => setStep(1)} style={{ borderRadius: '9999px', width: '160px', height: '40px', fontSize: '16px' }}>ย้อนกลับ</CancelButton>
-                <PrimaryButton onClick={handleSubmit} disabled={isSubmitting} style={{ borderRadius: '9999px', width: '160px', height: '40px', fontSize: '16px' }}>
-                  {isSubmitting ? 'กำลังบันทึก...' : 'บันทึก'}
+              {/* Buttons Step 2 */}
+              <div className="flex justify-end pt-8 pb-10 gap-4">
+                <CancelButton
+                  type="button"
+                  onClick={() => setStep(1)}
+                  style={{ borderRadius: "8px", width: "140px", height: "40px" }}
+                >
+                  ย้อนกลับ
+                </CancelButton>
+                <PrimaryButton
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  style={{ borderRadius: "8px", width: "140px", height: "40px" }}
+                >
+                  {isSubmitting ? "กำลังบันทึก..." : "บันทึก"}
                 </PrimaryButton>
               </div>
             </div>

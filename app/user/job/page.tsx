@@ -114,7 +114,7 @@ export default function JobListPage() {
   return (
     <div className="min-h-screen bg-[#FFFFFF]">
       {/* Hero Banner */}
-      <div className="relative w-full h-150">
+      <div className="relative w-full h-100">
         <Image
           src="/17.jpg"
           alt="Hero Banner"

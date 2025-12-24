@@ -17,24 +17,24 @@ export async function GET(
       include: {
         transactions: includeTransactions
           ? {
-              where: {
-                status: 'SUCCESS',
-                isPublic: true,
-              },
-              select: {
-                id: true,
-                amount: true,
-                message: true,
-                donorName: true,
-                createdAt: true,
-                user: {
-                  select: {
-                    fullName: true,
-                  },
+            where: {
+              status: 'SUCCESS',
+              isPublic: true,
+            },
+            select: {
+              id: true,
+              amount: true,
+              //message: true,
+              donorName: true,
+              createdAt: true,
+              user: {
+                select: {
+                  fullName: true,
                 },
               },
-              orderBy: { createdAt: 'desc' },
-            }
+            },
+            orderBy: { createdAt: 'desc' },
+          }
           : false,
         _count: {
           select: {
@@ -70,6 +70,123 @@ export async function GET(
     console.error('Error fetching donation project:', error);
     return NextResponse.json(
       { error: 'เกิดข้อผิดพลาดในการดึงข้อมูล' },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT - อัพเดทโครงการระดมทุน
+export async function PUT(
+  //   request: NextRequest,
+  //   { params }: { params: { id: string } } 
+  // ) {
+  //   try {
+  //     const idString = params.id;
+  //     const projectId = parseInt(idString);
+
+  //     const body = await request.json();
+  //     const { status, ...updateData } = body;
+
+  //     if (isNaN(projectId)) {
+  //       return NextResponse.json(
+  //         { error: 'Project ID ไม่ถูกต้อง' },
+  //         { status: 400 }
+  //       );
+  //     }  request: NextRequest,
+
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const projectId = parseInt(id);
+
+  const body = await request.json();
+  const { status, ...updateData } = body;
+
+  try {
+    if (isNaN(projectId)) {
+      return NextResponse.json({ error: "Project ID ไม่ถูกต้อง" }, { status: 400 });
+    }
+
+    const project = await prisma.donationProject.update({
+      where: { id: projectId },
+      data: {
+        ...updateData,
+        ...(status && { status }),
+        ...(updateData.goalAmount !== undefined && { goalAmount: parseFloat(updateData.goalAmount) }),
+        ...(updateData.startDate && { startDate: new Date(updateData.startDate) }),
+        ...(updateData.endDate && { endDate: new Date(updateData.endDate) }),
+      },
+    });
+
+    return NextResponse.json(
+      {
+        message: 'อัพเดทโครงการสำเร็จ',
+        project,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Error updating donation project:', error);
+    // 💡 ตรวจสอบ Error ที่เกิดจากการอัปเดต (เช่น ID ไม่พบ)
+    if (error instanceof Error && (error as any).code === 'P2025') {
+      return NextResponse.json(
+        { error: 'ไม่พบโครงการที่ต้องการอัพเดท' },
+        { status: 404 }
+      );
+    }
+    return NextResponse.json(
+      { error: 'เกิดข้อผิดพลาดในการอัพเดทโครงการ' },
+      { status: 500 }
+    );
+  }
+}
+
+// --------------------------------------------------------------------------
+// DELETE - ลบโครงการระดมทุน (ใช้ ID จาก Path)
+// --------------------------------------------------------------------------
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params; // 💡 ดึง ID จาก Path Parameter
+    const projectId = parseInt(id);
+
+    if (isNaN(projectId)) {
+      return NextResponse.json(
+        { error: 'Project ID ไม่ถูกต้อง' },
+        { status: 400 }
+      );
+    }
+
+    // ตรวจสอบว่ามีการบริจาคแล้วหรือไม่
+    const transactionCount = await prisma.donationTransaction.count({
+      where: {
+        projectId: projectId,
+        status: 'SUCCESS',
+      },
+    });
+
+    if (transactionCount > 0) {
+      return NextResponse.json(
+        { error: 'ไม่สามารถลบโครงการที่มีการบริจาคแล้วได้ กรุณาเปลี่ยนสถานะเป็น CLOSED แทน' },
+        { status: 400 }
+      );
+    }
+
+    await prisma.donationProject.delete({
+      where: { id: projectId },
+    });
+
+    return NextResponse.json(
+      { message: 'ลบโครงการสำเร็จ' },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Error deleting donation project:', error);
+    return NextResponse.json(
+      { error: 'เกิดข้อผิดพลาดในการลบโครงการ' },
       { status: 500 }
     );
   }

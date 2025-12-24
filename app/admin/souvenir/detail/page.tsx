@@ -34,7 +34,7 @@ export default function SouvenirDetailPage() {
     <main className="min-h-screen bg-white py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Page Title */}
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">
+        <h1 className="text-3xl font-medium text-gray-700 mb-8">
           {formData.name}
         </h1>
 
@@ -149,12 +149,14 @@ export default function SouvenirDetailPage() {
           {/* CENTER: Product Image */}
           <div>
             <div className="bg-white rounded-2xl shadow-sm p-6 flex flex-col items-center">
-              <div className="relative w-full aspect-square max-w-sm bg-gray-50 rounded-2xl overflow-hidden mb-4">
+              <div className="relative h-72 md:h-80 bg-white flex items-center justify-center rounded-2xl overflow-hidden mb-4">
                 <Image
                   src={formData.imageUrl}
                   alt={formData.name}
-                  fill
-                  className="object-contain p-8"
+                  width={600}
+                  height={600}
+                  className="max-h-[75%] w-auto object-contain"
+                  priority
                 />
               </div>
               <button className="flex items-center gap-2 px-4 py-2 border-2 border-orange-500 text-orange-500 rounded-lg hover:bg-orange-50 transition font-semibold">

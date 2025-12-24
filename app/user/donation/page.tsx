@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import React from 'react';
-import CentralFundDonationPage from './fund';
+import CentralFundDonationPage from '../donation-budget/fund';
 import DonationPage from './donate';
 
 const Tag = ({ text }: { text: string }) => (
@@ -16,7 +16,7 @@ export default function DonationAndFundingPage() {
     return (
         <div className="min-h-screen mb-6 ">
 
-            <div className="relative w-full h-[300px] md:h-[500px] bg-gray-800 mb-4">
+            <div className="relative w-full h-[400px] bg-gray-800 mb-4">
                 <Image
                     src="/donation_poster/00.png"
                     alt="นักศึกษาวิศวกรรมศาสตร์ สุรนารี"

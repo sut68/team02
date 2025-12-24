@@ -60,7 +60,17 @@ export async function PUT(
     const { id: paramId } = await params;
     const id = parseInt(paramId);
     const body = await request.json();
-    const { name, description, category, imageUrl, unit, active } = body;
+    const { 
+      name, 
+      description, 
+      category, 
+      imageUrl, 
+      unit, 
+      active,
+      linkedType,
+      linkedEventId,
+      linkedDonationProjectId,
+    } = body;
 
     const item = await prisma.souvenirItem.update({
       where: { id },
@@ -73,6 +83,39 @@ export async function PUT(
         active,
       },
     });
+
+    // เชื่อมโยงกับ Content (กิจกรรม)
+    if (linkedType === "event") {
+      // ล้างการผูกเก่าทั้งหมดของ item นี้ก่อน
+      await prisma.content.updateMany({
+        where: { souvenirItemId: id },
+        data: { souvenirItemId: null },
+      });
+
+      // ถ้าเลือกกิจกรรมใหม่
+      if (linkedEventId) {
+        // กันผูกซ้อน: ถ้ากิจกรรมนี้มีของอยู่แล้วและไม่ใช่ item นี้ ให้ throw
+        const c = await prisma.content.findUnique({
+          where: { id: linkedEventId },
+          select: { souvenirItemId: true },
+        });
+        if (c?.souvenirItemId && c.souvenirItemId !== id) {
+          return NextResponse.json({ error: "Activity already linked to another souvenir." }, { status: 400 });
+        }
+
+        await prisma.content.update({
+          where: { id: linkedEventId },
+          data: { souvenirItemId: id },
+        });
+      }
+    }
+
+    if (linkedType === "none") {
+      await prisma.content.updateMany({
+        where: { souvenirItemId: id },
+        data: { souvenirItemId: null },
+      });
+    }
 
     return NextResponse.json(item);
   } catch (error) {

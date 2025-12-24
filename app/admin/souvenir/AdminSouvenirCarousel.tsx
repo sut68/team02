@@ -1,118 +1,195 @@
 'use client';
-import React from 'react';
+
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { CATEGORY_LABEL } from '@/constants/category';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-// ** Mock Data สำหรับของที่ระลึก (Admin - ไม่มี href) **
 type SouvenirItem = {
   id: number;
-  title: string;
-  stock: number;
-  imageSrc: string;
+  sku: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  imageUrl: string | null;
+  currentStock: number;
+  unit?: string;
+  active: boolean;
 };
 
-export const souvenirMockData = {
-  featured: [
-    {
-      id: 1,
-      title: 'เข็มกลัด SUT',
-      stock: 50,
-      imageSrc: '/souvenir/EngiButton.png',
-    },
-    {
-      id: 2,
-      title: 'SUT Cap',
-      stock: 50,
-      imageSrc: '/souvenir/EngiCap.png',
-    },
-    {
-      id: 3,
-      title: 'ENGi Bottle',
-      stock: 24,
-      imageSrc: '/souvenir/EngiBottle.png',
-    },
-  ] as SouvenirItem[],
-};
+interface AdminSouvenirCarouselProps {
+  onCardClick?: (itemId: number) => void;
+  category?: string;
+}
 
-export function AdminSouvenirCarousel({ onCardClick }: { onCardClick?: (itemId: number) => void }) {
-  const router = useRouter();
-  const { featured } = souvenirMockData;
-  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
-  const [isPaused, setIsPaused] = React.useState(false);
-  const trackRef = React.useRef<HTMLDivElement>(null);
-  const offsetRef = React.useRef(0);
-  const loopWidthRef = React.useRef(0);
-  const cardWidthRef = React.useRef(0);
-  const speedRef = React.useRef(36); // px per second (slightly faster continuous)
+export function AdminSouvenirCarousel({ onCardClick, category }: AdminSouvenirCarouselProps) {
+  const [souvenirItems, setSouvenirItems] = useState<SouvenirItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+
+  const [isPaused, setIsPaused] = useState(false);
+
+  const offsetRef = useRef(0);
+  const loopWidthRef = useRef(0);
+  const cardStepRef = useRef(0);
+  const speedRef = useRef(36);
+
+  // ---- fetch
+  useEffect(() => {
+    const fetchSouvenirItems = async () => {
+      try {
+        const res = await fetch('/api/admin/souvenir/items');
+        if (!res.ok) return;
+
+        const data = await res.json();
+        if (!Array.isArray(data)) return;
+
+        const filtered = category ? data.filter((it: SouvenirItem) => it.category === category) : data;
+        setSouvenirItems(filtered);
+      } catch (error) {
+        console.error('Error fetching souvenir items:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSouvenirItems();
+  }, [category]);
+
+  // ---- loop items
+  const loopItems = useMemo(() => {
+    if (souvenirItems.length === 0) return [];
+    return [...souvenirItems, ...souvenirItems, ...souvenirItems, ...souvenirItems];
+  }, [souvenirItems]);
+
+  // ---- step / loop width measure (NO hardcode cols)
+  useEffect(() => {
+    if (souvenirItems.length === 0) return;
+
+    const measure = () => {
+      const track = trackRef.current;
+      const container = scrollContainerRef.current;
+      if (!track || !container) return;
+
+      // force reflow
+      track.offsetHeight;
+
+      // loop width = 1/4 of duplicated track
+      const fullWidth = track.scrollWidth;
+      loopWidthRef.current = fullWidth / 4;
+
+      // step = first card width + gap (real DOM)
+      const firstCard = track.querySelector('[data-carousel-card]') as HTMLElement | null;
+      const gap = parseFloat(getComputedStyle(track).gap || '0');
+
+      if (firstCard) {
+        cardStepRef.current = firstCard.offsetWidth + gap;
+      } else {
+        // fallback: scroll by container width (rare)
+        cardStepRef.current = container.clientWidth;
+      }
+    };
+
+    measure();
+    const t = setTimeout(measure, 100);
+    window.addEventListener('resize', measure);
+
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('resize', measure);
+    };
+  }, [souvenirItems.length]);
 
   const stepBy = (px: number) => {
     const loopW = loopWidthRef.current || 0;
     if (loopW <= 0) return;
+
     offsetRef.current += px;
+
     while (offsetRef.current >= loopW) offsetRef.current -= loopW;
     while (offsetRef.current < 0) offsetRef.current += loopW;
+
     if (trackRef.current) {
       trackRef.current.style.transform = `translateX(${-offsetRef.current}px)`;
     }
   };
 
-  const nextSlide = () => stepBy(cardWidthRef.current || 0);
-
-  const prevSlide = () => stepBy(-(cardWidthRef.current || 0));
+  const nextSlide = () => stepBy(cardStepRef.current || 0);
+  const prevSlide = () => stepBy(-(cardStepRef.current || 0));
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const delta = Math.sign(e.deltaY) * 60; // smooth manual nudge
+    const delta = Math.sign(e.deltaY) * 80;
     stepBy(delta);
   };
 
-  const loopItems = React.useMemo(() => [...featured, ...featured], [featured]);
+  // ---- auto scroll
+  useEffect(() => {
+    if (souvenirItems.length === 0) return;
+    if (isPaused) return;
 
-  // Measure widths for seamless loop and step sizing
-  React.useEffect(() => {
-    const measure = () => {
-      const track = trackRef.current;
-      const container = scrollContainerRef.current;
-      if (!track || !container) return;
-      const fullWidth = track.scrollWidth;
-      loopWidthRef.current = fullWidth / 2; // since items duplicated
-      const cols = window.innerWidth >= 768 ? 3 : 1;
-      cardWidthRef.current = container.clientWidth / cols;
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, []);
-
-  // Continuous auto-scroll using requestAnimationFrame
-  React.useEffect(() => {
     let rafId = 0;
     let last = performance.now();
+
     const tick = (now: number) => {
       const dt = (now - last) / 1000;
       last = now;
-      if (!isPaused) {
-        stepBy(speedRef.current * dt);
+
+      const loopW = loopWidthRef.current;
+      if (loopW > 0 && trackRef.current) {
+        const distance = speedRef.current * dt;
+        offsetRef.current += distance;
+
+        while (offsetRef.current >= loopW) offsetRef.current -= loopW;
+        while (offsetRef.current < 0) offsetRef.current += loopW;
+
+        trackRef.current.style.transform = `translateX(${-offsetRef.current}px)`;
       }
+
       rafId = requestAnimationFrame(tick);
     };
+
     rafId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafId);
-  }, [isPaused]);
+  }, [isPaused, souvenirItems.length]);
+
+  // ---- states
+  if (loading) {
+    return (
+      <section className="w-full bg-white px-4 py-16 min-h-[calc(100vh-80px)] flex items-center justify-center">
+        <div className="text-gray-500">กำลังโหลด...</div>
+      </section>
+    );
+  }
+
+  if (souvenirItems.length === 0) {
+    return (
+      <section className="w-full bg-white px-4 py-16 min-h-[calc(100vh-80px)] flex items-center justify-center">
+        <div className="text-gray-500">ไม่พบข้อมูลของที่ระลึก</div>
+      </section>
+    );
+  }
 
   return (
     <section className="w-full bg-white px-4 py-16 min-h-[calc(100vh-80px)] md:min-h-[calc(100vh-88px)] flex items-center">
       <div className="container mx-auto relative">
-        {/* หัวข้อ */}
+        {/* title */}
         <div className="flex items-center justify-between mb-10">
-          <h2 className="text-3xl md:text-4xl font-semibold text-gray-800">ของที่ระลึก</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
+            {category === 'DONATION'
+              ? 'จัดการของที่ระลึกสำหรับโครงการบริจาค'
+              : `ของที่ระลึก${category ? ` (${CATEGORY_LABEL[category as keyof typeof CATEGORY_LABEL] || category})` : ''}`}
+          </h2>
         </div>
 
-        {/* Navigation Buttons */}
+        {/* nav */}
         <button
           onClick={prevSlide}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-gray-50/90 backdrop-blur rounded-full p-3 shadow-md hover:bg-gray-100 transition-colors hidden md:block"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur rounded-full p-3 shadow-md hover:bg-white transition hidden md:block"
           aria-label="Previous slide"
         >
           <ChevronLeft className="w-6 h-6 text-gray-600" />
@@ -120,13 +197,15 @@ export function AdminSouvenirCarousel({ onCardClick }: { onCardClick?: (itemId: 
 
         <button
           onClick={nextSlide}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-gray-50/90 backdrop-blur rounded-full p-3 shadow-md hover:bg-gray-100 transition-colors hidden md:block"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur rounded-full p-3 shadow-md hover:bg-white transition hidden md:block"
           aria-label="Next slide"
         >
           <ChevronRight className="w-6 h-6 text-gray-600" />
         </button>
 
-        {/* แถบโปรโมต 3 บล็อกแบบเลื่อนต่อเนื่อง (ไม่มี Link) */}
+        {/* carousel */}
         <div
           ref={scrollContainerRef}
           onWheel={handleWheel}
@@ -134,40 +213,56 @@ export function AdminSouvenirCarousel({ onCardClick }: { onCardClick?: (itemId: 
           onMouseLeave={() => setIsPaused(false)}
           className="relative overflow-hidden max-w-7xl mx-auto"
         >
-          <div ref={trackRef} className="flex gap-12 will-change-transform items-end pb-8">
-            {loopItems.map((item, idx) => {
-              const isCenter = (idx % featured.length) === 1;
-              return (
-                <div 
-                  key={`${item.id}-${idx}`} 
-                  onClick={() => onCardClick?.(item.id)}
-                  className={`group block basis-full md:basis-1/3 shrink-0 transition-transform duration-300 cursor-pointer ${isCenter ? 'md:scale-110 md:mb-4' : 'md:scale-100'}`}
-                >
-                  <div className="flex flex-col items-center text-center">
-                    {/* รูปหลัก */}
-                    <div className="relative w-full h-64 md:h-80 bg-white rounded-3xl overflow-hidden transition-all duration-300 shadow-sm group-hover:shadow-2xl group-hover:-translate-y-0.5">
-                      <Image
-                        src={item.imageSrc}
-                        alt={item.title}
-                        fill
-                        priority={isCenter}
-                        className={'object-contain p-4'}
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      />
-                    </div>
-
-                    {/* ชื่อสินค้า */}
-                    <h3 className="mt-4 text-lg md:text-xl font-bold text-orange-500">
-                      {item.title}
-                    </h3>
-                    {/* จำนวนคงเหลือ */}
-                    <p className="mt-1 text-sm text-gray-500">
-                      จำนวนคงเหลือ: {item.stock} ชิ้น
-                    </p>
+          <div ref={trackRef} className="flex gap-12 will-change-transform pb-8">
+            {loopItems.map((item, idx) => (
+              <div
+                data-carousel-card
+                key={`${item.id}-${idx}`}
+                onClick={() => onCardClick?.(item.id)}
+                className="group shrink-0 basis-[90vw] md:basis-[calc(33.333%-32px)] cursor-pointer"
+              >
+                {/* ✅ กรอบรูป (แยกจากเนื้อหาเหมือน activity) */}
+                <div className="w-full bg-white rounded-3xl overflow-hidden shadow-sm group-hover:shadow-2xl transition">
+                  <div className="relative w-full aspect-4/3">
+                    <Image
+                      src={item.imageUrl || '/souvenir/placeholder.png'}
+                      alt={item.name}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                      className="object-contain p-[clamp(20px,4vw,48px)]"
+                    />
                   </div>
                 </div>
-              );
-            })}
+
+                {/* ✅ เนื้อหาอยู่นอกกรอบรูป + ความสูงเท่ากัน */}
+                <div className="text-center w-full min-h-[120px] flex flex-col justify-between">
+                  <div>
+                    <h3 className="mt-4 text-lg md:text-xl font-bold text-orange-500 line-clamp-1">
+                      {item.name}
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      จำนวนคงเหลือ: {item.currentStock} {item.unit || 'ชิ้น'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="mt-1 text-xs text-gray-400">
+                      หมวดหมู่: {CATEGORY_LABEL[(item.category ?? '') as keyof typeof CATEGORY_LABEL] || item.category || '-'}
+                    </p>
+
+                    <div className="mt-2">
+                      <span
+                        className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
+                          item.active ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {item.active ? 'ใช้งาน' : 'ไม่ใช้งาน'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

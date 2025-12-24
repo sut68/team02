@@ -1,0 +1,19 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - curl
+  - gnupg
+  - lsb-release
+runcmd:
+  - curl -fsSL https://get.docker.com -o /tmp/get-docker.sh && sh /tmp/get-docker.sh
+  - mkdir -p /home/azureuser/myapp
+  - curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+  - chmod +x /usr/local/bin/docker-compose
+  - echo 'version: "3.9"' > /home/azureuser/myapp/docker-compose.yml
+  - echo "services:\n  web:\n    image: ${IMAGE_REPO:-your-docker-username/next-app:latest}\n    restart: unless-stopped\n    ports:\n      - \"80:3000\"\n    environment:\n      NODE_ENV: production\n" >> /home/azureuser/myapp/docker-compose.yml
+  - chown -R azureuser:azureuser /home/azureuser/myapp
+  - su - azureuser -c 'cd ~/myapp && docker-compose pull'
+  - su - azureuser -c 'cd ~/myapp && docker-compose up -d'

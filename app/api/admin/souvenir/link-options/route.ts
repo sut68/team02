@@ -1,46 +1,45 @@
+
+
 import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 
+// GET /api/admin/souvenir/link-options
 export async function GET() {
   try {
-    // ดึงกิจกรรมทั้งหมด
-    const events = await prisma.event.findMany({
+    const activities = await prisma.content.findMany({
+      where: { categories: 'ACTIVITY' },
       select: {
         id: true,
-        name: true,
-        startDate: true,
+        TitleName: true,
+        createdAt: true,
         souvenirItemId: true,
       },
-      orderBy: {
-        startDate: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
     });
 
-    // ดึงโครงการบริจาคที่ยังเปิดอยู่
     const donationProjects = await prisma.donationProject.findMany({
-      where: {
-        status: 'OPEN',
-      },
       select: {
         id: true,
         title: true,
-        goalAmount: true,
         currentAmount: true,
+        goalAmount: true,
+        status: true,
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { id: 'desc' },
+      // where: { status: 'OPEN' }, // Uncomment to filter only open projects
     });
 
     return NextResponse.json({
-      events,
+      events: activities.map(a => ({
+        id: a.id,
+        name: a.TitleName ?? '(ไม่มีชื่อกิจกรรม)',
+        startDate: a.createdAt,
+        souvenirItemId: a.souvenirItemId ?? null,
+      })),
       donationProjects,
-    });
-  } catch (error) {
-    console.error('Error fetching link options:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch link options' },
-      { status: 500 }
-    );
+    }, { status: 200 });
+  } catch (e) {
+    console.error('link-options error:', e);
+    return NextResponse.json({ events: [], donationProjects: [] }, { status: 500 });
   }
 }

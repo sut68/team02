@@ -71,7 +71,7 @@ export default function Navbar() {
       await fetch('/api/auth/logout', { method: 'POST' });
       setUser(null);
       router.push('/auth/login');
-      window.location.href = '/auth/login'; // Force reload
+      window.location.href = '/auth/login'; 
     } catch (error) {
       // Silent error
     }
@@ -144,9 +144,7 @@ export default function Navbar() {
               </div>
             </div>
 
-            <Link href='/forum' className='hover:text-gray-900'>
-              รับสมัครงาน
-            </Link>
+            <Link href="/user/job" className="hover:text-gray-900">รับสมัครงาน</Link>
 
             <div className='relative group'>
               <span className='flex items-center hover:text-[#F26522] transition-colors duration-200 cursor-pointer'>
@@ -168,121 +166,68 @@ export default function Navbar() {
               </div>
             </div>
 
-            <Link href='/budget' className='hover:text-gray-900'>
-              รายงานงบประมาณ
-            </Link>
-            <Link href='/user/talk' className='hover:text-gray-900'>
-              กระดานสนทนา
-            </Link>
+            <Link href="/user/budget" className="hover:text-gray-900">รายงานงบประมาณ</Link>
+            <Link href="/user/talk" className="hover:text-gray-900">กระดานสนทนา</Link>
           </>
         )}
 
         {/* --- 💡 เมนูสำหรับแอดมิน (จะแสดงเมื่อ isAdmin = true) --- */}
         {isAdmin && (
           <>
-            <div className='relative group'>
-              <Link
-                href='/user/news'
-                className='flex items-center hover:text-[#F26522] transition-colors duration-200'
-              >
-                <span className='material-icons ml-1 text-base'>กิจกรรม</span>
+            <div className="relative group">
+              <Link href="/user/news" className="flex items-center hover:text-[#F26522] transition-colors duration-200">
+                <span className="material-icons ml-1 text-base">กิจกรรม</span>
               </Link>
-              <div className='absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50'>
-                <Link
-                  href='/admin/news/create'
-                  className='block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200'
-                >
-                  สร้างโพส
-                </Link>
-                <Link
-                  href='/admin/news'
-                  className='block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200'
-                >
-                  อนุมัติโพส
-                </Link>
-                <Link
-                  href='/admin/news'
-                  className='block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200'
-                >
-                  รายละเอียดการจอง
-                </Link>
+              <div className="absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50">
+                <Link href="/admin/news/create" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">สร้างโพส</Link>
+                <Link href="/admin/news" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">อนุมัติโพส</Link>
+                <Link href="/admin/news" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">รายละเอียดการจอง</Link>
               </div>
             </div>
 
-            <div className='relative group'>
-              <Link
-                href='/admin/souvenir'
-                className='flex items-center hover:text-[#F26522] transition-colors duration-200'
-              >
-                <span className='material-icons ml-1 text-base'>
-                  ของที่ระลึก
-                </span>
+            <div className="relative group">
+              <Link href="/admin/souvenir" className="flex items-center hover:text-[#F26522] transition-colors duration-200">
+                <span className="material-icons ml-1 text-base">ของที่ระลึก</span>
               </Link>
-              <div className='absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50'>
-                <Link
-                  href='/admin/souvenir/activity'
-                  className='block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200'
-                >
-                  กิจกรรม
-                </Link>
-                <Link
-                  href='/admin/souvenir/donation'
-                  className='block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200'
-                >
-                  บริจาค
-                </Link>
+              <div className="absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50">
+                <Link href="/admin/souvenir/activity" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">กิจกรรม</Link>
+                <Link href="/admin/souvenir/donation" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">บริจาค</Link>
               </div>
             </div>
 
-            <Link href='/user/job' className='hover:text-gray-900'>
-              รับสมัครงาน
-            </Link>
+            <Link href="/user/job" className="hover:text-gray-900">รับสมัครงาน</Link>
 
-            <div className='relative group/l0'>
-              <span className='flex items-center hover:text-[#F26522] transition-colors duration-200 cursor-pointer'>
+            <div className="relative group/l0">
+              <span className="flex items-center hover:text-[#F26522] transition-colors duration-200 cursor-pointer">
                 การระดมทุนและงบ
               </span>
-              <div className='absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover/l0:opacity-100 invisible group-hover/l0:visible transition-all duration-200 z-50'>
-                <div className='relative group/l1'>
-                  <span className='w-full flex justify-between items-center px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200 cursor-pointer'>
+              <div className="absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover/l0:opacity-100 invisible group-hover/l0:visible transition-all duration-200 z-50">
+                <div className="relative group/l1">
+                  <span className="w-full flex justify-between items-center px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200 cursor-pointer">
                     การระดมทุน
                   </span>
-                  <div className='absolute left-full top-0 mt-0 w-48 bg-white shadow-lg group-hover/l1:opacity-100 invisible group-hover/l1:visible transition-all duration-200 z-50'>
-                    <Link
-                      href='/admin/budget_approval'
-                      className='block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200'
-                    >
-                      พิจารณา
-                    </Link>
-                    <Link
-                      href='/admin/budget_report'
-                      className='block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200'
-                    >
-                      รายงานงบ
-                    </Link>
+                  <div className="absolute left-full top-0 mt-0 w-48 bg-white shadow-lg group-hover/l1:opacity-100 invisible group-hover/l1:visible transition-all duration-200 z-50">
+                    <Link href="/admin/budget_approval" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">พิจารณา</Link>
+                    <Link href="/admin/budget_report" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">รายงานงบ</Link>
                   </div>
                 </div>
-                <Link
-                  href='/admin/donation'
-                  className='block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200'
-                >
-                  บริจาค
-                </Link>
-                <Link
-                  href='/admin/payment'
-                  className='block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200'
-                >
+                <div className="relative group/l1">
+                  <span className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">
+                    การบริจาค
+                  </span>
+                  <div className="absolute left-full top-0 mt-0 w-48 bg-white shadow-lg group-hover/l1:opacity-100 invisible group-hover/l1:visible transition-all duration-200 z-50">
+                    <Link href="/admin/donation" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">หน้าบริจาค</Link>
+                    <Link href="/admin/donation/projects" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">จัดการโครงการ</Link>
+                  </div>
+                </div>
+                <Link href="/admin/payment" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">
                   การเงิน
                 </Link>
               </div>
             </div>
 
-            <Link href='/admin/talk' className='hover:text-gray-900'>
-              กระดานสนทนา
-            </Link>
-            <Link href='/admin/usermanage' className='hover:text-gray-900'>
-              จัดการสมาชิก
-            </Link>
+            <Link href="/admin/talk" className="hover:text-gray-900">กระดานสนทนา</Link>
+            <Link href="/admin/usermanage" className="hover:text-gray-900">จัดการสมาชิก</Link>
           </>
         )}
 
@@ -344,11 +289,12 @@ export default function Navbar() {
         <Link href='/'>
           <div className='flex items-center ml-20 space-x-4 transition-all duration-300'>
             <Image
-              className='dark:invert'
-              src='/SUT_Engineering_Eng.png'
-              alt='ENGi logo'
-              width={isScrolled ? 150 : 200}
-              height={isScrolled ? 30 : 40}
+              className="dark:invert"
+              src="/SUT_Engineering_Eng.png"
+              alt="ENGi logo"
+              width={isScrolled ? '150' : '200'}
+              height={isScrolled ? '30' : '40'}
+              // style={{ width: 'auto', height: 'auto' }}
               priority
               loading='eager'
             />
