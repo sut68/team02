@@ -35,7 +35,6 @@ export async function GET(req: NextRequest) {
           user: true,
           bookingForm: true,
           pictures: true,
-          bookings: true,
         },
       });
 
@@ -51,7 +50,6 @@ export async function GET(req: NextRequest) {
         user: true,
         bookingForm: true,
         pictures: true,
-        bookings: true,
       },
       orderBy: { createdAt: "desc" },
     });

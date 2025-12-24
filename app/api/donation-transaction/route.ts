@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     const result = await prisma.$transaction(async (tx) => {
       // ✅ ไม่ใช้ paymentId เพราะ schema DonationTransaction ไม่มี paymentId
-      // ✅ ใช้ nested create ผ่าน relation paymentRecords
+      // ✅ ใช้ nested create ผ่าน relation paymentRecord
       const transaction = await tx.donationTransaction.create({
         data: {
           projectId,
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
           userId: userId ?? null,
           status: TransactionStatus.SUCCESS,
 
-          paymentRecords: {
+          paymentRecord: {
             create: {
               amount,
               paymentSlipUrl,
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
           user: userId
             ? { select: { fullName: true, email: true } }
             : false,
-          paymentRecords: { include: { paymentMethod: true } },
+          paymentRecord: { include: { paymentMethod: true } },
         },
       });
 
@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
       include: {
         project: { select: { id: true, title: true } },
         user: { select: { id: true, fullName: true, email: true } },
-        paymentRecords: { include: { paymentMethod: true } },
+        paymentRecord: { include: { paymentMethod: true } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -182,7 +182,7 @@ export async function PUT(request: NextRequest) {
         data: { status },
         include: {
           project: { select: { id: true, title: true } },
-          paymentRecords: true,
+          paymentRecord: true,
         },
       });
 

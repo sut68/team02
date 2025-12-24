@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -47,7 +47,7 @@ interface FormData {
 // ----------------------------------------------------
 // 💡 Component หน้ารวมรายละเอียดและฟอร์ม
 // ----------------------------------------------------
-export default function CombinedDonationFormPage() {
+function CombinedDonationFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = searchParams.get('projectId');
@@ -399,5 +399,13 @@ export default function CombinedDonationFormPage() {
         </div>
       </div >
     </div >
+  );
+}
+
+export default function CombinedDonationFormPage() {
+  return (
+    <Suspense fallback={<div className="p-4">Loading...</div>}>
+      <CombinedDonationFormContent />
+    </Suspense>
   );
 }

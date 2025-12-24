@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ImageUp, Search as SearchIcon } from "lucide-react"; // แก้ import ให้กระชับ
-import { ProjectProposal, ProjectManager } from "@/app/types/budget_approval";
+import { ProjectManager } from "@/app/types/budget_approval";
 
 // เรียกใช้ Components
 import { Input } from "@/app/components/ui/Input";
@@ -99,7 +99,7 @@ export default function CreateBudgetProjectPage() {
         if (res.ok) {
           const data = await res.json();
           const rounds = data.budgetRounds || [];
-          const now = new Date();
+          // const now = new Date();
           
           // หา active round ที่ status เป็น 'OPEN'
           const active = rounds.find((r: any) => r.status === 'OPEN');

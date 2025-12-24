@@ -21,11 +21,14 @@ model PasswordResetToken {
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
 generator client {
   provider = "prisma-client-js"
 }
-
 // ========================================
 // Enums
 // ========================================
@@ -629,7 +632,7 @@ model ProjectProposal {
   manager     ProjectManager? @relation(fields: [managerId], references: [id])
   staff       User?           @relation("StaffProposals", fields: [staffId], references: [id])
 
-  summarySubmissions SummarySubmission[]
+  summarySubmission SummarySubmission?
   votes              ProjectVote[]
 }
 
@@ -646,7 +649,7 @@ model SummarySubmission {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  proposalId  Int
+  proposalId  Int   @unique
   submitterId Int?
 
   proposal  ProjectProposal   @relation(fields: [proposalId], references: [id], onDelete: Cascade)
@@ -674,9 +677,8 @@ model BudgetDonation {
   donorName     String? // ชื่อที่ผู้ใช้ระบุในฟอร์ม (ถ้าไม่ Login)
   donorEmail    String?
   donorPhone    String?
-  isPublic      Boolean           @default(true) // แสดงชื่อผู้บริจาคสาธารณะหรือไม่
-  paymentId     Int?
-  paymentRecord PaymentRecord[]
+  isPublic      Boolean           @default(true) // แสดงชื่อผู้บริจาคสาธารณะหรือไม่  
+  paymentRecords    PaymentRecord[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
@@ -897,7 +899,9 @@ model PaymentRecord {
   transaction           DonationTransaction? @relation(fields: [donationTransactionId], references: [id])
   donationTransactionId Int?
   bookings              Booking[]
-  budgetDonations       BudgetDonation[]
+
+  budgetDonationId      Int?
+  budgetDonation        BudgetDonation? @relation(fields: [budgetDonationId], references: [id])
 
   @@index([paymentStatus])
   @@index([createdAt])
