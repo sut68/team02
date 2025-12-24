@@ -147,7 +147,7 @@ async function sendStatusEmail(email: string, fullName: string, status: string, 
 
       ${isApproved ? `
         <p>คุณสามารถเข้าสู่ระบบเพื่อใช้งานฟังก์ชันต่างๆ ของศิษย์เก่าได้ทันที</p>
-        <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/login" 
+        <a href="${process.env.NEXTAUTH_URL || 'https://www.sut-alumniconnect.me'}/auth/login" 
            style="display: inline-block; background-color: #F26522; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
            เข้าสู่ระบบ
         </a>
