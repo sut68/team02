@@ -676,8 +676,11 @@ model BudgetDonation {
   donorEmail    String?
   donorPhone    String?
   isPublic      Boolean           @default(true) // แสดงชื่อผู้บริจาคสาธารณะหรือไม่
-  paymentId     Int?           @unique // ใส่ @unique เพื่อบังคับ 1-ต่อ-1
-  paymentRecord PaymentRecord? @relation(fields: [paymentId], references: [id])
+  paymentRecords    PaymentRecord[] @relation("MainDonation") 
+  
+  // คู่กับ budgetDonations ใน PaymentRecord (สมมติว่าเป็น Many-to-One หรือ Many-to-Many)
+  relatedPayments   PaymentRecord?  @relation("RelatedDonations", fields: [relatedPaymentId], references: [id]) 
+  relatedPaymentId  Int?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
@@ -898,7 +901,7 @@ model PaymentRecord {
   transaction           DonationTransaction? @relation(fields: [donationTransactionId], references: [id])
   donationTransactionId Int?
   bookings              Booking[]
-  
+
   budgetDonationId      Int?
   budgetDonations       BudgetDonation[]
   budgetDonation        BudgetDonation? @relation(fields: [budgetDonationId], references: [id])
