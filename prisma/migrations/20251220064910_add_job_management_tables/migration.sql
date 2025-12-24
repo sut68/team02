@@ -42,15 +42,6 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
--- DropForeignKey
-ALTER TABLE "Donation" DROP CONSTRAINT "Donation_souvenirItemId_fkey";
-
--- DropForeignKey
-ALTER TABLE "Event" DROP CONSTRAINT "Event_souvenirItemId_fkey";
-
--- DropIndex
-DROP INDEX "DonationTransaction_omiseChargeId_key";
-
 -- AlterTable
 ALTER TABLE "BookingForm" DROP COLUMN "singlePrice",
 DROP COLUMN "Souvenir",
@@ -63,15 +54,6 @@ ADD COLUMN     "Date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 ADD COLUMN     "StatusID" INTEGER,
 DROP COLUMN "Booking",
 ADD COLUMN     "Booking" TEXT;
-
--- AlterTable
-ALTER TABLE "Donation" DROP COLUMN "souvenirItemId";
-
--- AlterTable
-ALTER TABLE "DonationTransaction" DROP COLUMN "omiseChargeId";
-
--- AlterTable
-ALTER TABLE "Event" DROP COLUMN "souvenirItemId";
 
 -- DropEnum
 DROP TYPE "Option";
