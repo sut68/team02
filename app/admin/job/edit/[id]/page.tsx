@@ -1,97 +1,190 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
 
 interface Job {
   id: number;
-  jobTitle: string;
   title: string;
-  position: string;
-  jobType: string;
-  education: string;
-  salary: string;
-  companyName: string;
-  positions: string;
-  address: string;
-  contact: string;
-  transportation: string;
-  previews?: {
-    attachment: string | null;
-    logo: string | null;
-    image: string | null;
-  };
+  namejob: string;
+  position: string | null;
+  qualification: string | null;
+  location: string | null;
+  salarydetail: string | null;
+  numpositions: number | null;
+  contactInfo: string | null;
+  JobPosterPath: string | null;
+  educationlevel: string | null;
   status: string;
-  date: string;
   createdAt: string;
+  user?: {
+    id: number;
+    fullName: string;
+    email: string;
+  };
+  jobType?: {
+    id: number;
+    typename: string;
+  } | null;
+  company?: {
+    id: number;
+    companyname: string;
+    companyaddress: string | null;
+    CompanyLogoPath: string | null;
+    CompanyPicturePath: string | null;
+  } | null;
 }
 
 export default function JobDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const jobId = params?.id as string;
+  
   const [job, setJob] = useState<Job | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    // ดึง jobId จาก localStorage (ในโปรเจคจริงใช้ router params)
-    const jobId = localStorage.getItem('selectedJobId');
-    
     if (jobId) {
-      const jobs = JSON.parse(localStorage.getItem('jobs') || '[]');
-      const selectedJob = jobs.find((j: Job) => j.id === parseInt(jobId));
-      setJob(selectedJob || null);
+      loadJob();
     }
-  }, []);
+  }, [jobId]);
 
-  const handleBack = () => {
-    // กลับไปหน้าจัดการรายการ
-    localStorage.removeItem('selectedJobId');
-    window.location.href = '/admin/job';
+  const loadJob = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(`/api/admin/job/${jobId}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'ไม่พบข้อมูลงาน');
+      }
+
+      setJob(data.job);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการดึงข้อมูล';
+      setError(errorMessage);
+      console.error('Error loading job:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSave = () => {
+  const handleBack = () => {
+    router.push('/admin/job');
+  };
+
+  const handleSave = async () => {
     if (!job) return;
 
-    // บันทึกข้อมูลที่อัปเดตแล้วลง localStorage
-    const jobs = JSON.parse(localStorage.getItem('jobs') || '[]');
-    const updatedJobs = jobs.map((j: Job) => 
-      j.id === job.id ? job : j
-    );
-    
-    localStorage.setItem('jobs', JSON.stringify(updatedJobs));
-    
-    alert('บันทึกข้อมูลสำเร็จ');
-    
-    // กลับไปหน้าจัดการรายการ
-    localStorage.removeItem('selectedJobId');
-    window.location.href = '/admin/job';
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/admin/job/${job.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: job.status,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'เกิดข้อผิดพลาดในการบันทึก');
+      }
+
+      alert('บันทึกข้อมูลสำเร็จ');
+      router.push('/admin/job');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการบันทึก';
+      alert(errorMessage);
+      console.error('Error saving job:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {
-    // ยกเลิกและกลับไปหน้าจัดการรายการโดยไม่บันทึก
     if (confirm('คุณต้องการยกเลิกการแก้ไขหรือไม่?')) {
-      localStorage.removeItem('selectedJobId');
-      window.location.href = '/admin/job';
+      router.push('/admin/job');
     }
   };
 
   const handleUpdateStatus = (newStatus: string) => {
     if (!job) return;
-
-    // อัปเดตสถานะใน state
     setJob({ ...job, status: newStatus });
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'อนุมัติแล้ว': return 'bg-orange-500';
-      case 'ไม่อนุมัติ': return 'bg-red-500';
-      case 'รออนุมัติ': return 'bg-yellow-500';
-      default: return 'bg-orange-500';
+      case 'APPROVED': return 'bg-orange-500';
+      case 'REJECTED': return 'bg-red-500';
+      case 'PENDING': return 'bg-yellow-500';
+      default: return 'bg-gray-500';
     }
   };
 
-  if (!job) {
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'APPROVED': return 'อนุมัติแล้ว';
+      case 'REJECTED': return 'ไม่อนุมัติ';
+      case 'PENDING': return 'รออนุมัติ';
+      default: return status;
+    }
+  };
+
+  const getJobTypeText = (jobType: { typename: string } | null | undefined) => {
+    if (!jobType || !jobType.typename) return '-';
+    const mapping: Record<string, string> = {
+      'FULL_TIME': 'Full-time',
+      'PART_TIME': 'Part-time',
+      'CONTRACT': 'Contract',
+      'INTERNSHIP': 'Internship',
+    };
+    return mapping[jobType.typename] || jobType.typename;
+  };
+
+  const getEducationText = (education: string | null) => {
+    if (!education) return '-';
+    const mapping: Record<string, string> = {
+      'BELOW_BACHELOR': 'ต่ำกว่าปริญญาตรี',
+      'BACHELOR': 'ปริญญาตรี',
+      'MASTER': 'ปริญญาโท',
+      'DOCTORATE': 'ปริญญาเอก',
+      'OTHER': 'อื่นๆ',
+    };
+    return mapping[education] || education;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('th-TH', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+  };
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-500 mb-4">ไม่พบข้อมูลงาน</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-orange-500 border-t-transparent"></div>
+          <p className="text-gray-500 mt-2">กำลังโหลดข้อมูล...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !job) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-500 mb-4">{error || 'ไม่พบข้อมูลงาน'}</p>
           <button 
             onClick={handleBack}
             className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
@@ -128,13 +221,13 @@ export default function JobDetailPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">ชื่อหัวข้อของงาน</label>
                 <div className="bg-gray-50 px-4 py-3 rounded-lg">
-                  <p className="text-gray-800">{job.jobTitle || '-'}</p>
+                  <p className="text-gray-800">{job.title || '-'}</p>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-2">Title</label>
+                <label className="block text-sm font-medium text-gray-600 mb-2">ชื่อตำแหน่งงาน</label>
                 <div className="bg-gray-50 px-4 py-3 rounded-lg">
-                  <p className="text-gray-800">{job.title || '-'}</p>
+                  <p className="text-gray-800">{job.namejob || '-'}</p>
                 </div>
               </div>
             </div>
@@ -149,7 +242,7 @@ export default function JobDetailPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">ประเภทของงาน</label>
                 <div className="bg-gray-50 px-4 py-3 rounded-lg">
-                  <p className="text-gray-800">{job.jobType === 'Select Type' ? '-' : job.jobType}</p>
+                  <p className="text-gray-800">{getJobTypeText(job.jobType)}</p>
                 </div>
               </div>
             </div>
@@ -158,13 +251,13 @@ export default function JobDetailPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">ระดับการศึกษา</label>
                 <div className="bg-gray-50 px-4 py-3 rounded-lg">
-                  <p className="text-gray-800">{job.education || '-'}</p>
+                  <p className="text-gray-800">{getEducationText(job.educationlevel)}</p>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">รายได้เฉลี่ย</label>
                 <div className="bg-gray-50 px-4 py-3 rounded-lg">
-                  <p className="text-gray-800">{job.salary || '-'}</p>
+                  <p className="text-gray-800">{job.salarydetail || '-'}</p>
                 </div>
               </div>
             </div>
@@ -173,68 +266,70 @@ export default function JobDetailPage() {
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">ชื่อบริษัท</label>
                 <div className="bg-gray-50 px-4 py-3 rounded-lg">
-                  <p className="text-gray-800">{job.companyName || '-'}</p>
+                  <p className="text-gray-800">{job.company?.companyname || '-'}</p>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">จำนวนอัตรา</label>
                 <div className="bg-gray-50 px-4 py-3 rounded-lg">
-                  <p className="text-gray-800">{job.positions || '-'}</p>
+                  <p className="text-gray-800">{job.numpositions || '-'}</p>
                 </div>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-2">ที่อยู่บริษัท</label>
+              <label className="block text-sm font-medium text-gray-600 mb-2">ที่อยู่/สถานที่</label>
               <div className="bg-gray-50 px-4 py-3 rounded-lg">
-                <p className="text-gray-800 whitespace-pre-wrap">{job.address || '-'}</p>
+                <p className="text-gray-800 whitespace-pre-wrap">{job.location || job.company?.companyaddress || '-'}</p>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-2">ช่องทางการติดต่อ</label>
               <div className="bg-gray-50 px-4 py-3 rounded-lg">
-                <p className="text-gray-800 whitespace-pre-wrap">{job.contact || '-'}</p>
+                <p className="text-gray-800 whitespace-pre-wrap">{job.contactInfo || '-'}</p>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-600 mb-2">วิธีการเดินทาง</label>
-              <div className="bg-gray-50 px-4 py-3 rounded-lg">
-                <p className="text-gray-800 whitespace-pre-wrap">{job.transportation || '-'}</p>
+            {job.qualification && (
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-2">คุณสมบัติ</label>
+                <div className="bg-gray-50 px-4 py-3 rounded-lg">
+                  <p className="text-gray-800 whitespace-pre-wrap">{job.qualification}</p>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* รูปภาพ */}
-            {(job.previews?.attachment || job.previews?.logo || job.previews?.image) && (
+            {(job.JobPosterPath || job.company?.CompanyLogoPath || job.company?.CompanyPicturePath) && (
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-3">รูปภาพ</label>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {job.previews?.attachment && (
+                  {job.JobPosterPath && (
                     <div>
                       <p className="text-xs text-gray-500 mb-2">ไฟล์แนบงาน</p>
                       <img 
-                        src={job.previews.attachment} 
+                        src={job.JobPosterPath} 
                         alt="Attachment" 
                         className="w-full h-48 object-cover rounded-lg border border-gray-200"
                       />
                     </div>
                   )}
-                  {job.previews?.logo && (
+                  {job.company?.CompanyLogoPath && (
                     <div>
                       <p className="text-xs text-gray-500 mb-2">ตราบริษัท</p>
                       <img 
-                        src={job.previews.logo} 
+                        src={job.company.CompanyLogoPath} 
                         alt="Logo" 
                         className="w-full h-48 object-cover rounded-lg border border-gray-200"
                       />
                     </div>
                   )}
-                  {job.previews?.image && (
+                  {job.company?.CompanyPicturePath && (
                     <div>
                       <p className="text-xs text-gray-500 mb-2">รูปบริษัท</p>
                       <img 
-                        src={job.previews.image} 
+                        src={job.company.CompanyPicturePath} 
                         alt="Company" 
                         className="w-full h-48 object-cover rounded-lg border border-gray-200"
                       />
@@ -250,14 +345,14 @@ export default function JobDetailPage() {
                 <label className="block text-sm font-medium text-gray-600 mb-2">สถานะ</label>
                 <div>
                   <span className={`inline-block px-4 py-2 text-sm font-medium text-white rounded-full ${getStatusColor(job.status)}`}>
-                    {job.status}
+                    {getStatusText(job.status)}
                   </span>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">วันที่สร้าง</label>
                 <div className="bg-gray-50 px-4 py-3 rounded-lg">
-                  <p className="text-gray-800">{job.date}</p>
+                  <p className="text-gray-800">{formatDate(job.createdAt)}</p>
                 </div>
               </div>
             </div>
@@ -267,9 +362,9 @@ export default function JobDetailPage() {
               <label className="block text-sm font-medium text-gray-600 mb-3">เปลี่ยนสถานะ</label>
               <div className="flex flex-wrap gap-3">
                 <button
-                  onClick={() => handleUpdateStatus('อนุมัติแล้ว')}
+                  onClick={() => handleUpdateStatus('APPROVED')}
                   className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                    job.status === 'อนุมัติแล้ว'
+                    job.status === 'APPROVED'
                       ? 'bg-orange-500 text-white'
                       : 'bg-orange-100 text-orange-600 hover:bg-orange-200'
                   }`}
@@ -277,14 +372,24 @@ export default function JobDetailPage() {
                   อนุมัติแล้ว
                 </button>
                 <button
-                  onClick={() => handleUpdateStatus('ไม่อนุมัติ')}
+                  onClick={() => handleUpdateStatus('REJECTED')}
                   className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                    job.status === 'ไม่อนุมัติ'
+                    job.status === 'REJECTED'
                       ? 'bg-red-500 text-white'
                       : 'bg-red-100 text-red-600 hover:bg-red-200'
                   }`}
                 >
                   ไม่อนุมัติ
+                </button>
+                <button
+                  onClick={() => handleUpdateStatus('PENDING')}
+                  className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                    job.status === 'PENDING'
+                      ? 'bg-yellow-500 text-white'
+                      : 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
+                  }`}
+                >
+                  รออนุมัติ
                 </button>
               </div>
             </div>
@@ -299,9 +404,10 @@ export default function JobDetailPage() {
               </button>
               <button 
                 onClick={handleSave}
-                className="px-8 py-3 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-full transition-colors"
+                disabled={isSaving}
+                className="px-8 py-3 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                บันทึก
+                {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
               </button>
             </div>
           </div>
@@ -310,3 +416,4 @@ export default function JobDetailPage() {
     </div>
   );
 }
+
