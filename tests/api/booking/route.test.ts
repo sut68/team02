@@ -1,6 +1,6 @@
 // tests/api/booking/route.test.ts
 
-// 1) mock prisma
+// 1) mock prisma ให้ตรงกับที่ route ใช้จริง
 jest.mock("@/app/lib/prisma", () => ({
   prisma: {
     content: {
@@ -15,10 +15,10 @@ jest.mock("@/app/lib/prisma", () => ({
 
 import { prisma } from "@/app/lib/prisma";
 
-// import route หลัง mock
+// import route หลัง mock เสมอ
 const { POST } = require("@/app/api/booking/route");
 
-// helpers
+// -------------------- helpers --------------------
 function makeReq(body?: Record<string, any>) {
   return {
     json: async () => body ?? {},
@@ -26,10 +26,10 @@ function makeReq(body?: Record<string, any>) {
 }
 
 function makeIds() {
-  // ไม่ hardcode แบบฝังตาย: สุ่มค่าที่เป็นตัวเลขได้
-  const userId = Math.floor(Math.random() * 1000) + 1;
-  const contentId = Math.floor(Math.random() * 1000) + 1;
-  return { userId, contentId };
+  return {
+    userId: Math.floor(Math.random() * 1000) + 1,
+    contentId: Math.floor(Math.random() * 1000) + 1,
+  };
 }
 
 function mockContent({
@@ -46,22 +46,27 @@ function mockContent({
   return {
     Booking: booking,
     BookingFormID: bookingFormId,
-    bookingForm: {
-      id: bookingFormId ?? null,
-      TotalSeats: totalSeats,
-      Souvenir: "HAVE",
-      PriceType: priceType,
-      singlePrice: 100,
-      batchPrices: null,
-    },
+    bookingForm: bookingFormId
+      ? {
+          id: bookingFormId,
+          TotalSeats: totalSeats,
+          Souvenir: "HAVE",
+          PriceType: priceType,
+          singlePrice: 100,
+          batchPrices: null,
+        }
+      : null,
   };
 }
 
-describe("Booking API - Validation & Positive Tests (proposal-style)", () => {
-  afterEach(() => jest.clearAllMocks());
+// -------------------- tests --------------------
+describe("Booking API - Validation & Positive Tests (aligned with real controller)", () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
-  it("TC-VAL-01: Should return 400 if missing userId or contentId", async () => {
-    const req = makeReq({ contentId: 1 }); // missing userId
+  it("TC-VAL-01: missing userId or contentId -> 400", async () => {
+    const req = makeReq({ contentId: 1 });
 
     const res = await POST(req);
     const json = await res.json();
@@ -70,11 +75,15 @@ describe("Booking API - Validation & Positive Tests (proposal-style)", () => {
     expect(json.error).toBe("ต้องระบุ userId และ contentId");
   });
 
-  it("TC-VAL-02: Should return 404 if content not found", async () => {
+  it("TC-VAL-02: content not found -> 404", async () => {
     (prisma.content.findUnique as jest.Mock).mockResolvedValue(null);
 
     const { userId, contentId } = makeIds();
-    const req = makeReq({ userId, contentId, bookingField: { name: "A" } });
+    const req = makeReq({
+      userId,
+      contentId,
+      bookingField: { name: "Tester" },
+    });
 
     const res = await POST(req);
     const json = await res.json();
@@ -83,13 +92,17 @@ describe("Booking API - Validation & Positive Tests (proposal-style)", () => {
     expect(json.error).toBe("ไม่พบ content");
   });
 
-  it("TC-VAL-03: Should return 400 if content booking not open", async () => {
+  it("TC-VAL-03: booking not open -> 400", async () => {
     (prisma.content.findUnique as jest.Mock).mockResolvedValue(
       mockContent({ booking: "NOT" })
     );
 
     const { userId, contentId } = makeIds();
-    const req = makeReq({ userId, contentId, bookingField: { name: "A" } });
+    const req = makeReq({
+      userId,
+      contentId,
+      bookingField: { name: "Tester" },
+    });
 
     const res = await POST(req);
     const json = await res.json();
@@ -98,13 +111,17 @@ describe("Booking API - Validation & Positive Tests (proposal-style)", () => {
     expect(json.error).toBe("กิจกรรมนี้ไม่ได้เปิดให้จอง");
   });
 
-  it("TC-VAL-04: Should return 400 if content has no bookingForm linked", async () => {
+  it("TC-VAL-04: no bookingForm linked -> 400", async () => {
     (prisma.content.findUnique as jest.Mock).mockResolvedValue(
       mockContent({ bookingFormId: null })
     );
 
     const { userId, contentId } = makeIds();
-    const req = makeReq({ userId, contentId, bookingField: { name: "A" } });
+    const req = makeReq({
+      userId,
+      contentId,
+      bookingField: { name: "Tester" },
+    });
 
     const res = await POST(req);
     const json = await res.json();
@@ -113,10 +130,9 @@ describe("Booking API - Validation & Positive Tests (proposal-style)", () => {
     expect(json.error).toBe("กิจกรรมนี้ยังไม่มี bookingForm ผูกอยู่");
   });
 
-  it("TC-VAL-05: Should return 400 if seats are full (remaining < 1)", async () => {
-    // TotalSeats = 1 และ sum BookingSeats = 1 => เต็ม
+  it("TC-VAL-05: seats full -> 400", async () => {
     (prisma.content.findUnique as jest.Mock).mockResolvedValue(
-      mockContent({ totalSeats: 1, bookingFormId: 10 })
+      mockContent({ totalSeats: 1 })
     );
     (prisma.bookingField.aggregate as jest.Mock).mockResolvedValue({
       _sum: { BookingSeats: 1 },
@@ -137,7 +153,7 @@ describe("Booking API - Validation & Positive Tests (proposal-style)", () => {
     expect(prisma.bookingField.aggregate).toHaveBeenCalled();
   });
 
-  it("TC-VAL-06: Should return 400 if bookingField.name is missing/blank", async () => {
+  it("TC-VAL-06: bookingField.name blank -> 400", async () => {
     (prisma.content.findUnique as jest.Mock).mockResolvedValue(
       mockContent({ totalSeats: 30 })
     );
@@ -149,7 +165,7 @@ describe("Booking API - Validation & Positive Tests (proposal-style)", () => {
     const req = makeReq({
       userId,
       contentId,
-      bookingField: { name: "   " }, // blank
+      bookingField: { name: "   " },
     });
 
     const res = await POST(req);
@@ -159,15 +175,15 @@ describe("Booking API - Validation & Positive Tests (proposal-style)", () => {
     expect(json.error).toBe("กรุณากรอกชื่อ-สกุล");
   });
 
-  it("TC-POS-01: Should create booking successfully (201)", async () => {
+  it("TC-POS-01: create booking success -> 201", async () => {
     (prisma.content.findUnique as jest.Mock).mockResolvedValue(
-      mockContent({ totalSeats: 30, bookingFormId: 10 })
+      mockContent({ totalSeats: 30 })
     );
     (prisma.bookingField.aggregate as jest.Mock).mockResolvedValue({
       _sum: { BookingSeats: 5 },
     });
 
-    // mock transaction
+    // mock prisma.$transaction(fn)
     (prisma.$transaction as jest.Mock).mockImplementation(async (fn: any) => {
       const tx = {
         bookingField: {
@@ -175,15 +191,19 @@ describe("Booking API - Validation & Positive Tests (proposal-style)", () => {
         },
         booking: {
           create: jest.fn().mockResolvedValue({
-            id: 12345,
+            id: 123,
             Userid: 1,
             ContentID: 2,
             BookingFieldID: 999,
-            bookingField: { id: 999, BookingSeats: 1, Name: "Tester" },
+            bookingField: {
+              id: 999,
+              Name: "Tester",
+              BookingSeats: 1,
+            },
           }),
         },
       };
-      return await fn(tx);
+      return fn(tx);
     });
 
     const { userId, contentId } = makeIds();
@@ -191,14 +211,13 @@ describe("Booking API - Validation & Positive Tests (proposal-style)", () => {
       userId,
       contentId,
       bookingField: {
-        batchNumber: "1",
         name: "Tester",
         note: "note",
         souvenir: "NOT",
         totalPrice: 100,
       },
-      // attendees ถ้ามี ก็ไม่พัง (แต่ controller ignore)
-      attendees: ["X", "Y"],
+      // ส่งมาก็ไม่พัง แต่ controller ignore
+      attendees: ["A", "B"],
     });
 
     const res = await POST(req);
