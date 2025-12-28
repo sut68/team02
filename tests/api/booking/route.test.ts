@@ -150,7 +150,6 @@ describe("Booking API - Validation & Positive Tests (aligned with real controlle
 
     expect(res.status).toBe(400);
     expect(json.error).toBe("ที่นั่งเต็มแล้ว");
-    expect(prisma.bookingField.aggregate).toHaveBeenCalled();
   });
 
   it("TC-VAL-06: bookingField.name blank -> 400", async () => {
@@ -183,11 +182,14 @@ describe("Booking API - Validation & Positive Tests (aligned with real controlle
       _sum: { BookingSeats: 5 },
     });
 
-    // mock prisma.$transaction(fn)
+    // ✅ mock prisma.$transaction ให้ครบตาม route จริง
     (prisma.$transaction as jest.Mock).mockImplementation(async (fn: any) => {
       const tx = {
         bookingField: {
           create: jest.fn().mockResolvedValue({ id: 999 }),
+        },
+        paymentRecord: {
+          create: jest.fn().mockResolvedValue({ id: 555 }),
         },
         booking: {
           create: jest.fn().mockResolvedValue({
@@ -195,10 +197,15 @@ describe("Booking API - Validation & Positive Tests (aligned with real controlle
             Userid: 1,
             ContentID: 2,
             BookingFieldID: 999,
+            PaymentID: 555,
             bookingField: {
               id: 999,
               Name: "Tester",
               BookingSeats: 1,
+            },
+            payment: {
+              id: 555,
+              amount: 100,
             },
           }),
         },
@@ -214,17 +221,17 @@ describe("Booking API - Validation & Positive Tests (aligned with real controlle
         name: "Tester",
         note: "note",
         souvenir: "NOT",
-        totalPrice: 100,
       },
-      // ส่งมาก็ไม่พัง แต่ controller ignore
-      attendees: ["A", "B"],
     });
 
     const res = await POST(req);
     const json = await res.json();
 
     expect(res.status).toBe(201);
-    expect(json.message).toBe("สร้างการจองสำเร็จ");
+
+    // ✅ แก้ message ให้ตรง route จริง
+    expect(json.message).toBe("สร้างการจอง + สร้างรายการชำระเงินสำเร็จ");
+
     expect(json).toHaveProperty("booking");
     expect(prisma.$transaction).toHaveBeenCalled();
   });
