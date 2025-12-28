@@ -11,7 +11,9 @@
 
 */
 -- DropForeignKey
-ALTER TABLE "Booking" DROP CONSTRAINT "Booking_bookingFormId_fkey";
+ALTER TABLE "Booking"
+DROP CONSTRAINT IF EXISTS "Booking_bookingFormId_fkey";
+
 
 -- AlterTable
 ALTER TABLE "Booking" DROP COLUMN "Date",
