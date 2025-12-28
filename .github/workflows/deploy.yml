@@ -87,7 +87,8 @@ jobs:
             docker compose pull
             docker compose up -d --force-recreate
             
-            
+            # --- ส่วนที่ต้องเพิ่ม: สั่ง Resolve ตัวที่พังก่อน ---
+            docker compose exec -T api npx prisma migrate resolve --applied 20251224031927_y || true
             # ใช้ exec แทน run เพื่อความชัวร์
             docker compose exec -T api npx prisma migrate deploy
 
