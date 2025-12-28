@@ -86,7 +86,7 @@ jobs:
             git pull origin main
             docker compose pull
             docker compose up -d --force-recreate
-            docker compose exec -T api npx prisma migrate resolve --applied 20251224031927_y || true
+            docker compose exec -T api npx prisma migrate resolve --rolled-back 20251224031927_y || true
             # ใช้ exec แทน run เพื่อความชัวร์
             docker compose exec -T api npx prisma migrate deploy
 
