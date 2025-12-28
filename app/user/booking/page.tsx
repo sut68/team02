@@ -30,7 +30,7 @@ interface PictureContent {
 interface BookingFormDTO {
   id: number;
   Type: EventType | null;
-  BatchNumber: number | null; // ✅ จำนวน “รุ่น” ทั้งหมด
+  BatchNumber: number | null; //  จำนวน “รุ่น” ทั้งหมด
   TotalSeats: number | null;
   StartDate: string | null;
   EndDate: string | null;
