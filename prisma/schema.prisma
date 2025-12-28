@@ -1,3 +1,11 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
 model PasswordResetToken {
   id        Int       @id @default(autoincrement())
   email     String
@@ -16,14 +24,8 @@ model PasswordResetToken {
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
 
-generator client {
-  provider = "prisma-client-js"
-}
+
 // ========================================
 // Enums
 // ========================================
@@ -453,11 +455,8 @@ model BookingForm {
 model BookingField {
   id           Int     @id @default(autoincrement())
   BatchNumber  String?
-  BookingSeats Int?
-  Name1        String?
-  Name2        String?
-  Name3        String?
-  Name4        String?
+  BookingSeats Int      @default(1)
+  Name        String?
   TotalPrice   Int?
   Souvenir     String?
   Note         String?
