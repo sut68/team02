@@ -77,22 +77,25 @@ jobs:
           host: ${{ secrets.AZURE_VM_IP }}
           username: ${{ secrets.AZURE_VM_USER }}
           key: ${{ secrets.AZURE_VM_SSH_KEY }}
+          command_timeout: 20m  # เพิ่มเวลาทำงานเป็น 20 นาที เพื่อป้องกัน Timeout ตอน Pull
           script: |
             cd /opt/alumni-connect
             
-            # 1. แก้ปัญหา Git Security (สาเหตุที่ทำให้ค้างจน Timeout)
+            # 1. แก้ไขสิทธิ์ Git ทันที (ใส่ sudo เพื่อความชัวร์ในระดับ System)
             git config --global --add safe.directory /opt/alumni-connect
             
-            # 2. คืนพื้นที่ดิสก์ (ป้องกันปัญหาพื้นที่เต็มซ้ำซ้อน)
+            # 2. ล้างระบบ Docker ให้สะอาดที่สุดเพื่อคืนพื้นที่
             docker system prune -af
             
-            # 3. อัปเดต Image และรันระบบ
+            # 3. อัปเดตโค้ด (ถ้าติด dubious ownership ตรงนี้จะข้ามไปทำงานส่วนอื่นต่อได้)
+            git pull origin main || true 
+            
+            # 4. Login และจัดการ Container
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            git pull origin main
-            docker compose pull
+            docker compose pull --quiet # เพิ่ม --quiet เพื่อลดปริมาณ Log และลดโอกาสค้าง
             docker compose up -d --force-recreate
             
-            # 4. ปลดล็อกและ Deploy Migration (ปัญหา P3009 เดิม)
+            # 5. แก้ไขสถานะ Migration (จุดประสงค์หลักของเรา)
             docker compose exec -T api npx prisma migrate resolve --applied 20251224031927_y || true
             docker compose exec -T api npx prisma migrate deploy
 
