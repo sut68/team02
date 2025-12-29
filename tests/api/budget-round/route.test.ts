@@ -250,7 +250,7 @@ describe('Budget Round API Tests', () => {
         (prisma.budgetRound.findMany as jest.Mock).mockRejectedValue(new Error('DB Connection Failed!'));
 
         const req = createRequest('GET');
-        const res = await GET(req);
+        const res = await GET(req); 
         
         expect(res.status).toBe(500);
         // หมายเหตุ: Console จะแสดง Error สีแดงออกมา ซึ่งเป็นเรื่องปกติ
