@@ -77,25 +77,25 @@ jobs:
           host: ${{ secrets.AZURE_VM_IP }}
           username: ${{ secrets.AZURE_VM_USER }}
           key: ${{ secrets.AZURE_VM_SSH_KEY }}
-          command_timeout: 20m  # เพิ่มเวลาทำงานเป็น 20 นาที เพื่อป้องกัน Timeout ตอน Pull
+          command_timeout: 20m  # <--- ต้องมีบรรทัดนี้เพื่อไม่ให้ตายที่ 9 นาที
           script: |
             cd /opt/alumni-connect
             
-            # 1. แก้ไขสิทธิ์ Git ทันที (ใส่ sudo เพื่อความชัวร์ในระดับ System)
+            # 1. ปลดล็อก Git
             git config --global --add safe.directory /opt/alumni-connect
             
-            # 2. ล้างระบบ Docker ให้สะอาดที่สุดเพื่อคืนพื้นที่
+            # 2. คืนพื้นที่ (สำคัญมากเพื่อป้องกันดิสก์เต็ม)
             docker system prune -af
             
-            # 3. อัปเดตโค้ด (ถ้าติด dubious ownership ตรงนี้จะข้ามไปทำงานส่วนอื่นต่อได้)
-            git pull origin main || true 
-            
-            # 4. Login และจัดการ Container
+            # 3. Login และ Pull Image ตรงๆ (แก้ปัญหา Denied)
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker compose pull --quiet # เพิ่ม --quiet เพื่อลดปริมาณ Log และลดโอกาสค้าง
+            docker pull ghcr.io/sut68/team02-api:latest || true
+            docker pull ghcr.io/sut68/team02-web:latest || true
+            
+            # 4. รันระบบใหม่
             docker compose up -d --force-recreate
             
-            # 5. แก้ไขสถานะ Migration (จุดประสงค์หลักของเรา)
+            # 5. ซ่อม Migration (หัวใจหลักของงานนี้)
             docker compose exec -T api npx prisma migrate resolve --applied 20251224031927_y || true
             docker compose exec -T api npx prisma migrate deploy
 
