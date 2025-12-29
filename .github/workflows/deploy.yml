@@ -96,7 +96,6 @@ jobs:
             docker compose up -d --force-recreate
             
             # 5. ซ่อม Migration (หัวใจหลักของงานนี้)
-            docker compose exec -T api npx prisma migrate resolve --applied 20251224031927_y || true
             docker compose exec -T api npx prisma migrate deploy
 
       - name: Run health check
