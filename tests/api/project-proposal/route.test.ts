@@ -1,9 +1,11 @@
-// tests/api/project-proposal/route.test.ts
 import { POST, PUT, GET, DELETE } from '@/app/api/project-proposal/route';
 import { prisma } from '@/app/lib/prisma';
 import { NextRequest } from 'next/server';
 
-// 1. Mock Prisma และ Nodemailer
+// ============================================================================
+// 1. MOCKING DEPENDENCIES
+// ============================================================================
+
 jest.mock('@/app/lib/prisma', () => ({
   prisma: {
     projectProposal: {
@@ -27,6 +29,10 @@ jest.mock('@/app/lib/nodemailer', () => ({
   mailOptions: {},
 }));
 
+// ============================================================================
+// 2. TEST SUITE
+// ============================================================================
+
 describe('Project Proposal API - Validation Tests', () => {
 
   afterEach(() => {
@@ -40,6 +46,10 @@ describe('Project Proposal API - Validation Tests', () => {
       email: 'test@manager.com',
       phoneNumber: '0812345678' // 10 หลัก
   };
+
+  // --------------------------------------------------------------------------
+  // Group 1: POST Request (Create & Validation)
+  // --------------------------------------------------------------------------
 
   // ✅ 1. ตรวจสอบชื่อโครงการ (Basic Validation)
 
@@ -120,7 +130,7 @@ describe('Project Proposal API - Validation Tests', () => {
 
     const body = {
       project: { projectName: duplicateName, budgetRoundId: roundId, requestedAmount: 1000 },
-      manager: validManager // ✅ ใส่ข้อมูล Manager ครบถ้วน
+      manager: validManager
     };
 
     (prisma.projectProposal.findFirst as jest.Mock).mockResolvedValue(null);
@@ -135,7 +145,7 @@ describe('Project Proposal API - Validation Tests', () => {
   it('TC-VAL-07: Should trim whitespace from project name before saving', async () => {
     const body = {
         project: { projectName: '   Project A   ', budgetRoundId: 2, requestedAmount: 500 },
-        manager: validManager // ✅ ใส่ข้อมูล Manager ครบถ้วน
+        manager: validManager
     };
     
     (prisma.projectProposal.findFirst as jest.Mock).mockResolvedValue(null);
@@ -151,7 +161,7 @@ describe('Project Proposal API - Validation Tests', () => {
     }));
   });
 
- it('TC-VAL-08: Should return 400 if description is too long (> 500 chars)', async () => {
+  it('TC-VAL-08: Should return 400 if description is too long (> 500 chars)', async () => {
     const longDesc = 'a'.repeat(501);
     const body = {
       project: { projectName: 'Normal Name', description: longDesc, budgetRoundId: 1 },
@@ -168,7 +178,7 @@ describe('Project Proposal API - Validation Tests', () => {
     const boundaryDesc = 'a'.repeat(500);
     const body = {
       project: { projectName: 'Boundary Project', description: boundaryDesc, budgetRoundId: 2 },
-      manager: validManager // ✅ ใส่ข้อมูล Manager ครบถ้วน
+      manager: validManager
     };
     (prisma.projectProposal.findFirst as jest.Mock).mockResolvedValue(null);
     (prisma.projectProposal.create as jest.Mock).mockResolvedValue({ id: 1, ...body.project });
@@ -180,7 +190,7 @@ describe('Project Proposal API - Validation Tests', () => {
   it('TC-VAL-10: Should ALLOW creating project without description', async () => {
     const body = {
       project: { projectName: 'No Desc Project', budgetRoundId: 2 },
-      manager: validManager // ✅ ใส่ข้อมูล Manager ครบถ้วน
+      manager: validManager
     };
     (prisma.projectProposal.findFirst as jest.Mock).mockResolvedValue(null);
     (prisma.projectProposal.create as jest.Mock).mockResolvedValue({ id: 1, ...body.project });
@@ -217,7 +227,7 @@ describe('Project Proposal API - Validation Tests', () => {
     const roundId = 1;
     const body = {
       project: { projectName: 'My Project', requestedAmount: 99999999, budgetRoundId: roundId },
-      manager: validManager // ✅ ใส่ข้อมูล Manager ครบถ้วน
+      manager: validManager
     };
     (prisma.projectProposal.findFirst as jest.Mock).mockResolvedValue(null);
     (prisma.projectProposal.create as jest.Mock).mockResolvedValue({ id: 1, ...body.project });
@@ -274,7 +284,7 @@ describe('Project Proposal API - Validation Tests', () => {
             projectName: 'One Day Project', budgetRoundId: 1,
             projectStartDate: dateStr, projectEndDate: dateStr 
         },
-        manager: validManager // ✅ ใส่ข้อมูล Manager ครบถ้วน
+        manager: validManager
       };
       (prisma.projectProposal.findFirst as jest.Mock).mockResolvedValue(null);
       (prisma.projectProposal.create as jest.Mock).mockResolvedValue({ id: 1, ...body.project });
@@ -310,7 +320,7 @@ describe('Project Proposal API - Validation Tests', () => {
     it('TC-VAL-IMG-19: Should ALLOW valid image extensions (.jpg, .png)', async () => {
       const body = {
         project: { projectName: 'Image Project', budgetRoundId: 1, coverFilePath: '/uploads/poster.png' },
-        manager: validManager // ✅ ใส่ข้อมูล Manager ครบถ้วน
+        manager: validManager
       };
       (prisma.projectProposal.findFirst as jest.Mock).mockResolvedValue(null);
       (prisma.projectProposal.create as jest.Mock).mockResolvedValue({ id: 1, ...body.project });
@@ -389,6 +399,9 @@ describe('Project Proposal API - Validation Tests', () => {
     expect(res.status).toBe(201); // Created
   });
 
+  // --------------------------------------------------------------------------
+  // Group 2: PUT Request Validation
+  // --------------------------------------------------------------------------
   describe('PUT Request Validation', () => {
     
     // ✅ Test Case: แก้ไขข้อมูลสำเร็จ (Happy Path)
@@ -547,6 +560,9 @@ describe('Project Proposal API - Validation Tests', () => {
     });
   });
 
+  // --------------------------------------------------------------------------
+  // Group 3: GET Request
+  // --------------------------------------------------------------------------
   describe('GET Request', () => {
     it('TC-GET-01: Should fetch project by ID', async () => {
       const req = new NextRequest('http://localhost:3000/api?id=1', { method: 'GET' });
@@ -593,9 +609,9 @@ describe('Project Proposal API - Validation Tests', () => {
     });
   });
 
-  // ==========================================
-  // 🔴 Test Group: DELETE Request (ลบข้อมูล)
-  // ==========================================
+  // --------------------------------------------------------------------------
+  // Group 4: DELETE Request (ลบข้อมูล)
+  // --------------------------------------------------------------------------
 
   describe('DELETE Request', () => {
     it('TC-DEL-01: Should soft delete project (update deletedAt)', async () => {
@@ -625,4 +641,23 @@ describe('Project Proposal API - Validation Tests', () => {
       expect(res.status).toBe(400);
     });
   });
+
+  // --------------------------------------------------------------------------
+  // Group 5: Server Error Handling (500)
+  // --------------------------------------------------------------------------
+  describe('Server Error Handling', () => {
+    it('TC-ERR-01: Should return 500 if Database fails', async () => {
+      // จำลองให้ Prisma พัง (Throw Error)
+      (prisma.projectProposal.findMany as jest.Mock).mockRejectedValue(new Error('Database Connection Failed'));
+
+      const req = new NextRequest('http://localhost:3000/api', { method: 'GET' });
+      const res = await GET(req);
+      const json = await res.json();
+
+      // ตรวจสอบว่าระบบส่ง 500 กลับมาจริง
+      expect(res.status).toBe(500);
+      expect(json.error).toBeDefined(); 
+    });
+  });
+
 });
