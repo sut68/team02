@@ -80,14 +80,20 @@ jobs:
           script: |
             cd /opt/alumni-connect
             
-            # Login ก่อนดึง Image
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            # 1. แก้ปัญหา Git Security (สาเหตุที่ทำให้ค้างจน Timeout)
+            git config --global --add safe.directory /opt/alumni-connect
             
+            # 2. คืนพื้นที่ดิสก์ (ป้องกันปัญหาพื้นที่เต็มซ้ำซ้อน)
+            docker system prune -af
+            
+            # 3. อัปเดต Image และรันระบบ
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             git pull origin main
             docker compose pull
             docker compose up -d --force-recreate
-            docker compose exec -T api npx prisma migrate resolve --rolled-back 20251224031927_y || true
-            # ใช้ exec แทน run เพื่อความชัวร์
+            
+            # 4. ปลดล็อกและ Deploy Migration (ปัญหา P3009 เดิม)
+            docker compose exec -T api npx prisma migrate resolve --applied 20251224031927_y || true
             docker compose exec -T api npx prisma migrate deploy
 
       - name: Run health check
