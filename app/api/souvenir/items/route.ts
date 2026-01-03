@@ -14,6 +14,19 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { createdAt: 'desc' },
       include: {
+        contents: {
+          select: {
+            id: true,
+            TitleName: true,
+            categories: true,
+          },
+        },
+        donationProjects: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
         _count: {
           select: {
             movements: true,
@@ -25,16 +38,14 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // คำนวณสต็อกคงเหลือจริง
+    // คำนวณสต็อกคงเหลือจริง และแนบ relations ที่ต้องใช้
     const itemsWithStock = await Promise.all(
       items.map(async (item) => {
         const movements = await prisma.stockMovement.findMany({
           where: { itemId: item.id },
         });
-        
         const totalDelta = movements.reduce((sum: number, m) => sum + m.delta, 0);
         const currentStock = item.initialStock + totalDelta;
-
         return {
           id: item.id,
           sku: item.sku,
@@ -45,6 +56,8 @@ export async function GET(request: NextRequest) {
           unit: item.unit,
           currentStock,
           active: item.active,
+          contents: item.contents,
+          donationProjects: item.donationProjects,
         };
       })
     );
