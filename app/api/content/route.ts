@@ -1,51 +1,55 @@
+// app/api/content/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
 import path from "path";
 import { promises as fs } from "fs";
-import { ContentCategoryType, Option } from "@prisma/client"; 
+import { ContentCategoryType, Option } from "@prisma/client";
+
+function isNonEmptyString(s: unknown) {
+  return typeof s === "string" && s.trim().length > 0;
+}
+
+function tooLong(s: string, max: number) {
+  return s.length > max;
+}
 
 // ============================
-// GET - ดึงรายการ Content ทั้งหมด หรือ 1 อันด้วย id
+// GET - list หรือ 1 อันด้วย id
 // ============================
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const category = searchParams.get("category");
     const idParam = searchParams.get("id");
-    const id = idParam ? Number(idParam) : null;
 
-    // ถ้ามี id → ดึงแค่อันเดียว
-    if (id) {
+    // ถ้ามี id param แต่แปลงเป็นเลขไม่ได้ -> 400 (เพิ่ม validation)
+    if (idParam !== null) {
+      const id = Number(idParam);
+      if (!Number.isFinite(id) || id <= 0) {
+        return NextResponse.json({ error: "id ไม่ถูกต้อง" }, { status: 400 });
+      }
+
       const content = await prisma.content.findUnique({
         where: { id },
         include: {
           user: true,
           bookingForm: true,
           pictures: true,
-          bookings: true,
         },
       });
 
       if (!content) {
-        return NextResponse.json(
-          { error: "ไม่พบเนื้อหา" },
-          { status: 404 }
-        );
+        return NextResponse.json({ error: "ไม่พบเนื้อหา" }, { status: 404 });
       }
-
       return NextResponse.json({ content }, { status: 200 });
     }
 
-    // ถ้าไม่มี id → ดึง list ทั้งหมด (ของเดิม)
     const contents = await prisma.content.findMany({
-      where: category
-        ? { categories: category as any }
-        : undefined,
+      where: category ? { categories: category as any } : undefined,
       include: {
         user: true,
         bookingForm: true,
         pictures: true,
-        bookings: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -53,75 +57,101 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ contents }, { status: 200 });
   } catch (err) {
     console.error("GET content error:", err);
-    return NextResponse.json(
-      { error: "ดึงข้อมูลเนื้อหาไม่สำเร็จ" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "ดึงข้อมูลเนื้อหาไม่สำเร็จ" }, { status: 500 });
   }
 }
 
 // ============================
-// POST - สร้าง Content + PictureContent หลายรูป
-//      (แก้ให้เหมือน submission + handle enum)
+// POST - สร้าง Content + รูปหลายรูป
 // ============================
 export async function POST(req: NextRequest) {
   try {
-    // ✅ เปลี่ยนจาก req.json() → formData() เพื่อรับไฟล์จริง
     const formData = await req.formData();
-    const title = (formData.get("title") as string) || "";
-    const description = (formData.get("description") as string) || "";
+
+    const titleRaw = formData.get("title");
+    const descriptionRaw = formData.get("description");
     const categoriesRaw = formData.get("categories") as string | null;
     const bookingRaw = formData.get("booking") as string | null;
+
     const userIdRaw = formData.get("userId") as string | null;
     const bookingFormIdRaw = formData.get("bookingFormId") as string | null;
 
-    const userId = userIdRaw ? Number(userIdRaw) : null;
-    const bookingFormId = bookingFormIdRaw ? Number(bookingFormIdRaw) : null;
+    const title = typeof titleRaw === "string" ? titleRaw.trim() : "";
+    const description = typeof descriptionRaw === "string" ? descriptionRaw : "";
 
+    // --- Validation ---
+    if (!isNonEmptyString(title)) {
+      return NextResponse.json({ error: "ชื่อหัวเรื่องห้ามว่าง" }, { status: 400 });
+    }
+    if (title.length < 3) {
+      return NextResponse.json({ error: "ชื่อหัวเรื่องสั้นเกินไป" }, { status: 400 });
+    }
+    if (tooLong(title, 200)) {
+      return NextResponse.json({ error: "ชื่อหัวเรื่องยาวเกินไป" }, { status: 400 });
+    }
     if (!categoriesRaw) {
-      return NextResponse.json(
-        { error: "ต้องระบุ categories" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "ต้องระบุ categories" }, { status: 400 });
     }
 
-    // ✅ แปลง string → enum ContentCategoryType
-    let category: ContentCategoryType | null = null;
-    if (Object.values(ContentCategoryType).includes(categoriesRaw as ContentCategoryType)) {
-      category = categoriesRaw as ContentCategoryType;
-    } else {
-      return NextResponse.json(
-        { error: "categories ไม่ถูกต้อง" },
-        { status: 400 }
-      );
+    if (!Object.values(ContentCategoryType).includes(categoriesRaw as ContentCategoryType)) {
+      return NextResponse.json({ error: "categories ไม่ถูกต้อง" }, { status: 400 });
+    }
+    const category = categoriesRaw as ContentCategoryType;
+
+    // Description length check: if provided and too long -> fail early
+    if (typeof descriptionRaw === "string" && tooLong(descriptionRaw, 1000)) {
+      return NextResponse.json({ error: "รายละเอียดต้องไม่เกิน 1000 ตัวอักษร" }, { status: 400 });
     }
 
-    // ✅ แปลง string → enum Option (HAVE / NOT) หรือ null
+    // Picture validation: ต้องมีรูปอย่างน้อย 1 รูป ก่อนสร้าง
+    const pictureFiles = formData.getAll("pictures") as File[];
+    const validPictureFiles = pictureFiles.filter(
+      (f) =>
+        f &&
+        typeof f !== "string" &&
+        // support Node-side fake files used in tests (they expose arrayBuffer)
+        typeof (f as any).arrayBuffer === "function"
+    );
+
+    if (validPictureFiles.length === 0) {
+      return NextResponse.json({ error: "ต้องอัปโหลดรูปอย่างน้อย 1 รูป" }, { status: 400 });
+    }
+
     let booking: Option | null = null;
-    if (bookingRaw && Object.values(Option).includes(bookingRaw as Option)) {
+    if (bookingRaw) {
+      if (!Object.values(Option).includes(bookingRaw as Option)) {
+        return NextResponse.json({ error: "booking ไม่ถูกต้อง" }, { status: 400 });
+      }
       booking = bookingRaw as Option;
     }
 
-    // ✅ รับไฟล์รูปหลายไฟล์จาก field ชื่อ "pictures"
-    const pictureFiles = formData.getAll("pictures") as File[];
+    const userId = userIdRaw ? Number(userIdRaw) : null;
+    if (userIdRaw !== null && (!Number.isFinite(userId!) || userId! <= 0)) {
+      return NextResponse.json({ error: "userId ไม่ถูกต้อง" }, { status: 400 });
+    }
 
-    // ✅ เซฟไฟล์ลง /public/uploads/contents เหมือน submission
+    let bookingFormId: number | null = null;
+
+if (bookingFormIdRaw !== null && bookingFormIdRaw !== "") {
+  const parsed = Number(bookingFormIdRaw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return NextResponse.json({ error: "bookingFormId ไม่ถูกต้อง" }, { status: 400 });
+  }
+  bookingFormId = parsed;
+}
+
+
     const uploadDir = path.join(process.cwd(), "public", "uploads", "content");
     await fs.mkdir(uploadDir, { recursive: true });
 
     const picturePaths: string[] = [];
-
-    for (const file of pictureFiles) {
-      // กันเผื่อมีค่าอื่นปนมา
+    for (const file of validPictureFiles) {
       if (!file || typeof file === "string") continue;
-
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
 
       const safeName = file.name.replace(/\s+/g, "_");
-      const fileNameOnDisk = `${Date.now()}_${Math.random()
-        .toString(36)
-        .slice(2)}_${safeName}`;
+      const fileNameOnDisk = `${Date.now()}_${Math.random().toString(36).slice(2)}_${safeName}`;
       const filePathOnDisk = path.join(uploadDir, fileNameOnDisk);
       const publicPath = `/uploads/content/${fileNameOnDisk}`;
 
@@ -129,26 +159,21 @@ export async function POST(req: NextRequest) {
       picturePaths.push(publicPath);
     }
 
-    // ✅ ใช้ transaction เดิม แต่เปลี่ยนมาจาก picturePaths ที่เซฟจริงแล้ว
     const createdContent = await prisma.$transaction(async (tx) => {
       const content = await tx.content.create({
         data: {
-          TitleName: title || "", 
+          TitleName: title, 
           Description: description || "",
           categories: category,
           Booking: booking,
-          Userid: userId || null,
-          BookingFormID: bookingFormId || null,
+          Userid: userId,
+          BookingFormID: bookingFormId,
         },
       });
 
-      // ถ้ามีรูป → สร้าง PictureContent หลายรายการ
-      if (picturePaths && picturePaths.length > 0) {
+      if (picturePaths.length > 0) {
         await tx.pictureContent.createMany({
-          data: picturePaths.map((p: string) => ({
-            Path: p,
-            ContentID: content.id,
-          })),
+          data: picturePaths.map((p) => ({ Path: p, ContentID: content.id })),
         });
       }
 
@@ -164,114 +189,25 @@ export async function POST(req: NextRequest) {
     );
   } catch (err) {
     console.error("POST content error:", err);
-    return NextResponse.json(
-      { error: "สร้างเนื้อหาไม่สำเร็จ" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "สร้างเนื้อหาไม่สำเร็จ" }, { status: 500 });
   }
 }
 
-// ============================
-// PUT - อัปเดต Content + รูปทั้งหมด
-// ============================
-export async function PUT(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const {
-      id,
-      title,
-      description,
-      categories,
-      booking,
-      userId,
-      bookingFormId,
-      pictures, // array ของ path ใหม่
-    } = body;
-
-    if (!id) {
-      return NextResponse.json(
-        { error: "ต้องระบุ id สำหรับอัปเดต" },
-        { status: 400 }
-      );
-    }
-
-    const updated = await prisma.$transaction(async (tx) => {
-      // update content
-      const content = await tx.content.update({
-        where: { id },
-        data: {
-          Description: description || "",
-          categories: categories || undefined,
-          Booking: booking || undefined,
-          Userid: userId || undefined,
-          BookingFormID: bookingFormId || undefined,
-        },
-      });
-
-      // ลบรูปเก่าทั้งหมด + เพิ่มรูปใหม่
-      if (pictures) {
-        await tx.pictureContent.deleteMany({
-          where: { ContentID: id },
-        });
-
-        if (pictures.length > 0) {
-          await tx.pictureContent.createMany({
-            data: pictures.map((p: string) => ({
-              Path: p,
-              ContentID: id,
-            })),
-          });
-        }
-      }
-
-      return await tx.content.findUnique({
-        where: { id },
-        include: { pictures: true },
-      });
-    });
-
-    return NextResponse.json(
-      { message: "อัปเดตเนื้อหาสำเร็จ", content: updated },
-      { status: 200 }
-    );
-  } catch (err) {
-    console.error("PUT content error:", err);
-    return NextResponse.json(
-      { error: "อัปเดตเนื้อหาไม่สำเร็จ" },
-      { status: 500 }
-    );
-  }
-}
-
-// ============================
-// DELETE - ลบ Content + PictureContent
-// ============================
+// DELETE เหมือนเดิม (แต่อยากให้เหมือนเพื่อน: validate id)
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const id = Number(searchParams.get("id"));
+    const idParam = searchParams.get("id");
+    const id = idParam ? Number(idParam) : NaN;
 
-    if (!id) {
-      return NextResponse.json(
-        { error: "ต้องระบุ id สำหรับลบ" },
-        { status: 400 }
-      );
+    if (!Number.isFinite(id) || id <= 0) {
+      return NextResponse.json({ error: "ต้องระบุ id สำหรับลบ" }, { status: 400 });
     }
 
-    // PictureContent จะถูกลบตามเพราะ onDelete: Cascade
-    await prisma.content.delete({
-      where: { id },
-    });
-
-    return NextResponse.json(
-      { message: "ลบเนื้อหาสำเร็จ" },
-      { status: 200 }
-    );
+    await prisma.content.delete({ where: { id } });
+    return NextResponse.json({ message: "ลบเนื้อหาสำเร็จ" }, { status: 200 });
   } catch (err) {
     console.error("DELETE content error:", err);
-    return NextResponse.json(
-      { error: "ลบเนื้อหาไม่สำเร็จ" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "ลบเนื้อหาไม่สำเร็จ" }, { status: 500 });
   }
 }

@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     // 4) สร้าง reset url
     const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000";
+      process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "https://www.sut-alumniconnect.me";
 
     const resetUrl = `${baseUrl}/reset-password?token=${rawToken}&email=${encodeURIComponent(email)}`;
 

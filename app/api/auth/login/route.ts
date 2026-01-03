@@ -5,17 +5,41 @@ import { prisma } from '@/app/lib/prisma';
 import { loginLimiter } from '@/app/lib/rate-limit';
 import { validateEmail } from '@/app/lib/validation';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
+const JWT_SECRET =
+  process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
+
+// Ensure Node.js runtime for database operations
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
-  // ตรวจสอบ rate limit
-  const rateLimitResult = await loginLimiter(request);
-  if (rateLimitResult) {
-    return rateLimitResult;
+  try {
+    // ตรวจสอบ rate limit
+    const rateLimitResult = await loginLimiter(request);
+    if (rateLimitResult) {
+      return rateLimitResult;
+    }
+  } catch (rateLimitError) {
+    console.error('Rate limit error:', rateLimitError);
+    return NextResponse.json(
+      { error: 'เกิดข้อผิดพลาดในการตรวจสอบ rate limit' },
+      { status: 500 }
+    );
   }
 
   try {
-    const { email, password } = await request.json();
+    // Parse JSON body with error handling
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      return NextResponse.json(
+        { error: 'รูปแบบข้อมูลไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง' },
+        { status: 400 }
+      );
+    }
+
+    const { email, password } = body;
 
     // Validation
     if (!email || !password) {
@@ -34,16 +58,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user with relations
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
-      include: {
-        verification: true,
-        educationRecords: {
-          orderBy: { createdAt: 'desc' },
-          take: 1
-        }
-      }
-    });
+    let user;
+    try {
+      user = await prisma.user.findUnique({
+        where: { email: email.toLowerCase().trim() },
+        include: {
+          verification: true,
+          educationRecords: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          },
+        },
+      });
+    } catch (dbError) {
+      console.error('Database error:', dbError);
+      return NextResponse.json(
+        { error: 'เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล กรุณาลองใหม่อีกครั้ง' },
+        { status: 500 }
+      );
+    }
 
     if (!user) {
       return NextResponse.json(
@@ -68,9 +101,10 @@ export async function POST(request: NextRequest) {
         const verificationStatus = user.verification?.status || 'PENDING';
         return NextResponse.json(
           {
-            error: verificationStatus === 'PENDING'
-              ? 'บัญชีของคุณรอการอนุมัติจากแอดมิน'
-              : 'บัญชีของคุณถูกปฏิเสธ กรุณาติดต่อผู้ดูแลระบบ',
+            error:
+              verificationStatus === 'PENDING'
+                ? 'บัญชีของคุณรอการอนุมัติจากแอดมิน'
+                : 'บัญชีของคุณถูกปฏิเสธ กรุณาติดต่อผู้ดูแลระบบ',
           },
           { status: 403 }
         );
@@ -111,10 +145,28 @@ export async function POST(request: NextRequest) {
     });
 
     return response;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Login error:', error);
+
+    // Ensure we always return JSON, never HTML
+    // This prevents the "Unexpected token '<'" error
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      });
+    }
+
     return NextResponse.json(
-      { error: 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ' },
+      {
+        error: 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ',
+        details:
+          process.env.NODE_ENV === 'development' ? errorMessage : undefined,
+      },
       { status: 500 }
     );
   }

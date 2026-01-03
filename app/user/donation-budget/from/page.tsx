@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Image from 'next/image';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { FaSpinner, FaRegSadCry } from 'react-icons/fa';
@@ -44,7 +44,14 @@ interface FormData {
   message?: string;
 }
 
+<<<<<<< HEAD
 export default function CombinedDonationFormPage() {
+=======
+// ----------------------------------------------------
+// 💡 Component หน้ารวมรายละเอียดและฟอร์ม
+// ----------------------------------------------------
+function CombinedDonationFormContent() {
+>>>>>>> 447ea104895762d00404caf510fed8d4321364f2
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = searchParams.get('projectId');
@@ -372,5 +379,13 @@ export default function CombinedDonationFormPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CombinedDonationFormPage() {
+  return (
+    <Suspense fallback={<div className="p-4">Loading...</div>}>
+      <CombinedDonationFormContent />
+    </Suspense>
   );
 }

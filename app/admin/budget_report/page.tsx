@@ -14,16 +14,16 @@ import {
   Plus,
   Loader2,
   Calendar,
-  Filter
+  Filter,
+  History
 } from "lucide-react";
 
-// Import Types
 import { SummarySubmissionStatus } from "@/app/types/budget_report";
 import BudgetReportCard from "@/app/components/ui/BudgetReportCard";
 import { Input } from "@/app/components/ui/Input";
 
 // Type Definitions
-type FilterLabel = "ทั้งหมด" | "ฉบับร่าง" | "รอตรวจสอบ" | "อนุมัติ" | "ส่งกลับไปแก้ไข";
+type FilterLabel = "ทั้งหมด" | "ฉบับร่าง" | "รอตรวจสอบ" | "อนุมัติ" | "ส่งกลับไปแก้ไข" | "ถังขยะ";
 
 interface FilterOption {
   label: FilterLabel;
@@ -39,7 +39,6 @@ const filters: FilterOption[] = [
   { label: "ส่งกลับไปแก้ไข", icon: FileX2, key: "NEEDS_REVISION" },
 ];
 
-// ข้อมูลสำหรับ Dropdown เดือน
 const thaiMonths = [
   "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
   "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
@@ -48,29 +47,33 @@ const thaiMonths = [
 export default function BudgetReportPage() {
   const router = useRouter();
 
-  // ================= State =================
-  // 1. Data State
+  // State
   const [reports, setReports] = useState<any[]>([]);
   const [approvedProjects, setApprovedProjects] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 2. Filter State (สำหรับหน้าหลัก)
+  // Filter State
   const [activeFilter, setActiveFilter] = useState<FilterLabel>("ทั้งหมด");
-  const [reportSearchTerm, setReportSearchTerm] = useState(""); // ค้นหารายงาน
+  const [reportSearchTerm, setReportSearchTerm] = useState(""); 
   const [filterYear, setFilterYear] = useState<string>("all");
   const [filterMonth, setFilterMonth] = useState<string>("all");
 
-  // 3. Modal State (สำหรับเลือกโครงการ)
+  // Modal State
   const [isSelectModalOpen, setIsSelectModalOpen] = useState(false);
-  const [modalSearchTerm, setModalSearchTerm] = useState(""); // ค้นหาโครงการใน Modal
+  const [modalSearchTerm, setModalSearchTerm] = useState(""); 
 
   // ================= Fetch Data =================
-  const fetchData = useCallback(async () => {
+  // ✅ แก้ไข: รับ parameter เป็น boolean ว่าจะเอาถังขยะหรือไม่
+  const fetchData = useCallback(async (isTrashMode: boolean = false) => {
     try {
       setIsLoading(true);
 
+      const url = isTrashMode
+        ? "/api/budget-report?trash=true" 
+        : "/api/budget-report";
+
       const [resReports, resProjects] = await Promise.all([
-        fetch("/api/budget-report"),
+        fetch(url),
         fetch("/api/budget-report/approved-projects")
       ]);
 
@@ -88,58 +91,65 @@ export default function BudgetReportPage() {
     }
   }, []);
 
+  // ✅ แก้ไข: useEffect เรียกครั้งเดียวตอนเข้าหน้าเว็บ (หรือเมื่อ fetchData เปลี่ยน)
+  // ไม่ใส่ activeFilter ในนี้แล้ว เพื่อกันการรีเฟรชตอนกด Filter
   useEffect(() => {
-    fetchData();
+    fetchData(false); // เริ่มต้นโหลดแบบปกติ (ไม่ใช่ถังขยะ)
   }, [fetchData]);
 
-  // ================= Logic การกรอง (Filtering) =================
-  
-  // 1. สร้างรายการปีที่มีอยู่ในระบบ (เพื่อเอาไปใส่ Dropdown)
+  // ================= Filtering Logic =================
   const availableYears = Array.from(new Set(reports.map(r => new Date(r.createdAt).getFullYear()))).sort((a, b) => b - a);
 
-  // 2. กรอง Reports ตามเงื่อนไขทั้งหมด (Status AND Search AND Year AND Month)
   const filteredReports = reports.filter((report) => {
-    // A. Status Filter
-    let matchStatus = true;
-    if (activeFilter !== "ทั้งหมด") {
+    // 1. กรองตาม Status (ยกเว้นโหมดถังขยะ)
+    if (activeFilter === "ถังขยะ") {
+       // ไม่ต้องกรอง status เพราะ API ส่งมาเฉพาะถังขยะแล้ว
+    } else if (activeFilter !== "ทั้งหมด") {
       const currentFilterKey = filters.find((f) => f.label === activeFilter)?.key;
-      matchStatus = report.status === currentFilterKey;
+      if (report.status !== currentFilterKey) return false;
     }
 
-    // B. Search Filter (Title or Project Name)
+    // 2. Search
     const searchLower = reportSearchTerm.toLowerCase();
     const matchSearch = 
       report.reportTitle?.toLowerCase().includes(searchLower) ||
       report.project?.projectName?.toLowerCase().includes(searchLower);
 
-    // C. Date Filter (Year & Month)
-    const createdDate = new Date(report.createdAt);
-    
-    const matchYear = filterYear === "all" || createdDate.getFullYear().toString() === filterYear;
-    // getMonth() returns 0-11, so we add 1 to match value 1-12
-    const matchMonth = filterMonth === "all" || (createdDate.getMonth() + 1).toString() === filterMonth;
+    // 3. Date
+    const dateToCheck = new Date(report.createdAt);
+    const matchYear = filterYear === "all" || dateToCheck.getFullYear().toString() === filterYear;
+    const matchMonth = filterMonth === "all" || (dateToCheck.getMonth() + 1).toString() === filterMonth;
 
-    return matchStatus && matchSearch && matchYear && matchMonth;
+    return matchSearch && matchYear && matchMonth;
   });
 
-  // 3. กรอง Projects ใน Modal
   const filteredProjectsInModal = approvedProjects.filter((p) =>
     p.projectName.toLowerCase().includes(modalSearchTerm.toLowerCase())
   );
 
-  // Helper: นับจำนวน Status (นับจากทั้งหมด ไม่สน Filter วันที่ เพื่อให้เห็น Overview)
   const getStatusCount = (filterKey?: SummarySubmissionStatus) => {
     if (!filterKey) return reports.length;
     return reports.filter((r) => r.status === filterKey).length;
   };
 
-  // ================= Handlers =================
+  // Handlers
   const handleSelectProject = (projectId: number) => {
     router.push(`/admin/budget_report/create?projectId=${projectId}`);
   };
 
   const handleCreateManual = () => {
     router.push(`/admin/budget_report/create`);
+  };
+
+  // ✅ เพิ่ม Handler สำหรับปุ่ม Toggle ถังขยะ
+  const handleTrashToggle = () => {
+    if (activeFilter === "ถังขยะ") {
+        setActiveFilter("ทั้งหมด");
+        fetchData(false); // กลับไปโหลดข้อมูลปกติ
+    } else {
+        setActiveFilter("ถังขยะ");
+        fetchData(true); // โหลดข้อมูลถังขยะ
+    }
   };
 
   const formatDate = (date: Date | string | null) => {
@@ -151,56 +161,57 @@ export default function BudgetReportPage() {
     });
   };
 
-  // ================= Render =================
   return (
     <main className="min-h-screen bg-white py-4 px-4 font-sans">
       <div className="max-w-7xl mx-auto px-4 py-8">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-semibold text-gray-800">รายงานงบประมาณ</h1>
+            <h1 className="text-4xl font-semibold text-gray-800">
+                {activeFilter === "ถังขยะ" ? "รายการที่ถูกลบ (ถังขยะ)" : "รายงานงบประมาณ"}
+            </h1>
         </div>
 
         {/* Status Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-          {filters.map((filter) => {
-            const Icon = filter.icon;
-            const isActive = activeFilter === filter.label;
-            const count = getStatusCount(filter.key);
-
-            return (
-              <div
-                key={filter.label}
-                onClick={() => setActiveFilter(filter.label)}
-                className={`
-                  cursor-pointer border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all 
-                  ${isActive ? "border-orange-300 shadow-md" : "border-orange-100"}
-                `}
-              >
-                <div className="mb-4 flex justify-center">
-                  <Icon
-                    className={`w-14 h-14 ${isActive ? "text-orange-500" : "text-orange-300"}`}
-                    strokeWidth={1.3}
-                  />
+        {activeFilter !== "ถังขยะ" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+            {filters.map((filter) => {
+                const Icon = filter.icon;
+                const isActive = activeFilter === filter.label;
+                
+                return (
+                <div
+                    key={filter.label}
+                    onClick={() => setActiveFilter(filter.label)} // ✅ กดปุ่มนี้แค่เปลี่ยน State -> React จะคำนวณ filteredReports ใหม่เองทันทีโดยไม่หมุน
+                    className={`
+                      cursor-pointer border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all 
+                      ${isActive ? "border-orange-300 shadow-md" : "border-orange-100"}
+                    `}
+                >
+                    <div className="mb-4 flex justify-center">
+                      <Icon 
+                        className={`w-14 h-14 ${isActive ? "text-orange-500" : "text-orange-300"}`} 
+                        strokeWidth={1.3} 
+                      />
+                    </div>
+                    <h3 className={`text-base ${isActive ? "text-gray-900" : "text-gray-500"}`}>
+                      {filter.label}
+                    </h3>
+                    <p className={`text-2xl font-medium mt-2 ${isActive ? "text-orange-600" : "text-gray-400"}`}>
+                      {/* ✅ ใช้ reports.length แทน isLoading เพื่อให้ตัวเลขไม่หายตอนกดเล่น */}
+                      {getStatusCount(filter.key)}
+                    </p>
                 </div>
-                <h3 className={`text-base ${isActive ? "text-gray-900" : "text-gray-500"}`}>
-                  {filter.label}
-                </h3>
-                <p className={`text-2xl font-medium mt-2 ${isActive ? "text-orange-600" : "text-gray-400"}`}>
-                  {isLoading ? "..." : count}
-                </p>
-              </div>
-            );
-          })}
-        </div>
+                );
+            })}
+            </div>
+        )}
 
-        {/* ================= Toolbar (New!) ================= */}
+        {/* Toolbar */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           
-          {/* Left Side: Search & Filters */}
-          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-            
-            {/* Search Input */}
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
+            {/* ... Search & Filters ... */}
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
@@ -212,9 +223,8 @@ export default function BudgetReportPage() {
               />
             </div>
 
-            {/* Date Filters Group */}
             <div className="flex gap-2">
-              {/* Year Filter */}
+                {/* Year Select */}
               <div className="relative">
                 <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <select
@@ -224,12 +234,12 @@ export default function BudgetReportPage() {
                 >
                   <option value="all">ทุกปี</option>
                   {availableYears.map(year => (
-                    <option key={year} value={year}>{year + 543}</option> // แสดงเป็น พ.ศ.
+                    <option key={year} value={year}>{year + 543}</option>
                   ))}
                 </select>
               </div>
-
-              {/* Month Filter */}
+                
+                {/* Month Select */}
               <div className="relative">
                 <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <select
@@ -245,16 +255,41 @@ export default function BudgetReportPage() {
               </div>
             </div>
 
+            {/* ✅ ปุ่ม Toggle ถังขยะ ใช้ฟังก์ชันใหม่ */}
+            <button
+                onClick={handleTrashToggle}
+                className={`
+                    h-10 px-4 rounded-lg flex items-center gap-2 transition-all border shrink-0
+                    ${activeFilter === "ถังขยะ" 
+                        ? "bg-gray-500 text-white border-gray-600 shadow-md" 
+                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:text-red-500 hover:border-red-200"
+                    }
+                `}
+                title={activeFilter === "ถังขยะ" ? "กลับไปหน้ารายงาน" : "ดูถังขยะ"}
+            >
+                {activeFilter === "ถังขยะ" ? (
+                    <>
+                        <Layers className="w-4 h-4" />
+                        <span className="text-sm font-medium">ดูรายงานปกติ</span>
+                    </>
+                ) : (
+                    <>
+                        <History className="w-4 h-4" />
+                        <span className="text-sm font-medium">กู้คืนรายงาน</span>
+                    </>
+                )}
+            </button>
           </div>
 
-          {/* Right Side: Add Button */}
-          <button
-            onClick={() => setIsSelectModalOpen(true)}
-            className="w-full md:w-auto h-10 px-6 rounded-lg bg-orange-500 text-white flex items-center justify-center gap-2 hover:bg-orange-600 transition-colors shadow-sm whitespace-nowrap"
-          >
-            <CirclePlus className="w-5 h-5" />
-            เพิ่มรายงาน
-          </button>
+          {activeFilter !== "ถังขยะ" && (
+            <button
+                onClick={() => setIsSelectModalOpen(true)}
+                className="w-full md:w-auto h-10 px-6 rounded-lg bg-orange-500 text-sm text-white flex items-center justify-center gap-2 hover:bg-orange-600 transition-colors shadow-sm whitespace-nowrap"
+            >
+                <CirclePlus className="w-5 h-5" />
+                เพิ่มรายงาน
+            </button>
+          )}
         </div>
 
         {/* Report List */}
@@ -264,53 +299,61 @@ export default function BudgetReportPage() {
             กำลังโหลดข้อมูล...
           </div>
         ) : filteredReports.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {filteredReports.map((report) => (
-              <BudgetReportCard key={report.id} report={report} onUpdate={fetchData} />
+              <BudgetReportCard 
+                key={report.id} 
+                report={report} 
+                // ✅ Update: ส่งสถานะถังขยะไปให้ถูกต้อง
+                onUpdate={() => fetchData(activeFilter === "ถังขยะ")}
+                isTrash={activeFilter === "ถังขยะ"}
+              />
             ))}
           </div>
         ) : (
           <div className="text-center py-16 border-2 border-dashed border-gray-100 rounded-xl">
-            <Layers className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+             {activeFilter === "ถังขยะ" ? (
+                <History className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+            ) : (
+                <Layers className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+            )}
             <p className="text-gray-500">
-              ไม่พบรายงานตามเงื่อนไขที่กำหนด
+               {activeFilter === "ถังขยะ" 
+                ? "ไม่มีรายการในถังขยะ" 
+                : "ไม่พบรายงานตามเงื่อนไขที่กำหนด"}
             </p>
             <button 
               onClick={() => {
                 setReportSearchTerm("");
                 setFilterYear("all");
                 setFilterMonth("all");
-                setActiveFilter("ทั้งหมด");
+                // ถ้าอยู่ในถังขยะ ไม่ต้องเด้งกลับ แค่เคลียร์ search
+                if(activeFilter !== "ถังขยะ") setActiveFilter("ทั้งหมด");
               }}
-                className="text-orange-500 hover:underline mt-2 text-sm"              >
+              className="text-orange-500 hover:underline mt-2 text-sm"
+            >
               ล้างตัวกรองทั้งหมด
             </button>
           </div>
         )}
       </div>
 
-      {/* ================= Modal เลือกโครงการ ================= */}
+      {/* Modal Selection (ส่วนนี้เหมือนเดิม) */}
       {isSelectModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-            
-            {/* Modal Header */}
-            <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
+             {/* ... Modal Content ... */}
+             <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
               <div>
                 <h3 className="text-xl font-bold text-gray-800">เลือกโครงการ</h3>
                 <p className="text-sm text-gray-500 mt-1">
                   เลือกโครงการที่ <span className="text-green-600 font-medium">อนุมัติแล้ว</span> เพื่อเริ่มทำรายงาน
                 </p>
               </div>
-              <button
-                onClick={() => setIsSelectModalOpen(false)}
-                className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-colors"
-              >
+              <button onClick={() => setIsSelectModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-colors">
                 <X className="w-6 h-6" />
               </button>
             </div>
-
-            {/* Modal Search */}
             <div className="px-8 pt-6 pb-2">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -322,8 +365,6 @@ export default function BudgetReportPage() {
                 />
               </div>
             </div>
-
-            {/* Project List in Modal */}
             <div className="flex-1 overflow-y-auto p-8 pt-4 space-y-3">
               {filteredProjectsInModal.length > 0 ? (
                 filteredProjectsInModal.map((project) => (
@@ -359,8 +400,6 @@ export default function BudgetReportPage() {
                 </div>
               )}
             </div>
-
-            {/* Modal Footer */}
             <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-center sticky bottom-0 z-10">
               <button
                 onClick={handleCreateManual}
