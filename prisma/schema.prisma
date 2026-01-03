@@ -76,15 +76,6 @@ enum ProjectStatus {
   COMPLETED
 }
 
-enum DonationProjectType {
-  CENTRAL       
-  SCHOLARSHIP   
-  ACTIVITY    
-  RESEARCH    
-  BUILDING     
-  EMERGENCY     
-}
-
 enum TransactionStatus {
   PENDING
   SUCCESS
@@ -93,12 +84,11 @@ enum TransactionStatus {
 
 enum PaymentMethodType {
   PROMPTPAY
-  CASH
-  BANKTRANSFER
+  CREDIT_CARD
+  BANK_TRANSFER
 }
 
 enum PaymentStatusType {
-  PENDING
   CONFIRMED
   CANCELLED
   REFUNDED
@@ -566,6 +556,21 @@ model PictureContent {
   @@unique([Path, ContentID])
 }
 
+// การชำระเงิน
+// model Payment {
+//   id            Int               @id @default(autoincrement())
+//   amount        Float
+//   paymentDate   DateTime          @default(now())
+//   paymentMethod String? // เช่น "credit_card", "bank_transfer", "qr_code"
+//   status        TransactionStatus @default(PENDING)
+//   referenceNo   String? // เลขที่อ้างอิง/slip
+
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+
+//   booking Booking?
+// }
+
 // ========================================
 // Budget & Project Management System
 // ========================================
@@ -695,29 +700,20 @@ model SubmissionImage {
 
 // การบริจาคเข้ารอบงบประมาณ
 model BudgetDonation {
-  id      Int   @id @default(autoincrement())
+  id            Int               @id @default(autoincrement())
+  message       String?
+  status        TransactionStatus @default(PENDING)
+  amount        Float
+  donorName     String? // ชื่อที่ผู้ใช้ระบุในฟอร์ม (ถ้าไม่ Login)
+  donorEmail    String?
+  donorPhone    String?
+  isPublic      Boolean           @default(true) // แสดงชื่อผู้บริจาคสาธารณะหรือไม่  
+  paymentRecords    PaymentRecord[]
 
-  email       String
-  fullName    String
-  phone       String
-  address     String
-  subdistrict String
-  district    String
-  province    String
-  postalCode  String
-
-  isPublic   Boolean @default(true) // แสดงชื่อผู้บริจาคสาธารณะหรือไม่
-  amount Float
-  message String?
-  paymentRecord PaymentRecord?
-
-  status  TransactionStatus @default(PENDING)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
   deletedAt DateTime?
 
-  projectId     Int
-  project       DonationProject @relation(fields: [projectId], references: [id], onDelete: Cascade) 
   budgetRoundId Int
   budgetRound   BudgetRound @relation(fields: [budgetRoundId], references: [id])
   userId        Int
@@ -835,97 +831,228 @@ model ContentManagementLog {
 // Donation Project & Payment System
 // ========================================
 
-// โครงการรับบริจาค
+// 💡 NEW MODEL: โครงการระดมทุน (DonationProject)
 model DonationProject {
-  id            Int      @id @default(autoincrement())
-
+  id            Int           @id @default(autoincrement())
   title         String
   description   String
   goalAmount    Float
   currentAmount Float         @default(0)
   startDate     DateTime
   endDate       DateTime
-  ownerName     String?
-  contact       String?
-  projectType   DonationProjectType @default(SCHOLARSHIP) 
-  posterUrl String?
+  ownerName     String
+  contact       String
+  isCentralFund Boolean       @default(false)
+  // status (ใช้ Enum ใหม่)
+  status        ProjectStatus @default(OPEN)
+  posterUrl     String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
-  status    ProjectStatus @default(OPEN)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  deletedAt DateTime?
-
-  transactions DonationTransaction[] 
-  budgetDonations BudgetDonation[]
-  souvenirItemId Int?              
-  souvenirItem   SouvenirItem?     @relation(fields: [souvenirItemId], references: [id])
+  // Relations
+  transactions   DonationTransaction[] // ความสัมพันธ์ 1-to-Many กับ Transaction
+  souvenirItem   SouvenirItem?         @relation(fields: [souvenirItemId], references: [id])
+  souvenirItemId Int?
 }
 
-// ธุรกรรมการบริจาค (DonationTransaction)
+// 💡 NEW MODEL: ธุรกรรมการบริจาค (DonationTransaction)
 model DonationTransaction {
   id Int @id @default(autoincrement())
 
-  fullName    String
-  email       String
-  phone       String
-  address     String
-  subdistrict String
-  district    String
-  province    String
-  postalCode  String
-
-  isPublic   Boolean @default(true) 
-  amount Float
+  amount  Float
   message String?
-  status TransactionStatus @default(PENDING)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime?
 
+  // สถานะการทำธุรกรรม (Pending, Success, Failed)
+  status TransactionStatus @default(PENDING)
+
+  // Omise/Payment Gateway Reference IDs
+  //omiseChargeId String @unique // Omise Charge ID (ใช้ในการตรวจสอบ Webhook)
+
+  // ข้อมูลผู้บริจาค (ถ้าผู้ใช้ไม่ได้ Login, อาจ null ได้)
+  donorName  String? // ชื่อที่ผู้ใช้ระบุในฟอร์ม (ถ้าไม่ Login)
+  donorEmail String?
+  donorPhone String?
+  isPublic   Boolean @default(true) // แสดงชื่อผู้บริจาคสาธารณะหรือไม่
+
+  // ความสัมพันธ์กับ User (ถ้าบริจาคโดย Login)
   userId Int?
   user   User? @relation(fields: [userId], references: [id])
+
+  // ความสัมพันธ์กับ Project
   projectId Int
   project   DonationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  paymentRecord PaymentRecord?
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  paymentId     Int?
+  paymentRecord PaymentRecord[]
+  souvenirItems SouvenirItem[]
 }
 
 // วิธีการชำระเงิน
 model PaymentMethodRecord {
   id            Int               @id @default(autoincrement())
-  methodName    PaymentMethodType @unique
-  accountNumber String?          
-  provider      String?        
+  methodName    PaymentMethodType @default(PROMPTPAY)
+  accountNumber String?
+  provider      String?
   isActive      Boolean           @default(true)
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   payments PaymentRecord[]
 
+  // ✅ เพิ่ม unique เพื่อ upsert โดย methodName ได้
+  @@unique([methodName])
 }
 
 // บันทึกการชำระเงิน
 model PaymentRecord {
   id Int @id @default(autoincrement())
-  amount          Decimal @db.Decimal(10, 2)
+
+  // Omise/Payment Gateway ID
+  paymentRefId String? @unique
+
+  amount          Float
   transactionCode String?
-  paymentSlipUrl  String? 
-  paymentStatus PaymentStatusType 
+  paymentSlipUrl  String? // url ของสลิป
+
+  paymentStatus PaymentStatusType @default(CONFIRMED)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Relations
   paymentMethodId Int?
   paymentMethod   PaymentMethodRecord? @relation(fields: [paymentMethodId], references: [id])
 
-  donationTransactionId Int? @unique 
-  transaction     DonationTransaction? @relation(fields: [donationTransactionId], references: [id])
-  
-  bookingId Int? @unique 
-  bookings   Booking? @relation(fields: [bookingId], references: [id])
-  
-  budgetDonationId Int? @unique 
-  budgetDonation   BudgetDonation? @relation(fields: [budgetDonationId], references: [id])
+  transaction           DonationTransaction? @relation(fields: [donationTransactionId], references: [id])
+  donationTransactionId Int?
+  bookings              Booking[]
+
+  budgetDonationId      Int?
+  budgetDonation        BudgetDonation? @relation(fields: [budgetDonationId], references: [id])
 
   @@index([paymentStatus])
   @@index([createdAt])
+}
+
+// ========================================
+// Job Management System
+// ========================================
+
+// ประเภทงาน
+model JobType {
+  id        Int          @id @default(autoincrement())
+  typename  JobTypeEnum @unique
+
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  jobPostings JobPosting[]
+
+  @@map("JobType")
+}
+
+// ประกาศงาน
+model JobPosting {
+  id            Int             @id @default(autoincrement())
+  title         String
+  namejob       String          // ชื่อตำแหน่งงาน
+  position      String?         // ตำแหน่งงาน
+  qualification String?         @db.Text // คุณสมบัติ
+  location      String?         @db.Text // ที่อยู่/สถานที่
+  salarydetail  String?         @db.Text // รายละเอียดเงินเดือน
+  numpositions  Int?            // จำนวนอัตรา
+  contactInfo   String?         @db.Text // ข้อมูลติดต่อ
+  JobPosterPath String?         // ไฟล์แนบงาน (poster/attachment)
+  educationlevel EducationLevel? // ระดับการศึกษา
+
+  status        JobStatus       @default(PENDING)
+
+  // Foreign Keys
+  userId        Int
+  jobtypeId     Int?
+
+  // Relations
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobType       JobType?        @relation(fields: [jobtypeId], references: [id])
+  company       Company?
+  approvalLogs  ApprovalLog[]
+  editHistories JobEditHistory[]
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([jobtypeId])
+  @@index([createdAt])
+  @@map("JobPosting")
+}
+
+// ข้อมูลบริษัท
+model Company {
+  id                Int         @id @default(autoincrement())
+  companyname       String
+  companyaddress    String?     @db.Text
+  CompanyLogoPath   String?     // ตราบริษัท
+  CompanyPicturePath String?    // รูปบริษัท
+
+  // Foreign Key (One-to-One with JobPosting)
+  jobId             Int         @unique
+
+  // Relations
+  jobPosting        JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@map("Company")
+}
+
+// ประวัติการอนุมัติ
+model ApprovalLog {
+  id         Int            @id @default(autoincrement())
+  action     ApprovalAction
+  actionDate DateTime       @default(now())
+
+  // Foreign Keys
+  staffId    Int            // Admin/Staff who approved/rejected
+  jobId      Int
+
+  // Relations
+  staff      User           @relation(fields: [staffId], references: [id])
+  jobPosting JobPosting     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([staffId])
+  @@index([jobId])
+  @@index([actionDate])
+  @@map("ApprovalLog")
+}
+
+// ประวัติการแก้ไขประกาศ
+model JobEditHistory {
+  id              Int         @id @default(autoincrement())
+  editedbyuserId  Int
+  olddata         Json?       // เก็บข้อมูลเก่าเป็น JSON
+  editdate        DateTime    @default(now())
+
+  // Foreign Key
+  jobId           Int
+
+  // Relations
+  editedByUser    User        @relation(fields: [editedbyuserId], references: [id])
+  jobPosting      JobPosting  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([editedbyuserId])
+  @@index([jobId])
+  @@index([editdate])
+  @@map("JobEditHistory")
 }

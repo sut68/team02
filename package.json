@@ -7,10 +7,6 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-<<<<<<< HEAD
-    "test": "jest",
-    "test:watch": "jest --watch"
-=======
     "seed": "tsx prisma/seed.ts",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -21,7 +17,6 @@
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
->>>>>>> 447ea104895762d00404caf510fed8d4321364f2
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
@@ -30,10 +25,8 @@
     "@types/bcrypt": "^6.0.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
-    "chromedriver": "^143.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "dayjs": "^1.11.19",
     "dotenv": "^17.2.3",
     "express-rate-limit": "^8.2.1",
     "jose": "^6.1.2",
@@ -43,29 +36,22 @@
     "nodemailer": "^7.0.11",
     "omise": "^1.0.0",
     "pg": "^8.16.3",
-<<<<<<< HEAD
     "prisma": "^6.19.0",
     "promptpay-qr": "^0.5.0",
     "qrcode": "^1.5.4",
-=======
->>>>>>> 447ea104895762d00404caf510fed8d4321364f2
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-hook-form": "^7.66.1",
     "react-icons": "^5.5.0",
     "recharts": "^3.5.1",
     "resend": "^6.4.2",
-    "selenium-webdriver": "^4.39.0",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4",
-<<<<<<< HEAD
-=======
     "@testcontainers/postgresql": "^11.10.0",
     "@testing-library/dom": "^10.4.1",
->>>>>>> 447ea104895762d00404caf510fed8d4321364f2
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@types/bcryptjs": "^2.4.6",
@@ -74,7 +60,6 @@
     "@types/node": "^20",
     "@types/node-fetch": "^2.6.13",
     "@types/nodemailer": "^7.0.4",
-    "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "chromedriver": "^143.0.3",
@@ -82,31 +67,20 @@
     "eslint": "^9",
     "eslint-config-next": "16.0.1",
     "jest": "^30.2.0",
-<<<<<<< HEAD
     "jest-environment-jsdom": "^30.2.0",
-=======
     "jest-mock-extended": "^4.0.0",
     "selenium-webdriver": "^4.39.0",
     "get-port": "^7.1.0",
-    "jest-environment-jsdom": "^30.2.0",
     "jsdom": "^27.3.0",
     "node-fetch": "^2.7.0",
     "node-mocks-http": "^1.17.2",
     "prisma": "^6.19.0",
->>>>>>> 447ea104895762d00404caf510fed8d4321364f2
     "tailwindcss": "^4.1.17",
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "tw-animate-css": "^1.4.0",
-<<<<<<< HEAD
-    "typescript": "^5"
-  },
-  "prisma": {
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
-=======
     "typescript": "^5",
     "@tailwindcss/vite": "^4.1.17"
->>>>>>> 447ea104895762d00404caf510fed8d4321364f2
   }
 }
