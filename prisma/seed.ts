@@ -14,6 +14,7 @@ import {
   PaymentMethodType,
   PaymentStatusType,
   EntitlementSource,
+  DonationProjectType,
 } from "@prisma/client";
 import bcrypt from "bcrypt";
 
@@ -450,70 +451,70 @@ async function main() {
     Userid: number;
     bookingFormKey: BookingFormKey | null;
   }> = [
-    {
-      TitleName: "SUT CHEERLEADERS CLUB",
-      Description:
-        "ขอแสดงความยินดีกับ ชมรมเชียร์ลีดเดอร์ มทส. SUT CHEERLEADERS CLUB ได้รับราวัลจากการแข่งขันเชียร์ลีดเดอร์ชิงถ้วยพระราชทานฯ ครั้งที่ 21 ประจำปี 2568",
-      categories: ContentCategoryType.NEWS,
-      Booking: Option.NOT,
-      Userid: adminId,
-      bookingFormKey: null,
-    },
-    {
-      TitleName: "พิธิมอบหมวกนักศึกษาพยาบาล มทส.",
-      Description:
-        "มทส. จัดพิธีมอบหมวก เข็มสัญลักษณ์ และตะเกียงไนติงเกล ให้กับนักศึกษาพยาบาล รุ่นที่ 16 ประจำปีการศึกษา 2568",
-      categories: ContentCategoryType.NEWS,
-      Booking: Option.NOT,
-      Userid: adminId,
-      bookingFormKey: null,
-    },
-    {
-      TitleName: "DSA MASCOT CONTENT",
-      Description:
-        "ขอเชิญชวนนักศึกษา ผู้เรียน และศิษย์เก่า มทส. ทุกท่านร่วมโหวตผลงานผู้เข้าประกวด พร้อมอ่านแนวคิดการออกแบบ ในกิจกรรม“DSA Mascot Contest”",
-      categories: ContentCategoryType.NEWS,
-      Booking: Option.NOT,
-      Userid: adminId,
-      bookingFormKey: null,
-    },
-    {
-      TitleName: "การแต่งตั้งให้ดำรงตำแหน่งรักษาการแทนอธิการบดี มทส.",
-      Description:
-        "มหาวิทยาลัยเทคโนโลยีสุรนารี ประกาศแต่งตั้งคณะผู้บริหารรักษาการชุดใหม่ *มีผลตั้งแต่วันที่ 15 พฤศจิกายน 2568 เป็นต้นไป",
-      categories: ContentCategoryType.NEWS,
-      Booking: Option.NOT,
-      Userid: adminId,
-      bookingFormKey: null,
-    },
-    {
-      TitleName: "IESUT FAMILY 2025",
-      Description:
-        "จากวันนั้นถึงวันนี้...ความผูกพัน IE มทส ไม่เคยจางหาย #IESUTFamily2025 #ย้อนวัยIEมทส #คืนสู่เหย้าIEสุรนารี #รวมพลชาวเลือดสีน้ำตาล",
-      categories: ContentCategoryType.ACTIVITY,
-      Booking: Option.HAVE,
-      Userid: adminId,
-      bookingFormKey: `${EventType.WORKSHOP}|2025-06-01T09:00:00.000Z` as BookingFormKey,
-    },
-    {
-      TitleName: "ENGi Research to Marget",
-      Description:
-        "โครงการ เส้นทางสู่นวัตวณิชย์ วิศวกรรม มทส. หรือ ENGi R2M (Research to Market) ครั้งที่ 1",
-      categories: ContentCategoryType.ACTIVITY,
-      Booking: Option.HAVE,
-      Userid: adminId,
-      bookingFormKey: `${EventType.REUNION}|2025-03-15T09:00:00.000Z` as BookingFormKey,
-    },
-    {
-      TitleName: "SUT GLOBAL ENTREPRENEURSHIP CAMP 2026",
-      Description:
-        "Be brave to try. Be proud to grow. Be part of GEC2026 !Got the spirit to try, learn, and make new international friends? This camp is for YOU!",
-      categories: ContentCategoryType.NEWS,
-      Booking: Option.NOT,
-      Userid: adminId,
-      bookingFormKey: null,
-    },
-  ];
+      {
+        TitleName: "SUT CHEERLEADERS CLUB",
+        Description:
+          "ขอแสดงความยินดีกับ ชมรมเชียร์ลีดเดอร์ มทส. SUT CHEERLEADERS CLUB ได้รับราวัลจากการแข่งขันเชียร์ลีดเดอร์ชิงถ้วยพระราชทานฯ ครั้งที่ 21 ประจำปี 2568",
+        categories: ContentCategoryType.NEWS,
+        Booking: Option.NOT,
+        Userid: adminId,
+        bookingFormKey: null,
+      },
+      {
+        TitleName: "พิธิมอบหมวกนักศึกษาพยาบาล มทส.",
+        Description:
+          "มทส. จัดพิธีมอบหมวก เข็มสัญลักษณ์ และตะเกียงไนติงเกล ให้กับนักศึกษาพยาบาล รุ่นที่ 16 ประจำปีการศึกษา 2568",
+        categories: ContentCategoryType.NEWS,
+        Booking: Option.NOT,
+        Userid: adminId,
+        bookingFormKey: null,
+      },
+      {
+        TitleName: "DSA MASCOT CONTENT",
+        Description:
+          "ขอเชิญชวนนักศึกษา ผู้เรียน และศิษย์เก่า มทส. ทุกท่านร่วมโหวตผลงานผู้เข้าประกวด พร้อมอ่านแนวคิดการออกแบบ ในกิจกรรม“DSA Mascot Contest”",
+        categories: ContentCategoryType.NEWS,
+        Booking: Option.NOT,
+        Userid: adminId,
+        bookingFormKey: null,
+      },
+      {
+        TitleName: "การแต่งตั้งให้ดำรงตำแหน่งรักษาการแทนอธิการบดี มทส.",
+        Description:
+          "มหาวิทยาลัยเทคโนโลยีสุรนารี ประกาศแต่งตั้งคณะผู้บริหารรักษาการชุดใหม่ *มีผลตั้งแต่วันที่ 15 พฤศจิกายน 2568 เป็นต้นไป",
+        categories: ContentCategoryType.NEWS,
+        Booking: Option.NOT,
+        Userid: adminId,
+        bookingFormKey: null,
+      },
+      {
+        TitleName: "IESUT FAMILY 2025",
+        Description:
+          "จากวันนั้นถึงวันนี้...ความผูกพัน IE มทส ไม่เคยจางหาย #IESUTFamily2025 #ย้อนวัยIEมทส #คืนสู่เหย้าIEสุรนารี #รวมพลชาวเลือดสีน้ำตาล",
+        categories: ContentCategoryType.ACTIVITY,
+        Booking: Option.HAVE,
+        Userid: adminId,
+        bookingFormKey: `${EventType.WORKSHOP}|2025-06-01T09:00:00.000Z` as BookingFormKey,
+      },
+      {
+        TitleName: "ENGi Research to Marget",
+        Description:
+          "โครงการ เส้นทางสู่นวัตวณิชย์ วิศวกรรม มทส. หรือ ENGi R2M (Research to Market) ครั้งที่ 1",
+        categories: ContentCategoryType.ACTIVITY,
+        Booking: Option.HAVE,
+        Userid: adminId,
+        bookingFormKey: `${EventType.REUNION}|2025-03-15T09:00:00.000Z` as BookingFormKey,
+      },
+      {
+        TitleName: "SUT GLOBAL ENTREPRENEURSHIP CAMP 2026",
+        Description:
+          "Be brave to try. Be proud to grow. Be part of GEC2026 !Got the spirit to try, learn, and make new international friends? This camp is for YOU!",
+        categories: ContentCategoryType.NEWS,
+        Booking: Option.NOT,
+        Userid: adminId,
+        bookingFormKey: null,
+      },
+    ];
 
   for (const c of contentData) {
     const BookingFormID = c.bookingFormKey
@@ -576,20 +577,59 @@ async function main() {
   // =========================================================
 
   // 5.0 Ensure payment method exists (BANK_TRANSFER) - use upsert
-  const payMethod = await prisma.paymentMethodRecord.upsert({
-    where: { methodName: PaymentMethodType.BANK_TRANSFER },
-    update: {
+  console.log("Creating Payment Methods...");
+
+  const paymentMethodsList = [
+    {
+      methodName: PaymentMethodType.PROMPTPAY,
+      accountNumber: "081-234-5678",
+      provider: "PromptPay (Any Bank)",
       isActive: true,
+    },
+    {
+      methodName: PaymentMethodType.CASH,
+      accountNumber: null,
+      provider: "จุดรับบริจาค / ห้องสโมสรนักศึกษา",
+      isActive: true,
+    },
+    {
+      methodName: PaymentMethodType.BANKTRANSFER,
       accountNumber: "123-456-7890",
       provider: "SUT Bank",
-    },
-    create: {
-      methodName: PaymentMethodType.BANK_TRANSFER,
       isActive: true,
-      accountNumber: "123-456-7890",
-      provider: "SUT Bank",
-    },
-  });
+    }
+  ];
+
+  // ตัวแปรสำหรับเก็บ Payment Method ที่จะใช้ทดสอบ Transaction ในข้อ 5.5
+  let payMethodForTest: any = null;
+
+  for (const pm of paymentMethodsList) {
+    const record = await prisma.paymentMethodRecord.upsert({
+      where: { methodName: pm.methodName },
+      update: {
+        accountNumber: pm.accountNumber,
+        provider: pm.provider,
+        isActive: pm.isActive,
+      },
+      create: {
+        methodName: pm.methodName,
+        accountNumber: pm.accountNumber,
+        provider: pm.provider,
+        isActive: pm.isActive,
+      },
+    });
+
+    // เราจะใช้ BANK_TRANSFER เป็นตัวหลักในการทดสอบสร้าง Transaction ด้านล่าง
+    if (pm.methodName === PaymentMethodType.BANKTRANSFER) {
+      payMethodForTest = record;
+    }
+  }
+
+  // กำหนดตัวแปร payMethod ให้เหมือนโค้ดเดิม เพื่อให้ Section 5.5 ไม่ Error
+  if (!payMethodForTest) throw new Error("Seed Error: BANK_TRANSFER method missing");
+  const payMethod = payMethodForTest;
+
+  console.log("✅ Seeded all payment methods");
 
   // 5.1 Find souvenir (must exist after seeding souvenirs)
   const souvenir = await prisma.souvenirItem.findFirst({
@@ -604,35 +644,84 @@ async function main() {
 
   const donationProject = existingDonationProject
     ? await prisma.donationProject.update({
-        where: { id: existingDonationProject.id },
-        data: {
-          description: "ทุนการศึกษาสำหรับนิสิตวิศวกรรมศาสตร์",
-          goalAmount: 10000,
-          currentAmount: 0,
-          startDate: new Date("2025-12-01T00:00:00Z"),
-          endDate: new Date("2026-01-31T23:59:59Z"),
-          ownerName: "คณะวิศวกรรมศาสตร์",
-          contact: "044223344",
-          status: ProjectStatus.OPEN,
-          souvenirItemId: souvenir.id,
-        },
-      })
+      where: { id: existingDonationProject.id },
+      data: {
+        title: "กองทุนกลางสมาคมศิษย์เก่าวิศวกรรมศาสตร์ ",
+        description: "ทุนการศึกษาสำหรับนิสิตวิศวกรรมศาสตร์",
+        goalAmount: 10000,
+        currentAmount: 0,
+        startDate: new Date("2025-12-01T00:00:00Z"),
+        endDate: new Date("2026-01-31T23:59:59Z"),
+        ownerName: "คณะวิศวกรรมศาสตร์",
+        contact: "044223344",
+        projectType: DonationProjectType.CENTRAL,
+        status: ProjectStatus.OPEN,
+        souvenirItemId: souvenir.id,
+      },
+    })
     : await prisma.donationProject.create({
-        data: {
-          title: "โครงการทุนการศึกษา ENGI",
-          description: "ทุนการศึกษาสำหรับนิสิตวิศวกรรมศาสตร์",
-          goalAmount: 10000,
-          currentAmount: 0,
-          startDate: new Date("2025-12-01T00:00:00Z"),
-          endDate: new Date("2026-01-31T23:59:59Z"),
-          ownerName: "คณะวิศวกรรมศาสตร์",
-          contact: "044223344",
-          status: ProjectStatus.OPEN,
-          posterUrl: null,
-          souvenirItemId: souvenir.id,
-        },
-      });
+      data: {
+        title: "โครงการทุนการศึกษา ENGI",
+        description: "ทุนการศึกษาสำหรับนิสิตวิศวกรรมศาสตร์",
+        goalAmount: 10000,
+        currentAmount: 0,
+        startDate: new Date("2025-12-01T00:00:00Z"),
+        endDate: new Date("2026-01-31T23:59:59Z"),
+        ownerName: "คณะวิศวกรรมศาสตร์",
+        contact: "044223344",
+        projectType: DonationProjectType.SCHOLARSHIP,
+        status: ProjectStatus.OPEN,
+        posterUrl: null,
+        souvenirItemId: souvenir.id,
+      },
+    });
+  const bagSouvenir = await prisma.souvenirItem.findFirst({
+    where: { sku: "BAG-NEW-2025" },
+  });
 
+  const floodProjectTitle = "CPE Flood Relief 2026";
+  const existingFloodProject = await prisma.donationProject.findFirst({
+    where: { title: floodProjectTitle },
+  });
+
+  if (existingFloodProject) {
+    // กรณีเจอ: อัปเดตข้อมูลให้เป็นปัจจุบัน
+    console.log(`🔄 Updating existing project: ${floodProjectTitle}`);
+    await prisma.donationProject.update({
+      where: { id: existingFloodProject.id },
+      data: {
+        description: "ระดมทุนช่วยเหลือเร่งด่วนสำหรับพี่น้องชาววิศวะที่ประสบภัยน้ำท่วม",
+        goalAmount: 500000,
+        // ไม่แก้ currentAmount เพราะอาจมียอดบริจาคจริงแล้ว
+        startDate: new Date("2026-06-01T00:00:00Z"),
+        endDate: new Date("2026-08-31T23:59:59Z"),
+        ownerName: "สมาคมศิษย์เก่าสัมพันธ์",
+        contact: "089-999-8888",
+        projectType: DonationProjectType.EMERGENCY, // ✅ ประเภทฉุกเฉิน
+        status: ProjectStatus.OPEN,
+        souvenirItemId: bagSouvenir?.id, // ผูกกับกระเป๋าผ้า
+      },
+    });
+  } else {
+    // กรณีไม่เจอ: สร้างใหม่
+    console.log(`➕ Creating new project: ${floodProjectTitle}`);
+    await prisma.donationProject.create({
+      data: {
+        title: floodProjectTitle,
+        description: "ระดมทุนช่วยเหลือเร่งด่วนสำหรับพี่น้องชาววิศวะที่ประสบภัยน้ำท่วม",
+        goalAmount: 500000,
+        currentAmount: 0,
+        startDate: new Date("2026-06-01T00:00:00Z"),
+        endDate: new Date("2026-08-31T23:59:59Z"),
+        ownerName: "สมาคมศิษย์เก่าสัมพันธ์",
+        contact: "089-999-8888",
+        projectType: DonationProjectType.EMERGENCY, // ✅ ประเภทฉุกเฉิน
+        status: ProjectStatus.OPEN,
+        posterUrl: null,
+        souvenirItemId: bagSouvenir?.id, // ผูกกับกระเป๋าผ้า
+      },
+    });
+  }
   // 5.3 test user
   const testUser = await prisma.user.findFirst({
     where: { email: "b6631345@g.sut.ac.th" },
@@ -658,6 +747,14 @@ async function main() {
         status: TransactionStatus.SUCCESS,
         isPublic: true,
         userId: testUser.id,
+        fullName: testUser.fullName,
+        email: testUser.email,
+        phone: testUser.phone || "",
+        address: testUser.address || "",
+        subdistrict: testUser.subdistrict || "",
+        district: testUser.district || "",
+        province: testUser.province || "",
+        postalCode: testUser.postalCode || "",
       },
     });
 

@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
 import { TransactionStatus } from "@prisma/client";
-import { TransactionSchema } from "../../../lib/models/validation"; 
+import { BudgetSchema } from "../../../lib/models/validation"; 
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const validatedData = TransactionSchema.parse({
+    // 1. Validation (รับ projectId มาจาก Form)
+    const validatedData = BudgetSchema.parse({
       ...body,
       amount: Number(body.amount),
       projectId: Number(body.projectId)
@@ -27,6 +28,7 @@ export async function POST(request: NextRequest) {
        return NextResponse.json({ error: "ไม่พบข้อมูลผู้ใช้งาน (กรุณา Login)" }, { status: 401 });
     }
 
+    // --- 2. ตรวจสอบ Project (ตามที่ User เลือก) ---
     const project = await prisma.donationProject.findUnique({
       where: { id: projectId },
       select: { id: true, status: true, endDate: true },
@@ -39,6 +41,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "โครงการนี้หมดเวลาแล้ว" }, { status: 400 });
     }
 
+    const currentBudgetRound = await prisma.budgetRound.findFirst({
+        where: {
+            status: 'OPEN', 
+        },
+        orderBy: {
+            id: 'desc' 
+        },
+        select: { id: true }
+    });
+
+    if (!currentBudgetRound) {
+        return NextResponse.json({ error: "ขณะนี้ไม่มีรอบงบประมาณที่เปิดรับบริจาค (No Active Budget Round)" }, { status: 400 });
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       
       const paymentCreate: any = {
@@ -48,9 +64,11 @@ export async function POST(request: NextRequest) {
       if (paymentMethodId !== undefined) paymentCreate.paymentMethodId = paymentMethodId;
       if (paymentSlipUrl) paymentCreate.paymentSlipUrl = paymentSlipUrl;
 
-      const newTransaction = await tx.donationTransaction.create({
+      const newBudgetDonation = await tx.budgetDonation.create({
         data: {
-          projectId: project.id,           
+          // ✅ ใส่ ID ให้ครบทั้ง 2 ตัว
+          projectId: project.id,                 // จาก Form ที่ User เลือก
+          budgetRoundId: currentBudgetRound.id,  // จากการค้นหา Round ปัจจุบันในระบบ
           userId: userId,
 
           amount,
@@ -58,6 +76,7 @@ export async function POST(request: NextRequest) {
           message: message || null,
           status: TransactionStatus.PENDING,
 
+          // ข้อมูล Address (Required)
           fullName: fullName || "",
           email: email || "",
           phone: phone || "",
@@ -77,7 +96,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return newTransaction;
+      return newBudgetDonation;
     });
 
     return NextResponse.json(

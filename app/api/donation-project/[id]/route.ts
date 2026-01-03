@@ -23,9 +23,16 @@ export async function GET(
             },
             select: {
               id: true,
+              fullName: true,
+              email: true,
+              phone: true,
+              postalCode: true,
+              address: true,
+              subdistrict: true,
+              district: true,
+              province: true,
               amount: true,
-              //message: true,
-              donorName: true,
+              message: true,
               createdAt: true,
               user: {
                 select: {

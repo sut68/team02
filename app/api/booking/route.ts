@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
         },
         content: true,
         bookingField: true,
-        payment: true,
+        paymentRecord: true,
         attendees: {
           include: {
             checkins: true,
