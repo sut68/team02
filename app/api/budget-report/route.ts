@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
+import { Prisma } from "@prisma/client";
 import path from "path";
 import { promises as fs } from "fs";
 import jwt from "jsonwebtoken";
@@ -16,6 +17,7 @@ function getUserFromToken(req: NextRequest) {
   }
 }
 
+// ✅ ฟังก์ชันบันทึกไฟล์ลง Local
 async function saveFile(file: File, subFolder: string): Promise<string> {
   const uploadDir = path.join(process.cwd(), "public", "uploads", "budget", subFolder);
   await fs.mkdir(uploadDir, { recursive: true });
@@ -40,7 +42,8 @@ export async function GET(req: NextRequest) {
     const id = searchParams.get("id");
     const projectId = searchParams.get("projectId");
     const status = searchParams.get("status");
-    const year = searchParams.get("year"); // ✅ รับ parameter ปีงบประมาณ
+    const year = searchParams.get("year"); 
+    const roundId = searchParams.get("roundId"); // ✅ รับค่า roundId
     const showTrash = searchParams.get("trash") === "true"; 
 
     // 1. กรณีดึงรายการเดียว (Detail)
@@ -61,7 +64,7 @@ export async function GET(req: NextRequest) {
     }
 
     // 2. กรณีดึงเป็น List
-    const where: any = {};
+    const where: Prisma.SummarySubmissionWhereInput = {};
 
     if (showTrash) {
       where.deletedAt = { not: null };
@@ -71,21 +74,18 @@ export async function GET(req: NextRequest) {
 
     if (projectId) where.proposalId = Number(projectId);
     
-    // ✅ เพิ่ม Logic กรองตามสถานะ และ ปีงบประมาณ
     if (status && status !== "ทั้งหมด") {
-        where.status = status;
-    } else {
-        // ถ้าเป็น Public User (ไม่ระบุ status มา) อาจจะอยากเห็นเฉพาะ APPROVED
-        // หรือถ้าใน Admin ก็อาจจะส่ง status มา
-        // ในที่นี้ถ้าไม่ส่งมา ให้ดึงทั้งหมดที่ไม่ใช่ Draft (สำหรับหน้าบ้าน) หรือตามต้องการ
-        // where.status = "APPROVED"; 
+        where.status = status as any;
     }
 
-    // ✅ กรองตามปีงบประมาณ (Relation: Report -> Proposal -> BudgetRound -> fiscalYear)
-    if (year) {
+    // ✅ เพิ่ม Logic กรองตาม ปีงบประมาณ และ รอบงบประมาณ
+    if (year || (roundId && roundId !== "all")) {
         where.proposal = {
             budgetRound: {
-                fiscalYear: year
+                // ถ้ามี year ให้กรอง fiscalYear
+                ...(year && { fiscalYear: year }),
+                // ถ้ามี roundId ให้กรอง id (แปลงเป็น Number ก่อน)
+                ...(roundId && roundId !== "all" && { id: Number(roundId) })
             }
         };
     }
@@ -94,7 +94,6 @@ export async function GET(req: NextRequest) {
       where,
       include: {
         proposal: {
-            // Include ข้อมูล Proposal ให้ครบถ้วนเพื่อใช้ใน Type
             include: {
                 budgetRound: true,
                 manager: true
@@ -106,11 +105,10 @@ export async function GET(req: NextRequest) {
       orderBy: { updatedAt: "desc" },
     });
 
-    // ✅ Map ข้อมูลให้ตรงกับ BudgetReport Type และเพิ่ม Helper fields
     const formattedReports = reports.map(r => ({
-        ...r, // Spread properties เดิม (id, status, etc.)
+        ...r, 
         reportTitle: `รายงานสรุปผลโครงการ ${r.proposal?.projectName || ''}`,
-        imageSrc: r.images[0]?.imagePath || null, // Helper สำหรับ UI
+        imageSrc: r.images[0]?.imagePath || null, 
     }));
 
     return NextResponse.json({ reports: formattedReports }, { status: 200 });
@@ -121,7 +119,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ... (ส่วน POST, PUT, DELETE คงเดิม)
+// ============================================================================
+// POST: สร้างรายงานใหม่
+// ============================================================================
 export async function POST(req: NextRequest) {
   try {
     const user = getUserFromToken(req);
@@ -157,7 +157,7 @@ export async function POST(req: NextRequest) {
         proposalId: Number(projectId),
         totalActualExpense: Number(actualExpense),
         summaryFilePath: summaryFilePath || null,
-        status: "DRAFT", // Default status
+        status: "DRAFT", 
         submitterId: user.userId,
         submissionDate: new Date(),
         images: {
@@ -173,10 +173,16 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     console.error("POST Error:", error);
-    return NextResponse.json({ error: "เกิดข้อผิดพลาดในการบันทึกข้อมูล" }, { status: 500 });
+    return NextResponse.json({ 
+        error: "เกิดข้อผิดพลาดในการบันทึกข้อมูล", 
+        details: (error as Error).message 
+    }, { status: 500 });
   }
 }
 
+// ============================================================================
+// PUT: แก้ไขข้อมูล
+// ============================================================================
 export async function PUT(req: NextRequest) {
   try {
     const user = getUserFromToken(req);
@@ -250,23 +256,21 @@ export async function PUT(req: NextRequest) {
   }
 }
 
+// ============================================================================
+// DELETE: ย้ายลงถังขยะ
+// ============================================================================
 export async function DELETE(req: NextRequest) {
   try {
     const user = getUserFromToken(req);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
-
     if (!id) return NextResponse.json({ error: "ไม่พบ ID" }, { status: 400 });
-
     await prisma.summarySubmission.update({
         where: { id: Number(id) },
         data: { deletedAt: new Date() }
     });
-
     return NextResponse.json({ message: "ย้ายลงถังขยะสำเร็จ" }, { status: 200 });
-
   } catch (error) {
     console.error("DELETE Error:", error);
     return NextResponse.json({ error: "ลบรายการไม่สำเร็จ" }, { status: 500 });
