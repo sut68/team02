@@ -208,7 +208,7 @@ export default function BudgetReportPage() {
   return (
     <div className="min-h-screen bg-white text-slate-900">
       {/* ================= Hero ================= */}
-      <section className="relative h-80 w-full overflow-hidden bg-slate-200">
+      <section className="relative h-[400px] w-full overflow-hidden bg-slate-200">
         <div className="absolute inset-0">
              <Image
                 src="/25.jpg"
@@ -225,8 +225,8 @@ export default function BudgetReportPage() {
         </div>
 
         <div className="absolute inset-0 bg-linear-to-r from-white/80 via-white/40 to-white/10" />
-        <div className="absolute inset-0 flex items-center justify-end px-6 md:px-20">
-          <h1 className="text-2xl md:text-5xl font-semibold text-orange-500 drop-shadow-sm">
+        <div className="absolute inset-0 flex items-end justify-end px-6 md:px-20 py-8 md:py-16">
+          <h1 className="text-2xl md:text-5xl font-semibold text-white drop-shadow-sm">
             รายงานผลงบประมาณ
           </h1>
         </div>

@@ -2,13 +2,13 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation"; // สำหรับ Redirect (ถ้าจำเป็น)
+import { useRouter } from "next/navigation";
 import { PrimaryButton } from "@/app/components/ui/Button";
-import { Card } from "@/app/components/ui/Card";
-import { Loader2, Building2, Coins, User } from "lucide-react";
+import { Card, CardContent, CardFooter } from "@/app/components/ui/Card"; // ✅ ใช้ Components ย่อยตาม Admin
+import { Loader2, Building2, Coins, User, CheckCircle2, XCircle } from "lucide-react";
 import { ProjectWithManager, ProjectVote } from "@/app/types/budget_approval";
 
-// ✅ เรียกใช้ UI Modal ที่มีอยู่แล้ว
+// UI Modal
 import ConfirmModal from "@/app/components/ui/ConfirmModal";
 import SuccessModal from "@/app/components/ui/SuccessModal";
 
@@ -17,12 +17,12 @@ export default function VotePage() {
   const [projects, setProjects] = useState<ProjectWithManager[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // State: สถานะการโหวตของผู้ใช้
+  // State: สถานะการโหวต
   const [userVotedId, setUserVotedId] = useState<number | null>(null);
   const [isVoting, setIsVoting] = useState(false);
   const [canVote, setCanVote] = useState(false);
 
-  // State: จัดการ Modal
+  // State: Modals
   const [targetProject, setTargetProject] = useState<{id: number, name: string} | null>(null);
   const [modalState, setModalState] = useState<{
     type: 'CONFIRM' | 'SUCCESS' | 'ERROR' | null;
@@ -30,12 +30,11 @@ export default function VotePage() {
     title?: string;
   }>({ type: null });
 
-  // 1. ฟังก์ชันดึงข้อมูลโครงการ
+  // 1. Fetch Data
   const fetchProjects = useCallback(async () => {
     try {
       const res = await fetch("/api/project-proposal"); 
       if (!res.ok) throw new Error("ไม่สามารถดึงข้อมูลได้");
-      
       const data = await res.json();
       setProjects(data.proposals || []);
     } catch (err) {
@@ -43,16 +42,12 @@ export default function VotePage() {
     }
   }, []);
 
-  // 2. ฟังก์ชันเช็คสถานะการโหวต (API จะเช็คตามรอบงบประมาณที่ OPEN ให้อัตโนมัติ)
   const fetchUserVoteStatus = useCallback(async () => {
     try {
       const res = await fetch("/api/project-vote"); 
       if (res.ok) {
         const data = await res.json();
-        
-        // รับค่า canVote มาเก็บไว้
         setCanVote(data.canVote); 
-
         if (data.voted) {
           setUserVotedId(data.votedProjectId);
         } else {
@@ -74,18 +69,14 @@ export default function VotePage() {
   }, [fetchProjects, fetchUserVoteStatus]);
 
   // --- Handlers ---
-
-  // 3.1 ขั้นตอนแรก: กดปุ่มโหวต -> เปิด Modal ยืนยัน
   const handleVoteClick = (projectId: number, projectName: string) => {
-    if (userVotedId) return; // กันไว้ที่ UI อีกชั้น
+    if (userVotedId) return; 
     setTargetProject({ id: projectId, name: projectName });
     setModalState({ type: 'CONFIRM' });
   };
 
-  // 3.2 ขั้นตอนสอง: ยืนยันใน Modal -> ยิง API
   const confirmVote = async () => {
     if (!targetProject) return;
-
     setIsVoting(true);
     try {
       const res = await fetch("/api/project-vote", {
@@ -95,24 +86,17 @@ export default function VotePage() {
       });
 
       const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "เกิดข้อผิดพลาดในการโหวต");
 
-      if (!res.ok) {
-        // กรณี Error: เช่น ยังไม่บริจาค (403) หรือ โหวตซ้ำ (400)
-        // ใช้ข้อความจาก Backend แสดงผลเลย
-        throw new Error(result.error || "เกิดข้อผิดพลาดในการโหวต");
-      }
-
-      // กรณีสำเร็จ
       setModalState({ 
         type: 'SUCCESS', 
         message: "ขอบคุณสำหรับการโหวต! คะแนนของคุณถูกบันทึกเรียบร้อยแล้ว" 
       });
       
       setUserVotedId(targetProject.id); 
-      fetchProjects(); // รีเฟรชคะแนน
+      fetchProjects(); 
 
     } catch (err: any) {
-      // แสดง Error Modal
       setModalState({
         type: 'ERROR',
         title: "ไม่สามารถโหวตได้",
@@ -123,7 +107,6 @@ export default function VotePage() {
     }
   };
 
-  // ปิด Modal ทั้งหมด
   const closeModal = () => {
     setModalState({ type: null });
     if (modalState.type !== 'CONFIRM') {
@@ -131,7 +114,7 @@ export default function VotePage() {
     }
   };
 
-  // --- Logic การคำนวณและแบ่งกลุ่ม ---
+  // --- Logic ---
   const votingProjects = projects.filter((p) => p.status === "OPEN");
   const resultProjects = projects.filter((p) => p.status === "APPROVED" || p.status === "CLOSE");
 
@@ -154,20 +137,20 @@ export default function VotePage() {
   }
 
   return (
-    <div className="min-h-screen bg-white pb-20 font-sans">
+    <div className="min-h-screen bg-gray-50/50 pb-20 font-sans">
       
-      {/* --- Hero Section --- */}
-      <section className="relative w-full h-[300px] md:h-[380px] overflow-hidden mb-12 bg-gray-100">
+      {/* --- Hero Section (เหมือนเดิม) --- */}
+      <section className="relative w-full h-[300px] md:h-[400px] overflow-hidden mb-12 bg-gray-800">
         <Image
           src="/18.jpg"
           alt="Banner พิจารณาโครงการ"
           fill
-          className="object-cover object-top"
+          className="object-cover object-top opacity-60"
           priority
         />
-        <div className="absolute inset-0 bg-linear-to-l from-white/90 via-white/40 to-transparent" />
-        <div className="absolute inset-0 container mx-auto px-4 md:px-8 max-w-7xl flex items-center justify-end">
-          <h1 className="text-3xl md:text-5xl font-bold text-orange-600 drop-shadow-sm mt-12 md:mt-0">
+        <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
+        <div className="absolute inset-0 flex items-end justify-end px-6 md:px-20 py-8 md:py-16">
+          <h1 className="text-3xl md:text-5xl font-bold text-white drop-shadow-md mb-2">
             พิจารณาโครงการ
           </h1>
         </div>
@@ -175,83 +158,90 @@ export default function VotePage() {
 
       <div className="container mx-auto px-4 md:px-8 max-w-7xl">
         
-        {/* --- Section 1: พิจารณาโครงการ (Voting) --- */}
+        {/* --- Section 1: Voting Projects --- */}
         <div className="mb-20">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-700 mb-8 border-l-4 border-orange-500 pl-4">
-            พิจารณาโครงการ
-          </h2>
+          <div className="flex items-center gap-3 mb-8 border-b border-gray-200 pb-4">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+              โครงการที่เปิดให้โหวต
+            </h2>
+            <div className="ml-auto text-sm text-gray-500 hidden sm:block">
+                สถานะ: <span className="text-orange-600 font-semibold">{votingProjects.length > 0 ? "เปิดรับคะแนน" : "ปิดรับคะแนน"}</span>
+            </div>
+          </div>
 
           {votingProjects.length === 0 ? (
-            <div className="text-center py-16 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 text-gray-400">
+            <div className="text-center py-20 bg-white rounded-2xl border-2 border-dashed border-gray-200 text-gray-400">
               ขณะนี้ยังไม่มีโครงการที่เปิดให้โหวต
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {votingProjects.map((project) => (
-                <Card
-                  key={project.id}
-                  className="group flex flex-col h-full overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-100 bg-white rounded-2xl p-0"
+                
+                /* ✅ Card Style ตาม Admin ProjectCard */
+                <Card 
+                    key={project.id} 
+                    className="p-4 border-none shadow-sm bg-white w-full h-full flex flex-col relative transition-all hover:shadow-lg rounded-xl"
                 >
-                  {/* รูปภาพ */}
-                  <div className="relative w-full aspect-4/3 bg-gray-100 overflow-hidden rounded-xl">
+                  {/* Image Section - ความสูงคงที่ มุมมน */}
+                  <div className="relative w-full h-48 mb-4 rounded-2xl overflow-hidden group z-10 bg-gray-100 shrink-0">
                     {project.coverFilePath ? (
                       <Image
                         src={project.coverFilePath}
                         alt={project.projectName}
                         fill
-                        className="object-cover transition-transform duration-700 group-hover:scale-110"
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
-                      <div className="flex items-center justify-center h-full text-gray-300">
-                        <span className="text-sm">ไม่มีรูปภาพ</span>
+                      <div className="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 text-sm flex-col gap-2">
+                        <Building2 className="w-8 h-8 opacity-20"/>
+                        <span>ไม่มีรูปภาพ</span>
                       </div>
                     )}
-                    <div className="absolute top-3 right-3 bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">
-                      เปิดโหวต
-                    </div>
                   </div>
 
-                  {/* เนื้อหา */}
-                  <div className="p-5 flex flex-col grow">
+                  {/* Content Section */}
+                  <CardContent className="p-0 mb-4 grow flex flex-col">
                     <h3 
-                        className="text-lg font-bold text-gray-800 mb-2 line-clamp-2 leading-snug min-h-14"
-                        title={project.projectName}
+                      className="font-bold text-lg text-gray-900 mb-2 line-clamp-2 leading-tight min-h-12" 
+                      title={project.projectName}
                     >
                       {project.projectName}
                     </h3>
                     
-                    <div className="w-10 h-1 bg-orange-200 rounded-full mb-3"></div>
-
-                    <div className="space-y-2 mb-6 text-xs text-gray-500 grow">
-                      <div className="flex items-start gap-2">
-                        <Building2 className="w-4 h-4 mt-0.5 shrink-0 text-orange-400" />
-                        <span className="line-clamp-1">{project.responsibilityUnit || "-"}</span>
-                      </div>
-                      {project.manager && (
+                    {/* ข้อมูล Metadata แบบเรียบง่าย */}
+                    <div className="space-y-1.5 text-sm text-gray-500 font-light mt-auto">
                         <div className="flex items-start gap-2">
-                          <User className="w-4 h-4 mt-0.5 shrink-0 text-orange-400" />
-                          <span className="line-clamp-1">{project.manager.firstName} {project.manager.lastName}</span>
+                            <Building2 className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+                            <span className="line-clamp-1">{project.responsibilityUnit || "-"}</span>
                         </div>
-                      )}
-                      <div className="flex items-start gap-2">
-                        <Coins className="w-4 h-4 mt-0.5 shrink-0 text-orange-400" />
-                        <span>งบประมาณ: {project.requestedAmount?.toLocaleString() || 0} บาท</span>
-                      </div>
+                        {project.manager && (
+                            <div className="flex items-start gap-2">
+                                <User className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+                                <span className="line-clamp-1">
+                                    {project.manager.firstName} {project.manager.lastName}
+                                </span>
+                            </div>
+                        )}
+                        <div className="flex items-start gap-2">
+                            <Coins className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+                            <span>{project.requestedAmount?.toLocaleString() || 0} บาท</span>
+                        </div>
                     </div>
+                  </CardContent>
 
-                    {/* ปุ่มโหวต (Interactive) */}
-                    <div className="mt-auto">
-                      <PrimaryButton
-                        className={`w-full rounded-full py-2.5 text-sm font-semibold transition-all ${
+                  {/* Footer Section - ปุ่มโหวต */}
+                  <CardFooter className="p-0 mt-auto pt-2 shrink-0">
+                    <PrimaryButton
+                        className={`w-full h-10 rounded-lg text-base font-medium shadow-sm transition-all flex items-center justify-center gap-2
+                        ${
                           userVotedId
                             ? userVotedId === project.id 
-                                ? "bg-[#F26522] hover:bg-orange-600 text-white shadow-none cursor-default" 
-                                : "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none"
+                                ? "bg-green-600 hover:bg-green-700 text-white cursor-default" 
+                                : "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none"
                             : canVote 
-                                ? "bg-[#F26522] shadow-md hover:shadow-orange-200 hover:-translate-y-0.5" // โหวตได้ปกติ
-                                : "bg-gray-300 text-gray-500 cursor-not-allowed" // ❌ ยังไม่บริจาค (ปุ่มเทา)
+                                ? "bg-[#F26522] hover:bg-[#d54e10] text-white hover:-translate-y-0.5" 
+                                : "bg-gray-200 text-gray-500 cursor-not-allowed"
                         }`}
-                        // ปิดปุ่มถ้า: โหวตไปแล้ว หรือ กำลังโหลด หรือ (ยังไม่บริจาค และ ยังไม่ได้โหวต)
                         disabled={!!userVotedId || isVoting || (!canVote && !userVotedId)}
                         onClick={() => {
                             if (!canVote && !userVotedId) {
@@ -260,37 +250,43 @@ export default function VotePage() {
                             }
                             handleVoteClick(project.id, project.projectName);
                         }}
-                      >
-                        {userVotedId === project.id 
-                          ? "คุณโหวตโครงการนี้แล้ว" 
-                          : userVotedId 
-                            ? "ใช้สิทธิ์ครบแล้ว" 
-                            : isVoting 
-                              ? "กำลังโหวต..." 
-                              : canVote 
-                                ? "โหวต" 
-                                : "บริจาคเพื่อรับสิทธิ์โหวต"}
-                      </PrimaryButton>
-                    </div>
-                  </div>
+                    >
+                        {userVotedId === project.id ? (
+                            <>
+                                <CheckCircle2 className="w-5 h-5"/> โหวตแล้ว
+                            </>
+                        ) : userVotedId ? (
+                            "ใช้สิทธิ์แล้ว"
+                        ) : isVoting ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : canVote ? (
+                            "โหวตโครงการ"
+                        ) : (
+                            "ไม่มีสิทธิ์โหวต"
+                        )}
+                    </PrimaryButton>
+                  </CardFooter>
                 </Card>
+
               ))}
             </div>
           )}
         </div>
 
-        {/* --- Section 2: ผลพิจารณาโครงการ --- */}
+        {/* --- Section 2: Result (เหมือนเดิม) --- */}
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-700 mb-8 border-l-4 border-gray-400 pl-4">
-            ผลพิจารณาโครงการ
-          </h2>
+          <div className="flex items-center gap-3 mb-8 border-b border-gray-200 pb-4">
+             <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
+               ผลพิจารณาโครงการ
+             </h2>
+          </div>
 
           {resultProjects.length === 0 ? (
-            <div className="text-center py-16 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 text-gray-400">
+            <div className="text-center py-16 bg-white rounded-2xl border-2 border-dashed border-gray-200 text-gray-400">
               ยังไม่มีผลการพิจารณาโครงการในขณะนี้
             </div>
           ) : (
-            <div className="space-y-6 max-w-5xl">
+            <div className="space-y-4 max-w-5xl">
               {resultProjects.map((project) => {
                 const percentage = calculatePercentage(project.votes);
                 const isApproved = project.status === 'APPROVED';
@@ -298,9 +294,10 @@ export default function VotePage() {
                 return (
                   <div 
                     key={project.id} 
-                    className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 flex flex-col md:flex-row gap-6 md:gap-8 items-start md:items-center"
+                    className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all flex flex-col sm:flex-row gap-6 items-start sm:items-center"
                   >
-                    <div className="relative w-full md:w-48 h-48 md:h-32 shrink-0 bg-gray-100 rounded-2xl overflow-hidden shadow-inner">
+                    {/* Result Image */}
+                    <div className="relative w-full sm:w-40 h-40 sm:h-28 shrink-0 bg-gray-100 rounded-xl overflow-hidden">
                       {project.coverFilePath ? (
                         <Image
                           src={project.coverFilePath}
@@ -316,41 +313,28 @@ export default function VotePage() {
                     </div>
 
                     <div className="grow w-full">
-                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-2 mb-2">
-                        <div>
-                            <h3 className="text-lg md:text-xl font-bold text-gray-800 leading-tight">
-                            {project.projectName}
-                            </h3>
-                            <p className="text-xs text-gray-400 mt-1">
-                                หน่วยงาน: {project.responsibilityUnit} | งบประมาณ: {project.requestedAmount?.toLocaleString()} บาท
-                            </p>
-                        </div>
-                        
-                        <div className="flex items-center gap-2 mt-2 md:mt-0">
-                            {isApproved ? (
-                                <span className="text-2xl font-bold text-[#F26522]">{percentage}%</span>
-                            ) : (
-                                <span className="text-sm font-bold text-gray-400 bg-gray-100 px-3 py-1 rounded-full">ไม่ผ่านการอนุมัติ</span>
-                            )}
+                      <div className="flex flex-col md:flex-row md:justify-between gap-2 mb-2">
+                        <h3 className="text-lg font-bold text-gray-800">{project.projectName}</h3>
+                        <div className={`self-start md:self-center px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
+                            isApproved ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                        }`}>
+                            {isApproved ? <CheckCircle2 className="w-3 h-3"/> : <XCircle className="w-3 h-3"/>}
+                            {isApproved ? "อนุมัติ" : "ไม่อนุมัติ"}
                         </div>
                       </div>
+                      
+                      <p className="text-sm text-gray-500 mb-3">
+                         หน่วยงาน: {project.responsibilityUnit} | งบ: {project.requestedAmount?.toLocaleString()}
+                      </p>
 
-                      <div className="mt-4">
-                        <div className="flex justify-between items-center mb-2 text-sm">
-                            <span className="font-semibold text-gray-600">ผลการอนุมัติ:</span>
-                            <span className={`font-bold ${isApproved ? 'text-green-600' : 'text-red-500'}`}>
-                                {isApproved ? 'อนุมัติ' : 'ไม่อนุมัติ / ปิดรับ'}
-                            </span>
-                        </div>
-
-                        {isApproved && (
-                            <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                      <div className="flex items-center gap-4">
+                         <div className="grow bg-gray-100 rounded-full h-2.5 overflow-hidden">
                             <div 
-                                className="bg-[#F26522] h-2.5 rounded-full transition-all duration-1000 ease-out" 
+                                className={`h-2.5 rounded-full transition-all duration-1000 ${isApproved ? "bg-[#F26522]" : "bg-gray-400"}`}
                                 style={{ width: `${Math.min(Number(percentage), 100)}%` }} 
                             />
-                            </div>
-                        )}
+                         </div>
+                         <span className="text-sm font-bold text-gray-600 w-12 text-right">{percentage}%</span>
                       </div>
                     </div>
                   </div>
@@ -362,8 +346,6 @@ export default function VotePage() {
       </div>
 
       {/* ================= MODALS ================= */}
-      
-      {/* 1. Modal ยืนยันการโหวต */}
       <ConfirmModal 
         isOpen={modalState.type === 'CONFIRM'}
         onClose={closeModal}
@@ -375,23 +357,21 @@ export default function VotePage() {
         isLoading={isVoting}
       />
 
-      {/* 2. Modal สำเร็จ */}
       <SuccessModal 
         show={modalState.type === 'SUCCESS'}
         message={modalState.message}
         onClose={closeModal}
       />
 
-      {/* 3. Modal Error / แจ้งเตือน (เช่น ยังไม่ได้บริจาค) */}
       <ConfirmModal 
         isOpen={modalState.type === 'ERROR'}
         onClose={closeModal}
-        onConfirm={closeModal} // ปุ่มยืนยันทำหน้าที่เป็นปุ่มปิด
+        onConfirm={closeModal} 
         title={modalState.title || "แจ้งเตือน"}
         message={modalState.message || "เกิดข้อผิดพลาด"}
         confirmLabel="ตกลง"
-        cancelLabel="" // ซ่อนปุ่มยกเลิกเพื่อให้เป็นปุ่มเดียว
-        isDanger={true} // สีแดงเพื่อบ่งบอกว่าเป็น Error/Warning
+        cancelLabel="" 
+        isDanger={true} 
       />
 
     </div>
