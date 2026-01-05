@@ -3,7 +3,7 @@
 
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardHeader, CardContent } from "../../components/ui/Card";
 import { PrimaryButton, CancelButton } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -30,7 +30,7 @@ interface PictureContent {
 interface BookingFormDTO {
   id: number;
   Type: EventType | null;
-  BatchNumber: number | null; // ✅ จำนวน “รุ่น” ทั้งหมด
+  BatchNumber: number | null; //  จำนวน “รุ่น” ทั้งหมด
   TotalSeats: number | null;
   StartDate: string | null;
   EndDate: string | null;
@@ -122,12 +122,16 @@ function formatThaiDate(dateStr?: string | null) {
  * 1) Array: [{ startBatch: 1, endBatch: 7, price: 100 }, ...]
  * 2) Object map: { "1": 100, "2": 120 } หรือ { "Generation 1-7": 100 }
  */
-function getBatchUnitPrice(batchPrices: any, batchNumberStr: string): number | null {
+function getBatchUnitPrice(
+  batchPrices: any,
+  batchNumberStr: string
+): number | null {
   if (!batchPrices || !batchNumberStr) return null;
 
   // ถ้าเลือกเป็นตัวเลข "1" "2" ...
   const batchNumber = Number(batchNumberStr);
-  const batchNumberIsNum = Number.isFinite(batchNumber) && !Number.isNaN(batchNumber);
+  const batchNumberIsNum =
+    Number.isFinite(batchNumber) && !Number.isNaN(batchNumber);
 
   // 1) Array ranges
   if (Array.isArray(batchPrices) && batchNumberIsNum) {
@@ -165,6 +169,7 @@ function getBatchUnitPrice(batchPrices: any, batchNumberStr: string): number | n
 }
 
 function UserBookingPageInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const contentIdParam = searchParams.get("contentId") ?? searchParams.get("id");
   const contentId = contentIdParam ? Number(contentIdParam) : null;
@@ -251,17 +256,6 @@ function UserBookingPageInner() {
   // ✅ กฎว่า “จองได้ไหม”
   const canBook = content?.Booking === "HAVE" && !!bookingForm && !!user;
 
-  // ✅ Seats options: สร้างจาก TotalSeats จริง
-  const seatSelectOptions = useMemo(() => {
-    const total = bookingForm?.TotalSeats ?? null;
-    if (!total || total <= 0) return null;
-
-    return Array.from({ length: total }, (_, i) => {
-      const v = String(i + 1);
-      return { label: v, value: v };
-    });
-  }, [bookingForm?.TotalSeats]);
-
   const souvenirEnabled = bookingForm?.Souvenir === "HAVE";
 
   // ✅ Batch options: สร้างจาก BookingForm.BatchNumber (จำนวนรุ่น)
@@ -269,7 +263,6 @@ function UserBookingPageInner() {
     const bn = bookingForm?.BatchNumber ?? null;
     if (!bn || bn <= 0) return null;
 
-    // รุ่น = 1..bn (ไม่ฮาร์ดโค้ด label)
     return [
       { label: "เลือกรุ่น", value: "" },
       ...Array.from({ length: bn }, (_, i) => {
@@ -280,32 +273,18 @@ function UserBookingPageInner() {
   }, [bookingForm?.BatchNumber]);
 
   // ---------- Form state ----------
+  // ✅ จองทีละคน: ตัด seats และ attendeeNames ออก เหลือชื่อเดียว
   const [formData, setFormData] = useState<{
     batchNumber: string; // ✅ รุ่นที่เลือก
-    seats: number;
     fullName: string;
     gift: boolean;
     notes: string;
   }>({
     batchNumber: "",
-    seats: 1,
     fullName: "",
     gift: false,
     notes: "",
   });
-
-  const [attendeeNames, setAttendeeNames] = useState<string[]>(["", "", "", ""]);
-
-  // ถ้า TotalSeats มี แล้ว seats เกิน => ปรับให้ไม่เกิน
-  useEffect(() => {
-    const total = bookingForm?.TotalSeats ?? null;
-    if (total && formData.seats > total) {
-      setFormData((p) => ({ ...p, seats: total }));
-    }
-    if (formData.seats < 1) {
-      setFormData((p) => ({ ...p, seats: 1 }));
-    }
-  }, [bookingForm?.TotalSeats]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ถ้าไม่ให้ของที่ระลึก ให้ปิด gift
   useEffect(() => {
@@ -324,10 +303,6 @@ function UserBookingPageInner() {
     const target = e.target as HTMLInputElement;
 
     setFormData((prev) => {
-      if (id === "seats") {
-        const n = Number(value);
-        return { ...prev, seats: Number.isFinite(n) ? n : 1 };
-      }
       if (type === "checkbox") {
         return { ...prev, [id]: target.checked } as any;
       }
@@ -335,11 +310,10 @@ function UserBookingPageInner() {
     });
   };
 
-  // ✅ คำนวณ unit price + total price จาก bookingForm จริง
+  // ✅ คำนวณ unit price + total price จาก bookingForm จริง (จองทีละคน => seats = 1)
   const pricing = useMemo(() => {
     const priceType = bookingForm?.PriceType ?? null;
-
-    const seats = Number(formData.seats) || 1;
+    const seats = 1;
 
     // FREE
     if (priceType === "FREE") {
@@ -369,17 +343,20 @@ function UserBookingPageInner() {
     }
 
     return { unitPrice: 0, totalPrice: 0, reason: "UNKNOWN" as const };
-  }, [bookingForm?.PriceType, bookingForm?.singlePrice, bookingForm?.batchPrices, formData.batchNumber, formData.seats]);
+  }, [
+    bookingForm?.PriceType,
+    bookingForm?.singlePrice,
+    bookingForm?.batchPrices,
+    formData.batchNumber,
+  ]);
 
   const resetForm = () => {
     setFormData({
       batchNumber: "",
-      seats: 1,
       fullName: "",
       gift: false,
       notes: "",
     });
-    setAttendeeNames(["", "", "", ""]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -392,23 +369,20 @@ function UserBookingPageInner() {
       return;
     }
 
-    const names = attendeeNames
-      .map((n) => (typeof n === "string" ? n.trim() : ""))
-      .filter((n) => n !== "");
+    // ✅ จองทีละคน: ต้องมีชื่อ
+    const name = formData.fullName?.trim();
+    if (!name) {
+      alert("กรุณากรอกชื่อ-สกุล");
+      return;
+    }
 
     const payload = {
       userId: user.id,
       contentId: contentId,
-      // (ถ้า API /api/booking รองรับ bookingFormId ก็ใส่ได้ แต่ของ bro ไม่บังคับ)
       bookingField: {
         batchNumber: formData.batchNumber || null,
-        bookingSeats: Number(formData.seats),
-
-        name1: attendeeNames[0]?.trim() || null,
-        name2: attendeeNames[1]?.trim() || null,
-        name3: attendeeNames[2]?.trim() || null,
-        name4: attendeeNames[3]?.trim() || null,
-
+        bookingSeats: 1, // ✅ จองทีละคน
+        name: name || null,
         note: formData.notes || null,
         souvenir:
           content.bookingForm.Souvenir === "HAVE"
@@ -416,11 +390,8 @@ function UserBookingPageInner() {
               ? "HAVE"
               : "NOT"
             : "NOT",
-
-        // ✅ ส่งราคาเข้า BookingField
         totalPrice: pricing.totalPrice,
       },
-      attendees: names,
     };
 
     const res = await fetch("/api/booking", {
@@ -436,7 +407,16 @@ function UserBookingPageInner() {
     }
 
     const json = await res.json();
-    alert("จองสำเร็จ ✅ bookingId=" + json.booking?.id);
+    const bookingId = json?.booking?.id;
+
+    // ✅ จองเสร็จแล้วไปหน้าจ่ายเงิน (ไม่ hardcode userId)
+    if (bookingId) {
+      router.push(`/user/payment?bookingId=${bookingId}`);
+      return;
+    }
+
+    // fallback ถ้า API ไม่ส่ง bookingId
+    alert("จองสำเร็จ ✅ แต่ไม่พบ bookingId สำหรับไปหน้าจ่ายเงิน");
     resetForm();
   };
 
@@ -512,7 +492,9 @@ function UserBookingPageInner() {
                 {bookingForm.BatchNumber != null && (
                   <p>จำนวนรุ่นทั้งหมด: {bookingForm.BatchNumber}</p>
                 )}
-                {bookingForm.PriceType && <p>รูปแบบราคา: {bookingForm.PriceType}</p>}
+                {bookingForm.PriceType && (
+                  <p>รูปแบบราคา: {bookingForm.PriceType}</p>
+                )}
               </div>
             )}
           </div>
@@ -553,40 +535,9 @@ function UserBookingPageInner() {
                   </div>
                 )}
 
-                {/* จำนวนที่นั่ง */}
-                <div>
-                  <FormLabel htmlFor="seats">จำนวนที่นั่ง</FormLabel>
+                {/* ✅ จองทีละคน: ตัดจำนวนที่นั่งออก */}
 
-                  {seatSelectOptions ? (
-                    <FormSelect
-                      id="seats"
-                      value={String(formData.seats)}
-                      onChange={handleChange}
-                      options={seatSelectOptions}
-                      disabled={!canBook}
-                    />
-                  ) : (
-                    <Input
-                      id="seats"
-                      type="number"
-                      value={formData.seats}
-                      onChange={handleChange}
-                      min={1}
-                      max={bookingForm?.TotalSeats ?? undefined}
-                      size="md"
-                      disabled={!canBook}
-                    />
-                  )}
-
-                  {typeof bookingForm?.TotalSeats === "number" &&
-                    bookingForm.TotalSeats > 0 && (
-                      <p className="text-xs text-gray-400 mt-1">
-                        สูงสุด {bookingForm.TotalSeats} ที่นั่ง
-                      </p>
-                    )}
-                </div>
-
-                {/* ชื่อ-สกุล */}
+                {/* ชื่อ-สกุล (ใช้เป็นชื่อผู้จอง/ผู้เข้าร่วมคนเดียว) */}
                 <div>
                   <FormLabel htmlFor="fullName">ชื่อ-สกุล</FormLabel>
                   <Input
@@ -598,27 +549,6 @@ function UserBookingPageInner() {
                     disabled={!canBook}
                   />
                 </div>
-
-                {/* ผู้เข้าร่วม 4 ช่อง */}
-                {attendeeNames.map((value, index) => (
-                  <div key={index}>
-                    <FormLabel htmlFor={`attendee-${index}`}>
-                      ผู้เข้าร่วมคนที่ {index + 1}
-                    </FormLabel>
-                    <Input
-                      id={`attendee-${index}`}
-                      placeholder={`กรอกชื่อผู้เข้าร่วมคนที่ ${index + 1}`}
-                      value={value}
-                      onChange={(e) => {
-                        const next = [...attendeeNames];
-                        next[index] = e.target.value;
-                        setAttendeeNames(next);
-                      }}
-                      size="md"
-                      disabled={!canBook}
-                    />
-                  </div>
-                ))}
 
                 {/* ของที่ระลึก */}
                 {souvenirEnabled && (
@@ -651,6 +581,7 @@ function UserBookingPageInner() {
                                disabled:bg-gray-100 disabled:text-gray-500"
                   />
                 </div>
+
                 {/* ✅ ราคา (คำนวณอัตโนมัติ ไม่ hardcode) */}
                 {!!bookingForm?.PriceType && (
                   <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
@@ -666,11 +597,12 @@ function UserBookingPageInner() {
                         {pricing.totalPrice.toLocaleString("th-TH")} บาท
                       </span>
                     </div>
-                    {bookingForm.PriceType === "BY_BATCH" && !formData.batchNumber && (
-                      <p className="mt-2 text-xs text-red-500">
-                        * ต้องเลือกรุ่นก่อน เพื่อคำนวณราคา
-                      </p>
-                    )}
+                    {bookingForm.PriceType === "BY_BATCH" &&
+                      !formData.batchNumber && (
+                        <p className="mt-2 text-xs text-red-500">
+                          * ต้องเลือกรุ่นก่อน เพื่อคำนวณราคา
+                        </p>
+                      )}
                   </div>
                 )}
 

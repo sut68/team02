@@ -12,8 +12,6 @@ services:
       POSTGRES_DB: mydb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -34,9 +32,9 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - certs:/etc/nginx/certs:ro
-      - /etc/nginx/vhost.d
-      - /usr/share/nginx/html
+      - ./nginx-data/certs:/etc/nginx/certs:ro
+      - ./nginx-data/vhost.d:/etc/nginx/vhost.d
+      - ./nginx-data/html:/usr/share/nginx/html
       - /var/run/docker.sock:/tmp/docker.sock:ro
       - ./config/client_max_body_size.conf:/etc/nginx/conf.d/client_max_body_size.conf
     restart: always
@@ -51,9 +49,9 @@ services:
     depends_on:
       - nginx-proxy
     volumes:
-      - certs:/etc/nginx/certs:rw
-      - /etc/nginx/vhost.d
-      - /usr/share/nginx/html
+      - ./nginx-data/certs:/etc/nginx/certs:rw
+      - ./nginx-data/vhost.d:/etc/nginx/vhost.d
+      - ./nginx-data/html:/usr/share/nginx/html
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       DEFAULT_EMAIL: sutalumniconnect@gmail.com
@@ -63,42 +61,7 @@ services:
       - app-network
 
   # ============================================
-  # Backend API
-  # ============================================
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
-    container_name: api
-    expose:
-      - "8000"
-    ports:
-      - "3000:3000"
-    environment:
-      VIRTUAL_HOST: api.sut-alumniconnect.me
-      LETSENCRYPT_HOST: api.sut-alumniconnect.me
-      VIRTUAL_PORT: 8000
-      DATABASE_URL: postgres://postgres:postgres@db:5432/mydb
-      NODE_ENV: production
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: always
-    networks:
-      - app-network
-    env_file:
-      - .env
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
-
-  # ============================================
-  # Frontend
+  # Web Application (Frontend + API in one)
   # ============================================
   web:
     build:
@@ -107,35 +70,29 @@ services:
     container_name: web
     expose:
       - "3000"
-    ports:
-      - "3000:3000"
-
     environment:
-      VIRTUAL_HOST: www.sut-alumniconnect.me
-      LETSENCRYPT_HOST: www.sut-alumniconnect.me
-      NEXT_PUBLIC_API_URL: http://api:8000
-      API_URL: http://api:8000
+      # 👇 ใส่ domain ทั้งหมดที่นี่ (ทั้ง www และ api)
+      VIRTUAL_HOST: www.sut-alumniconnect.me,sut-alumniconnect.me,api.sut-alumniconnect.me
+      LETSENCRYPT_HOST: www.sut-alumniconnect.me,sut-alumniconnect.me,api.sut-alumniconnect.me
+      VIRTUAL_PORT: 3000
+      
+      # URL ภายนอกที่ Browser จะเรียก (ชี้ไปที่โดเมน api หรือ www ก็ได้)
+      NEXT_PUBLIC_API_URL: https://www.sut-alumniconnect.me/api
+      
+      # Database Connection (Web ต่อ DB โดยตรง)
+      DATABASE_URL: postgres://postgres:postgres@db:5432/mydb
+      
       NODE_ENV: production
     depends_on:
-      - api
       - db
     restart: always
     networks:
       - app-network
     env_file:
       - .env
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
 
 volumes:
   db_data:
-  certs:
 
 networks:
   app-network:

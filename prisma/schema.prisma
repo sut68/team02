@@ -1,3 +1,11 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
 model PasswordResetToken {
   id        Int       @id @default(autoincrement())
   email     String
@@ -16,14 +24,7 @@ model PasswordResetToken {
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
 
-generator client {
-  provider = "prisma-client-js"
-}
 
 // ========================================
 // Enums
@@ -93,6 +94,33 @@ enum PaymentStatusType {
   REFUNDED
 }
 
+enum EducationLevel {
+  BELOW_BACHELOR
+  BACHELOR
+  MASTER
+  DOCTORATE
+  OTHER
+}
+
+enum JobStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum JobTypeEnum {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+}
+
+enum ApprovalAction {
+  APPROVED
+  REJECTED
+  PENDING
+}
+
 // ========================================
 // Models
 // ========================================
@@ -145,8 +173,14 @@ model User {
   comments              Comment[]
   contentManagementLogs ContentManagementLog[]
 
+
   // Donation Project Relations
   donationTransactions DonationTransaction[]
+
+  // Job Relations
+  jobPostings      JobPosting[]
+  approvalLogs     ApprovalLog[]
+  jobEditHistories JobEditHistory[]
 }
 
 model EducationRecord {
@@ -421,11 +455,8 @@ model BookingForm {
 model BookingField {
   id           Int     @id @default(autoincrement())
   BatchNumber  String?
-  BookingSeats Int?
-  Name1        String?
-  Name2        String?
-  Name3        String?
-  Name4        String?
+  BookingSeats Int      @default(1)
+  Name        String?
   TotalPrice   Int?
   Souvenir     String?
   Note         String?
@@ -631,7 +662,7 @@ model ProjectProposal {
   manager     ProjectManager? @relation(fields: [managerId], references: [id])
   staff       User?           @relation("StaffProposals", fields: [staffId], references: [id])
 
-  summarySubmissions SummarySubmission[]
+  summarySubmission SummarySubmission?
   votes              ProjectVote[]
 }
 
@@ -648,7 +679,7 @@ model SummarySubmission {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  proposalId  Int
+  proposalId  Int   @unique
   submitterId Int?
 
   proposal  ProjectProposal   @relation(fields: [proposalId], references: [id], onDelete: Cascade)
@@ -676,9 +707,8 @@ model BudgetDonation {
   donorName     String? // ชื่อที่ผู้ใช้ระบุในฟอร์ม (ถ้าไม่ Login)
   donorEmail    String?
   donorPhone    String?
-  isPublic      Boolean           @default(true) // แสดงชื่อผู้บริจาคสาธารณะหรือไม่
-  paymentId     Int?
-  paymentRecord PaymentRecord[]
+  isPublic      Boolean           @default(true) // แสดงชื่อผู้บริจาคสาธารณะหรือไม่  
+  paymentRecords    PaymentRecord[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
@@ -899,8 +929,130 @@ model PaymentRecord {
   transaction           DonationTransaction? @relation(fields: [donationTransactionId], references: [id])
   donationTransactionId Int?
   bookings              Booking[]
-  budgetDonations       BudgetDonation[]
+
+  budgetDonationId      Int?
+  budgetDonation        BudgetDonation? @relation(fields: [budgetDonationId], references: [id])
 
   @@index([paymentStatus])
   @@index([createdAt])
+}
+
+// ========================================
+// Job Management System
+// ========================================
+
+// ประเภทงาน
+model JobType {
+  id        Int          @id @default(autoincrement())
+  typename  JobTypeEnum @unique
+
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  jobPostings JobPosting[]
+
+  @@map("JobType")
+}
+
+// ประกาศงาน
+model JobPosting {
+  id            Int             @id @default(autoincrement())
+  title         String
+  namejob       String          // ชื่อตำแหน่งงาน
+  position      String?         // ตำแหน่งงาน
+  qualification String?         @db.Text // คุณสมบัติ
+  location      String?         @db.Text // ที่อยู่/สถานที่
+  salarydetail  String?         @db.Text // รายละเอียดเงินเดือน
+  numpositions  Int?            // จำนวนอัตรา
+  contactInfo   String?         @db.Text // ข้อมูลติดต่อ
+  JobPosterPath String?         // ไฟล์แนบงาน (poster/attachment)
+  educationlevel EducationLevel? // ระดับการศึกษา
+
+  status        JobStatus       @default(PENDING)
+
+  // Foreign Keys
+  userId        Int
+  jobtypeId     Int?
+
+  // Relations
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobType       JobType?        @relation(fields: [jobtypeId], references: [id])
+  company       Company?
+  approvalLogs  ApprovalLog[]
+  editHistories JobEditHistory[]
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([jobtypeId])
+  @@index([createdAt])
+  @@map("JobPosting")
+}
+
+// ข้อมูลบริษัท
+model Company {
+  id                Int         @id @default(autoincrement())
+  companyname       String
+  companyaddress    String?     @db.Text
+  CompanyLogoPath   String?     // ตราบริษัท
+  CompanyPicturePath String?    // รูปบริษัท
+
+  // Foreign Key (One-to-One with JobPosting)
+  jobId             Int         @unique
+
+  // Relations
+  jobPosting        JobPosting @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@map("Company")
+}
+
+// ประวัติการอนุมัติ
+model ApprovalLog {
+  id         Int            @id @default(autoincrement())
+  action     ApprovalAction
+  actionDate DateTime       @default(now())
+
+  // Foreign Keys
+  staffId    Int            // Admin/Staff who approved/rejected
+  jobId      Int
+
+  // Relations
+  staff      User           @relation(fields: [staffId], references: [id])
+  jobPosting JobPosting     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([staffId])
+  @@index([jobId])
+  @@index([actionDate])
+  @@map("ApprovalLog")
+}
+
+// ประวัติการแก้ไขประกาศ
+model JobEditHistory {
+  id              Int         @id @default(autoincrement())
+  editedbyuserId  Int
+  olddata         Json?       // เก็บข้อมูลเก่าเป็น JSON
+  editdate        DateTime    @default(now())
+
+  // Foreign Key
+  jobId           Int
+
+  // Relations
+  editedByUser    User        @relation(fields: [editedbyuserId], references: [id])
+  jobPosting      JobPosting  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([editedbyuserId])
+  @@index([jobId])
+  @@index([editdate])
+  @@map("JobEditHistory")
 }

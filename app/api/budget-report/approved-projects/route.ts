@@ -11,9 +11,7 @@ export async function GET() {
       where: {
         status: "APPROVED",
         // (Optional) กรองเอาเฉพาะอันที่ยังไม่เคยทำรายงานสรุป
-        summarySubmissions: {
-          none: {}
-        }
+        summarySubmission: null,
       },
       orderBy: {
         projectStartDate: 'desc',

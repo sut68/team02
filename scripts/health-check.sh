@@ -122,7 +122,7 @@ generate_report() {
     STATUS=0
     check_containers || STATUS=1
     check_database || STATUS=1
-    # we do not have
+    # we do not have health check endpoint.
     # check_api || STATUS=1
     check_disk || STATUS=1
     check_memory || STATUS=1
