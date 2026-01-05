@@ -12,8 +12,6 @@ services:
       POSTGRES_DB: mydb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    # ports:  <-- ลบทิ้งใน Prod เพื่อความปลอดภัย (ให้คุยกันแค่ใน Docker Network พอ)
-    #   - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
@@ -34,7 +32,6 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      # 👇 แก้: ใช้ Path จริง เพื่อกัน Cert หาย
       - ./nginx-data/certs:/etc/nginx/certs:ro
       - ./nginx-data/vhost.d:/etc/nginx/vhost.d
       - ./nginx-data/html:/usr/share/nginx/html
@@ -52,7 +49,6 @@ services:
     depends_on:
       - nginx-proxy
     volumes:
-      # 👇 แก้: ใช้ Path จริง (ต้องตรงกับ nginx-proxy)
       - ./nginx-data/certs:/etc/nginx/certs:rw
       - ./nginx-data/vhost.d:/etc/nginx/vhost.d
       - ./nginx-data/html:/usr/share/nginx/html
@@ -65,34 +61,7 @@ services:
       - app-network
 
   # ============================================
-  # Backend API
-  # ============================================
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
-    container_name: api
-    expose:
-      - "3000" # ปกติ NestJS/Express มักรันที่ 3000 (เช็คใน code อีกทีนะครับ)
-    environment:
-      VIRTUAL_HOST: api.sut-alumniconnect.me
-      LETSENCRYPT_HOST: api.sut-alumniconnect.me
-      VIRTUAL_PORT: 3000 # ต้องตรงกับ Port ที่ Code คุณรัน (ผมแก้เป็น 3000 ตามมาตรฐาน)
-      PORT: 3000         # บังคับให้ App รันที่ Port 3000
-      DATABASE_URL: postgres://postgres:postgres@db:5432/mydb
-      NODE_ENV: production
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: always
-    networks:
-      - app-network
-    env_file:
-      - .env
-    # ลบ ports: "3000:3000" ออก เพราะ Nginx จัดการให้แล้ว
-
-  # ============================================
-  # Frontend
+  # Web Application (Frontend + API in one)
   # ============================================
   web:
     build:
@@ -102,30 +71,28 @@ services:
     expose:
       - "3000"
     environment:
-      VIRTUAL_HOST: www.sut-alumniconnect.me,sut-alumniconnect.me
-      LETSENCRYPT_HOST: www.sut-alumniconnect.me,sut-alumniconnect.me
+      # 👇 ใส่ domain ทั้งหมดที่นี่ (ทั้ง www และ api)
+      VIRTUAL_HOST: www.sut-alumniconnect.me,sut-alumniconnect.me,api.sut-alumniconnect.me
+      LETSENCRYPT_HOST: www.sut-alumniconnect.me,sut-alumniconnect.me,api.sut-alumniconnect.me
       VIRTUAL_PORT: 3000
       
-      # 👇 สำคัญมาก: อันนี้คือ URL ที่ Browser ลูกค้าจะยิงไปหา
-      NEXT_PUBLIC_API_URL: https://api.sut-alumniconnect.me
+      # URL ภายนอกที่ Browser จะเรียก (ชี้ไปที่โดเมน api หรือ www ก็ได้)
+      NEXT_PUBLIC_API_URL: https://www.sut-alumniconnect.me/api
       
-      # 👇 อันนี้คือ URL ที่ Server Next.js จะยิงไปหา (Internal Docker)
-      API_URL: http://api:3000
+      # Database Connection (Web ต่อ DB โดยตรง)
+      DATABASE_URL: postgres://postgres:postgres@db:5432/mydb
       
       NODE_ENV: production
     depends_on:
-      - api
       - db
     restart: always
     networks:
       - app-network
     env_file:
       - .env
-    # ลบ ports: "3000:3000" ออก ป้องกัน Port ชนกัน
 
 volumes:
   db_data:
-  # certs: <-- ลบออกได้เลยเพราะใช้ Host Path แทนแล้ว
 
 networks:
   app-network:
