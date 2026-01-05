@@ -1,6 +1,73 @@
-deploy:
+name: Build and Deploy to Azure
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - ci/github-actions
+  pull_request:
+    branches:
+      - main
+      - develop
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  quality-check:
+    uses: ./.github/workflows/tests.yml
+    secrets: inherit
+
+  build:
+    needs: quality-check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile.api
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-api:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-api:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build and push Web image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile.web
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-web:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-web:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+  deploy:
     needs: build
     runs-on: ubuntu-latest
+    # Deploy เฉพาะตอน Push เข้า Main เท่านั้น
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
@@ -12,11 +79,10 @@ deploy:
           key: ${{ secrets.AZURE_VM_SSH_KEY }}
           command_timeout: 20m
           script: |
-            # 1. เข้าไปที่โฟลเดอร์ (Path ต้องถูก)
+            # 1. เข้าไปที่โฟลเดอร์โปรเจกต์
             cd ~/team02 || exit 1
             
-            # 2. แก้ปัญหา Git Auth (ใช้ Token ในการดึงโค้ด)
-            # บรรทัดนี้จะช่วยให้ Server ดึงไฟล์ docker-compose ตัวใหม่ได้ โดยไม่ต้องกรอกรหัส
+            # 2. แก้ปัญหา Git Permission (ใช้ Token ดึงโค้ด)
             git remote set-url origin https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
             git fetch origin main
             git reset --hard origin/main
@@ -24,19 +90,19 @@ deploy:
             # 3. Login Container Registry
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
-            # 4. Pull Image (เปลี่ยน docker-compose เป็น docker compose)
+            # 4. Pull Image (ใช้ docker compose แบบไม่มีขีด)
             docker compose -f docker-compose.prod.yml pull
             
-            # 5. สั่งหยุดของเก่า (เปลี่ยน docker-compose เป็น docker compose)
+            # 5. สั่งหยุดของเก่า (ใช้ docker compose แบบไม่มีขีด)
             docker compose -f docker-compose.prod.yml down || true
             
             # 6. คืนพื้นที่ Disk
             docker system prune -af
             
-            # 7. รันระบบใหม่ (เปลี่ยน docker-compose เป็น docker compose)
+            # 7. รันระบบใหม่ (ใช้ docker compose แบบไม่มีขีด)
             docker compose -f docker-compose.prod.yml up -d --force-recreate
             
-            # 8. รอและสั่ง Migration (เปลี่ยน docker-compose เป็น docker compose)
+            # 8. รอและสั่ง Migration
             echo "Waiting for database..."
             sleep 15
             docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
