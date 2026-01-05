@@ -60,12 +60,42 @@ export function SouvenirSection() {
         const categoryMeta: Record<string, { label: string; href: string | ((item: any) => string); requireAuth?: boolean; getDescription?: (name: string) => string }> = {
           ACTIVITY: {
             label: 'ลงทะเบียนเข้าร่วมกิจกรรม',
-            href: '/user/booking',
+            href: (item: any) => {
+              // ถ้ามี contents (array) และมี id
+              if (Array.isArray(item.contents) && item.contents.length > 0 && item.contents[0].id) {
+                const content = item.contents[0];
+                // ถ้า content.categories เป็น 'NEWS' ให้ลิงก์ไป /user/news/{id}
+                if (content.categories === 'NEWS') {
+                  return `/user/news/${content.id}`;
+                }
+                // ถ้า content.categories เป็น 'ACTIVITY' ให้ลิงก์ไป /user/activity/{id}
+                if (content.categories === 'ACTIVITY') {
+                  return `/user/activity/${content.id}`;
+                }
+                // fallback: ถ้ามี id แต่ไม่รู้ category
+                return `/user/content/${content.id}`;
+              }
+              // ถ้ามี linkedBookingId ให้ลิงก์ไปที่กิจกรรม
+              if (item.linkedBookingId) {
+                return `/user/booking/${item.linkedBookingId}`;
+              }
+              // ถ้ามี booking object ที่มี id
+              if (item.booking && item.booking.id) {
+                return `/user/booking/${item.booking.id}`;
+              }
+              return '/user/booking';
+            },
             getDescription: (name) => `รับ '${name}' เป็นของที่ระลึกสุดพิเศษ`,
           },
           DONATION: {
             label: 'บริจาคเพื่อสนับสนุน ENGi',
-            href: (item: any) => item.linkedDonationProjectId ? `/user/donation/projects/${item.linkedDonationProjectId}` : '/user/donation/projects',
+            href: (item: any) => {
+              // ถ้ามี donationProjects array และมี id
+              if (Array.isArray(item.donationProjects) && item.donationProjects.length > 0 && item.donationProjects[0].id) {
+                return `/user/donation/projects/${item.donationProjects[0].id}`;
+              }
+              return '/user/donation/projects';
+            },
             getDescription: (name) => `รับ ${name} แทนคำขอบคุณ`,
           },
         };
@@ -249,7 +279,16 @@ export function SouvenirSection() {
         >
           <div ref={trackRef} className="flex gap-12 will-change-transform">
             {loopItems.map((item, idx) => {
-              const finalHref = item.actionHref || '#';
+              const getDestinationUrl = (item: any) => {
+                if (item.donationProjects && item.donationProjects.length > 0) {
+                  return `/user/donation/${item.donationProjects[0].id}`;
+                }
+                if (item.contents && item.contents.length > 0) {
+                  return `/user/news/${item.contents[0].id}`;
+                }
+                return `/user/souvenir/${item.sku}`;
+              };
+              const finalHref = getDestinationUrl(item);
               return (
                 <Link
                   key={`${item.id}-${idx}`}
