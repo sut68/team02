@@ -70,6 +70,10 @@ services:
     container_name: api
     expose:
       - "3000"  # ✅ เปิดพอร์ต 3000 แค่ภายใน (ไม่ให้ชนกับ web ข้างนอก)
+    command: >
+      sh -c "npx prisma migrate resolve --applied 20260102205624_update_donation_project_schema && 
+             npx prisma migrate deploy && 
+             npm run start"
     environment:
       # ให้ Nginx ส่งคนเข้า api.sut... มาที่นี่
       VIRTUAL_HOST: api.sut-alumniconnect.me
