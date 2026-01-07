@@ -44,14 +44,10 @@ interface FormData {
   message?: string;
 }
 
-<<<<<<< HEAD
-export default function CombinedDonationFormPage() {
-=======
 // ----------------------------------------------------
 // 💡 Component หน้ารวมรายละเอียดและฟอร์ม
 // ----------------------------------------------------
 function CombinedDonationFormContent() {
->>>>>>> 447ea104895762d00404caf510fed8d4321364f2
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectId = searchParams.get('projectId');

@@ -37,9 +37,6 @@ ALTER TYPE "DonationProjectType_new" RENAME TO "DonationProjectType";
 DROP TYPE "public"."DonationProjectType_old";
 COMMIT;
 
--- AlterEnum
-ALTER TYPE "PaymentStatusType" ADD VALUE 'PENDING';
-
 -- DropForeignKey
 ALTER TABLE "Booking" DROP CONSTRAINT "Booking_PaymentID_fkey";
 
@@ -63,13 +60,10 @@ ALTER TABLE "BudgetDonation" ADD COLUMN     "address" TEXT NOT NULL,
 ADD COLUMN     "district" TEXT NOT NULL,
 ADD COLUMN     "email" TEXT NOT NULL,
 ADD COLUMN     "fullName" TEXT NOT NULL,
-ADD COLUMN     "isPublic" BOOLEAN NOT NULL DEFAULT true,
-ADD COLUMN     "message" TEXT,
 ADD COLUMN     "phone" TEXT NOT NULL,
 ADD COLUMN     "postalCode" TEXT NOT NULL,
 ADD COLUMN     "projectId" INTEGER NOT NULL,
 ADD COLUMN     "province" TEXT NOT NULL,
-ADD COLUMN     "status" "TransactionStatus" NOT NULL DEFAULT 'PENDING',
 ADD COLUMN     "subdistrict" TEXT NOT NULL;
 
 -- AlterTable
@@ -90,12 +84,9 @@ ALTER COLUMN "postalCode" SET NOT NULL;
 -- AlterTable
 ALTER TABLE "PaymentRecord" DROP COLUMN "paymentRefId",
 ADD COLUMN     "bookingId" INTEGER,
-ADD COLUMN     "budgetDonationId" INTEGER,
 ALTER COLUMN "amount" SET DATA TYPE DECIMAL(10,2),
 ALTER COLUMN "paymentStatus" DROP DEFAULT;
 
--- DropTable
-DROP TABLE "Payment";
 
 -- CreateTable
 CREATE TABLE "Donation" (
@@ -139,6 +130,3 @@ ALTER TABLE "BudgetDonation" ADD CONSTRAINT "BudgetDonation_projectId_fkey" FORE
 
 -- AddForeignKey
 ALTER TABLE "PaymentRecord" ADD CONSTRAINT "PaymentRecord_bookingId_fkey" FOREIGN KEY ("bookingId") REFERENCES "Booking"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "PaymentRecord" ADD CONSTRAINT "PaymentRecord_budgetDonationId_fkey" FOREIGN KEY ("budgetDonationId") REFERENCES "BudgetDonation"("id") ON DELETE SET NULL ON UPDATE CASCADE;

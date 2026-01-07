@@ -1,4 +1,3 @@
-// prisma/seed.ts
 import {
   Prisma,
   PrismaClient,
@@ -16,11 +15,14 @@ import {
   EntitlementSource,
   DonationProjectType,
 } from "@prisma/client";
-import bcrypt from "bcrypt";
+import * as bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
 
 const prisma = new PrismaClient();
 
 async function main() {
+  console.log("🌱 Starting seed...");
+
   const defaultPassword = "sut12345";
   const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
@@ -114,7 +116,6 @@ async function main() {
     },
   ];
 
-  // map email -> user.id
   const userMap: Record<string, { id: number }> = {};
   for (const u of userData) {
     const user = await prisma.user.upsert({
@@ -126,7 +127,6 @@ async function main() {
   }
   console.log("✅ Seeded users");
 
-  // ใช้ adminId จาก userMap (แก้จุด Userid: 1)
   const adminId = userMap["admin@sut-eng.ac.th"]?.id;
   if (!adminId) throw new Error("admin user not found after seeding");
 
@@ -375,7 +375,7 @@ async function main() {
       EndDate: new Date("2025-03-15T17:00:00Z"),
       PriceType: PriceMode.FREE,
       singlePrice: null as number | null,
-      batchPrices: undefined as any,
+      batchPrices: Prisma.DbNull,
       Souvenir: Option.HAVE,
     },
     {
@@ -386,32 +386,32 @@ async function main() {
       EndDate: new Date("2025-05-10T17:00:00Z"),
       PriceType: PriceMode.SINGLE,
       singlePrice: 199,
-      batchPrices: undefined as any,
+      batchPrices: Prisma.DbNull,
       Souvenir: Option.NOT,
     },
     {
       Type: EventType.WORKSHOP,
-      BatchNumber: 30,
+      BatchNumber: 2,
       TotalSeats: 2000,
       StartDate: new Date("2025-06-01T09:00:00Z"),
       EndDate: new Date("2025-06-02T17:00:00Z"),
       PriceType: PriceMode.BY_BATCH,
       singlePrice: null as number | null,
       batchPrices: [
-        { startBatch: 1, endBatch: 10, price: 300},
-        { startBatch: 11, endBatch: 20, price: 200 },
-        { startBatch: 21, endBatch: 30, price: 100 },
+        { startBatch: 1, endBatch: 50, price: 0 },
+        { startBatch: 51, endBatch: 200, price: 49 },
+        { startBatch: 201, endBatch: 500, price: 99 },
       ],
       Souvenir: Option.HAVE,
     },
   ];
 
-  // Refactor: use upsert and map key to id
   type BookingFormKey = `${EventType}|${string}`;
   const bookingFormMap = new Map<BookingFormKey, number>();
+  
   for (const form of bookingFormsData) {
     const saved = await prisma.bookingForm.upsert({
-      where: { Type_StartDate: { Type: form.Type, StartDate: form.StartDate } },
+      where: { Type_StartDate: { Type: form.Type!, StartDate: form.StartDate! } },
       update: {
         BatchNumber: form.BatchNumber,
         TotalSeats: form.TotalSeats,
@@ -433,16 +433,12 @@ async function main() {
         Souvenir: form.Souvenir,
       } as any,
     });
-    bookingFormMap.set(`${form.Type}|${form.StartDate.toISOString()}`, saved.id);
+    bookingFormMap.set(`${form.Type}|${form.StartDate!.toISOString()}`, saved.id);
   }
 
   // -----------------------------
   // 4.2) Content + PictureContent
-  // ✅ แก้ Userid: adminId
   // -----------------------------
-  // Refactor: use upsert and bookingFormKey
-
-  // Use BookingFormKey type for bookingFormKey
   const contentData: Array<{
     TitleName: string;
     Description: string;
@@ -451,70 +447,70 @@ async function main() {
     Userid: number;
     bookingFormKey: BookingFormKey | null;
   }> = [
-      {
-        TitleName: "SUT CHEERLEADERS CLUB",
-        Description:
-          "ขอแสดงความยินดีกับ ชมรมเชียร์ลีดเดอร์ มทส. SUT CHEERLEADERS CLUB ได้รับราวัลจากการแข่งขันเชียร์ลีดเดอร์ชิงถ้วยพระราชทานฯ ครั้งที่ 21 ประจำปี 2568",
-        categories: ContentCategoryType.NEWS,
-        Booking: Option.NOT,
-        Userid: adminId,
-        bookingFormKey: null,
-      },
-      {
-        TitleName: "พิธิมอบหมวกนักศึกษาพยาบาล มทส.",
-        Description:
-          "มทส. จัดพิธีมอบหมวก เข็มสัญลักษณ์ และตะเกียงไนติงเกล ให้กับนักศึกษาพยาบาล รุ่นที่ 16 ประจำปีการศึกษา 2568",
-        categories: ContentCategoryType.NEWS,
-        Booking: Option.NOT,
-        Userid: adminId,
-        bookingFormKey: null,
-      },
-      {
-        TitleName: "DSA MASCOT CONTENT",
-        Description:
-          "ขอเชิญชวนนักศึกษา ผู้เรียน และศิษย์เก่า มทส. ทุกท่านร่วมโหวตผลงานผู้เข้าประกวด พร้อมอ่านแนวคิดการออกแบบ ในกิจกรรม“DSA Mascot Contest”",
-        categories: ContentCategoryType.NEWS,
-        Booking: Option.NOT,
-        Userid: adminId,
-        bookingFormKey: null,
-      },
-      {
-        TitleName: "การแต่งตั้งให้ดำรงตำแหน่งรักษาการแทนอธิการบดี มทส.",
-        Description:
-          "มหาวิทยาลัยเทคโนโลยีสุรนารี ประกาศแต่งตั้งคณะผู้บริหารรักษาการชุดใหม่ *มีผลตั้งแต่วันที่ 15 พฤศจิกายน 2568 เป็นต้นไป",
-        categories: ContentCategoryType.NEWS,
-        Booking: Option.NOT,
-        Userid: adminId,
-        bookingFormKey: null,
-      },
-      {
-        TitleName: "IESUT FAMILY 2025",
-        Description:
-          "จากวันนั้นถึงวันนี้...ความผูกพัน IE มทส ไม่เคยจางหาย #IESUTFamily2025 #ย้อนวัยIEมทส #คืนสู่เหย้าIEสุรนารี #รวมพลชาวเลือดสีน้ำตาล",
-        categories: ContentCategoryType.ACTIVITY,
-        Booking: Option.HAVE,
-        Userid: adminId,
-        bookingFormKey: `${EventType.WORKSHOP}|2025-06-01T09:00:00.000Z` as BookingFormKey,
-      },
-      {
-        TitleName: "ENGi Research to Marget",
-        Description:
-          "โครงการ เส้นทางสู่นวัตวณิชย์ วิศวกรรม มทส. หรือ ENGi R2M (Research to Market) ครั้งที่ 1",
-        categories: ContentCategoryType.ACTIVITY,
-        Booking: Option.HAVE,
-        Userid: adminId,
-        bookingFormKey: `${EventType.REUNION}|2025-03-15T09:00:00.000Z` as BookingFormKey,
-      },
-      {
-        TitleName: "SUT GLOBAL ENTREPRENEURSHIP CAMP 2026",
-        Description:
-          "Be brave to try. Be proud to grow. Be part of GEC2026 !Got the spirit to try, learn, and make new international friends? This camp is for YOU!",
-        categories: ContentCategoryType.NEWS,
-        Booking: Option.NOT,
-        Userid: adminId,
-        bookingFormKey: null,
-      },
-    ];
+    {
+      TitleName: "SUT CHEERLEADERS CLUB",
+      Description:
+        "ขอแสดงความยินดีกับ ชมรมเชียร์ลีดเดอร์ มทส. SUT CHEERLEADERS CLUB ได้รับราวัลจากการแข่งขันเชียร์ลีดเดอร์ชิงถ้วยพระราชทานฯ ครั้งที่ 21 ประจำปี 2568",
+      categories: ContentCategoryType.NEWS,
+      Booking: Option.NOT,
+      Userid: adminId,
+      bookingFormKey: null,
+    },
+    {
+      TitleName: "พิธิมอบหมวกนักศึกษาพยาบาล มทส.",
+      Description:
+        "มทส. จัดพิธีมอบหมวก เข็มสัญลักษณ์ และตะเกียงไนติงเกล ให้กับนักศึกษาพยาบาล รุ่นที่ 16 ประจำปีการศึกษา 2568",
+      categories: ContentCategoryType.NEWS,
+      Booking: Option.NOT,
+      Userid: adminId,
+      bookingFormKey: null,
+    },
+    {
+      TitleName: "DSA MASCOT CONTENT",
+      Description:
+        "ขอเชิญชวนนักศึกษา ผู้เรียน และศิษย์เก่า มทส. ทุกท่านร่วมโหวตผลงานผู้เข้าประกวด พร้อมอ่านแนวคิดการออกแบบ ในกิจกรรม“DSA Mascot Contest”",
+      categories: ContentCategoryType.NEWS,
+      Booking: Option.NOT,
+      Userid: adminId,
+      bookingFormKey: null,
+    },
+    {
+      TitleName: "การแต่งตั้งให้ดำรงตำแหน่งรักษาการแทนอธิการบดี มทส.",
+      Description:
+        "มหาวิทยาลัยเทคโนโลยีสุรนารี ประกาศแต่งตั้งคณะผู้บริหารรักษาการชุดใหม่ *มีผลตั้งแต่วันที่ 15 พฤศจิกายน 2568 เป็นต้นไป",
+      categories: ContentCategoryType.NEWS,
+      Booking: Option.NOT,
+      Userid: adminId,
+      bookingFormKey: null,
+    },
+    {
+      TitleName: "IESUT FAMILY 2025",
+      Description:
+        "จากวันนั้นถึงวันนี้...ความผูกพัน IE มทส ไม่เคยจางหาย #IESUTFamily2025 #ย้อนวัยIEมทส #คืนสู่เหย้าIEสุรนารี #รวมพลชาวเลือดสีน้ำตาล",
+      categories: ContentCategoryType.ACTIVITY,
+      Booking: Option.HAVE,
+      Userid: adminId,
+      bookingFormKey: `${EventType.WORKSHOP}|2025-06-01T09:00:00.000Z` as BookingFormKey,
+    },
+    {
+      TitleName: "ENGi Research to Marget",
+      Description:
+        "โครงการ เส้นทางสู่นวัตวณิชย์ วิศวกรรม มทส. หรือ ENGi R2M (Research to Market) ครั้งที่ 1",
+      categories: ContentCategoryType.ACTIVITY,
+      Booking: Option.HAVE,
+      Userid: adminId,
+      bookingFormKey: `${EventType.REUNION}|2025-03-15T09:00:00.000Z` as BookingFormKey,
+    },
+    {
+      TitleName: "SUT GLOBAL ENTREPRENEURSHIP CAMP 2026",
+      Description:
+        "Be brave to try. Be proud to grow. Be part of GEC2026 !Got the spirit to try, learn, and make new international friends? This camp is for YOU!",
+      categories: ContentCategoryType.NEWS,
+      Booking: Option.NOT,
+      Userid: adminId,
+      bookingFormKey: null,
+    },
+  ];
 
   for (const c of contentData) {
     const BookingFormID = c.bookingFormKey
@@ -571,19 +567,17 @@ async function main() {
   console.log("✅ Seeded BookingForm + Content + PictureContent");
 
   // =========================================================
-  // ✅ 5) Donation flow
-  //    - ใช้ enum ทั้งหมด: OPEN / CONFIRMED / DONATION / SUCCESS
-  //    - ไม่ hardcode paymentMethod id
+  // 5) Donation flow
   // =========================================================
 
-  // 5.0 Ensure payment method exists (BANK_TRANSFER) - use upsert
+  // 5.0 Create Payment Methods
   console.log("Creating Payment Methods...");
-
+  
   const paymentMethodsList = [
     {
       methodName: PaymentMethodType.PROMPTPAY,
-      accountNumber: "081-234-5678",
-      provider: "PromptPay (Any Bank)",
+      accountNumber: "0957013361",
+      provider: "PromptPay",
       isActive: true,
     },
     {
@@ -593,237 +587,262 @@ async function main() {
       isActive: true,
     },
     {
-      methodName: PaymentMethodType.BANKTRANSFER,
-      accountNumber: "123-456-7890",
-      provider: "SUT Bank",
+      methodName: PaymentMethodType.BANKTRANSFER, 
+      accountNumber: "0943976007",
+      provider: "SUT K-Bank",
       isActive: true,
     }
   ];
 
-  // ตัวแปรสำหรับเก็บ Payment Method ที่จะใช้ทดสอบ Transaction ในข้อ 5.5
   let payMethodForTest: any = null;
 
   for (const pm of paymentMethodsList) {
-    const record = await prisma.paymentMethodRecord.upsert({
-      where: { methodName: pm.methodName },
-      update: {
-        accountNumber: pm.accountNumber,
-        provider: pm.provider,
-        isActive: pm.isActive,
-      },
-      create: {
-        methodName: pm.methodName,
-        accountNumber: pm.accountNumber,
-        provider: pm.provider,
-        isActive: pm.isActive,
-      },
+    const existing = await prisma.paymentMethodRecord.findFirst({
+      where: { methodName: pm.methodName }
     });
 
-    // เราจะใช้ BANK_TRANSFER เป็นตัวหลักในการทดสอบสร้าง Transaction ด้านล่าง
+    let record;
+
+    if (existing) {
+      record = await prisma.paymentMethodRecord.update({
+        where: { id: existing.id },
+        data: {
+          accountNumber: pm.accountNumber,
+          provider: pm.provider,
+          isActive: pm.isActive,
+        },
+      });
+    } else {
+      record = await prisma.paymentMethodRecord.create({
+        data: {
+          methodName: pm.methodName,
+          accountNumber: pm.accountNumber,
+          provider: pm.provider,
+          isActive: pm.isActive,
+        },
+      });
+    }
+    
+    // เก็บตัวแปรไว้ใช้เทส Transaction
     if (pm.methodName === PaymentMethodType.BANKTRANSFER) {
       payMethodForTest = record;
     }
   }
 
-  // กำหนดตัวแปร payMethod ให้เหมือนโค้ดเดิม เพื่อให้ Section 5.5 ไม่ Error
   if (!payMethodForTest) throw new Error("Seed Error: BANK_TRANSFER method missing");
-  const payMethod = payMethodForTest;
+  const payMethod = payMethodForTest; 
 
   console.log("✅ Seeded all payment methods");
 
-  // 5.1 Find souvenir (must exist after seeding souvenirs)
-  const souvenir = await prisma.souvenirItem.findFirst({
-    where: { sku: "BOTTLE-ENGI-2025" },
-  });
-  if (!souvenir) throw new Error("SouvenirItem not found (BOTTLE-ENGI-2025)");
+  // 5.2 Find/create donation projects (Batch Loop)
+  const donationProjectsData = [
+    {
+      title: "กองทุนกลางสมาคมศิษย์เก่าวิศวกรรมศาสตร์",
+      description: "กองทุนหลักเพื่อบริหารจัดการและสนับสนุนกิจกรรมต่างๆ ของคณะ",
+      goalAmount: 1000000, 
+      startDate: new Date("2025-01-01T00:00:00Z"),
+      endDate: new Date("2030-12-31T23:59:59Z"),
+      projectType: DonationProjectType.CENTRAL,
+      ownerName: "สมาคมศิษย์เก่า",
+      contact: "044-223-344",
+      posterUrl: "/uploads/posters/1766588375462-3ac8382dfe3a.png",
+      skuToLink: "BOTTLE-ENGI-2025" 
+    },
+    {
+      title: "โครงการทุนการศึกษา ENGI 2026",
+      description: "ทุนการศึกษาสำหรับนิสิตวิศวกรรมศาสตร์ที่ขาดแคลนทุนทรัพย์",
+      goalAmount: 500000,
+      startDate: new Date("2026-01-01T00:00:00Z"),
+      endDate: new Date("2026-12-31T23:59:59Z"),
+      projectType: DonationProjectType.SCHOLARSHIP,
+      ownerName: "ฝ่ายกิจการนักศึกษา",
+      contact: "044-223-355",
+      posterUrl: "/uploads/posters/1767388329049-43cc8d9dee24.png",
+      skuToLink: "BOOK-NEW-2025"
+    },
+    {
+      title: "CPE Flood Relief 2026",
+      description: "ระดมทุนช่วยเหลือพี่น้องชาว CPE ที่ประสบภัยน้ำท่วมเร่งด่วน",
+      goalAmount: 200000,
+      startDate: new Date("2026-08-01T00:00:00Z"),
+      endDate: new Date("2026-09-30T23:59:59Z"),
+      projectType: DonationProjectType.EMERGENCY,
+      ownerName: "สโมสรนักศึกษา",
+      contact: "089-999-9999",
+      posterUrl: "/donation_poster/flood.jpg",
+      skuToLink: "BAG-NEW-2025" 
+    },
+    {
+      title: "ทุนวิจัย AI เพื่อการเกษตร Smart Farm",
+      description: "สนับสนุนอุปกรณ์ IoT และ Server สำหรับงานวิจัย Smart Farm",
+      goalAmount: 800000,
+      startDate: new Date("2026-03-01T00:00:00Z"),
+      endDate: new Date("2027-02-28T23:59:59Z"),
+      projectType: DonationProjectType.RESEARCH,
+      ownerName: "ศูนย์วิจัย AI Center",
+      contact: "044-223-366",
+      posterUrl: "/donation_poster/research.jpg",
+      skuToLink: null 
+    }
+  ];
 
-  // 5.2 Find/create donation project (title not unique -> findFirst)
-  const existingDonationProject = await prisma.donationProject.findFirst({
-    where: { title: "โครงการทุนการศึกษา ENGI" },
-  });
+  for (const p of donationProjectsData) {
+    let souvenirId = null;
+    if (p.skuToLink) {
+      const s = await prisma.souvenirItem.findUnique({ where: { sku: p.skuToLink } });
+      if (s) souvenirId = s.id;
+    }
 
-  const donationProject = existingDonationProject
-    ? await prisma.donationProject.update({
-      where: { id: existingDonationProject.id },
-      data: {
-        title: "กองทุนกลางสมาคมศิษย์เก่าวิศวกรรมศาสตร์ ",
-        description: "ทุนการศึกษาสำหรับนิสิตวิศวกรรมศาสตร์",
-        goalAmount: 10000,
-        currentAmount: 0,
-        startDate: new Date("2025-12-01T00:00:00Z"),
-        endDate: new Date("2026-01-31T23:59:59Z"),
-        ownerName: "คณะวิศวกรรมศาสตร์",
-        contact: "044223344",
-        projectType: DonationProjectType.CENTRAL,
-        status: ProjectStatus.OPEN,
-        souvenirItemId: souvenir.id,
-      },
-    })
-    : await prisma.donationProject.create({
-      data: {
-        title: "โครงการทุนการศึกษา ENGI",
-        description: "ทุนการศึกษาสำหรับนิสิตวิศวกรรมศาสตร์",
-        goalAmount: 10000,
-        currentAmount: 0,
-        startDate: new Date("2025-12-01T00:00:00Z"),
-        endDate: new Date("2026-01-31T23:59:59Z"),
-        ownerName: "คณะวิศวกรรมศาสตร์",
-        contact: "044223344",
-        projectType: DonationProjectType.SCHOLARSHIP,
-        status: ProjectStatus.OPEN,
-        posterUrl: null,
-        souvenirItemId: souvenir.id,
-      },
+    const existing = await prisma.donationProject.findFirst({
+      where: { title: p.title }
     });
-  const bagSouvenir = await prisma.souvenirItem.findFirst({
-    where: { sku: "BAG-NEW-2025" },
-  });
 
-  const floodProjectTitle = "CPE Flood Relief 2026";
-  const existingFloodProject = await prisma.donationProject.findFirst({
-    where: { title: floodProjectTitle },
-  });
-
-  if (existingFloodProject) {
-    // กรณีเจอ: อัปเดตข้อมูลให้เป็นปัจจุบัน
-    console.log(`🔄 Updating existing project: ${floodProjectTitle}`);
-    await prisma.donationProject.update({
-      where: { id: existingFloodProject.id },
-      data: {
-        description: "ระดมทุนช่วยเหลือเร่งด่วนสำหรับพี่น้องชาววิศวะที่ประสบภัยน้ำท่วม",
-        goalAmount: 500000,
-        // ไม่แก้ currentAmount เพราะอาจมียอดบริจาคจริงแล้ว
-        startDate: new Date("2026-06-01T00:00:00Z"),
-        endDate: new Date("2026-08-31T23:59:59Z"),
-        ownerName: "สมาคมศิษย์เก่าสัมพันธ์",
-        contact: "089-999-8888",
-        projectType: DonationProjectType.EMERGENCY, // ✅ ประเภทฉุกเฉิน
-        status: ProjectStatus.OPEN,
-        souvenirItemId: bagSouvenir?.id, // ผูกกับกระเป๋าผ้า
-      },
-    });
-  } else {
-    // กรณีไม่เจอ: สร้างใหม่
-    console.log(`➕ Creating new project: ${floodProjectTitle}`);
-    await prisma.donationProject.create({
-      data: {
-        title: floodProjectTitle,
-        description: "ระดมทุนช่วยเหลือเร่งด่วนสำหรับพี่น้องชาววิศวะที่ประสบภัยน้ำท่วม",
-        goalAmount: 500000,
-        currentAmount: 0,
-        startDate: new Date("2026-06-01T00:00:00Z"),
-        endDate: new Date("2026-08-31T23:59:59Z"),
-        ownerName: "สมาคมศิษย์เก่าสัมพันธ์",
-        contact: "089-999-8888",
-        projectType: DonationProjectType.EMERGENCY, // ✅ ประเภทฉุกเฉิน
-        status: ProjectStatus.OPEN,
-        posterUrl: null,
-        souvenirItemId: bagSouvenir?.id, // ผูกกับกระเป๋าผ้า
-      },
-    });
+    if (existing) {
+      console.log(`   ↻ Updating: ${p.title}`);
+      await prisma.donationProject.update({
+        where: { id: existing.id },
+        data: {
+          description: p.description,
+          goalAmount: p.goalAmount,
+          startDate: p.startDate,
+          endDate: p.endDate,
+          projectType: p.projectType,
+          ownerName: p.ownerName,
+          contact: p.contact,
+          posterUrl: p.posterUrl,
+          souvenirItemId: souvenirId,
+          status: ProjectStatus.OPEN
+        }
+      });
+    } else {
+      console.log(`   + Creating: ${p.title}`);
+      await prisma.donationProject.create({
+        data: {
+          title: p.title,
+          description: p.description,
+          goalAmount: p.goalAmount,
+          currentAmount: 0,
+          startDate: p.startDate,
+          endDate: p.endDate,
+          projectType: p.projectType,
+          ownerName: p.ownerName,
+          contact: p.contact,
+          posterUrl: p.posterUrl,
+          souvenirItemId: souvenirId,
+          status: ProjectStatus.OPEN
+        }
+      });
+    }
   }
-  // 5.3 test user
+
+  // ---------------------------------------------------------
+  // 5.3 Prepare Test User & Project for Transaction
+  // ---------------------------------------------------------
+  
   const testUser = await prisma.user.findFirst({
     where: { email: "b6631345@g.sut.ac.th" },
   });
-  if (!testUser) throw new Error("Test user not found (b6631345@g.sut.ac.th)");
+  if (!testUser) throw new Error("Test user not found");
 
-  // ป้องกัน seed ซ้ำแล้วเพิ่มยอดซ้ำ: เราจะสร้าง flow แค่ถ้ายังไม่มี transaction ที่ผูก project+user+amount นี้
-  const existedTx = await prisma.donationTransaction.findFirst({
-    where: {
-      projectId: donationProject.id,
-      userId: testUser.id,
-      amount: 500,
-      status: TransactionStatus.SUCCESS,
-    },
+  const targetProject = await prisma.donationProject.findFirst({
+    where: { projectType: DonationProjectType.CENTRAL } 
   });
-
-  if (!existedTx) {
-    // 5.4 create donationTransaction
-    const donationTransaction = await prisma.donationTransaction.create({
-      data: {
-        projectId: donationProject.id,
+  
+  if (!targetProject) {
+    console.log("⚠️ Skipping transaction seed: Central Project not found.");
+  } else {
+    // 5.4 Check duplicate transaction
+    const existedTx = await prisma.donationTransaction.findFirst({
+      where: {
+        projectId: targetProject.id,
+        userId: testUser.id,
         amount: 500,
         status: TransactionStatus.SUCCESS,
-        isPublic: true,
-        userId: testUser.id,
-        fullName: testUser.fullName,
-        email: testUser.email,
-        phone: testUser.phone || "",
-        address: testUser.address || "",
-        subdistrict: testUser.subdistrict || "",
-        district: testUser.district || "",
-        province: testUser.province || "",
-        postalCode: testUser.postalCode || "",
       },
     });
 
-    // 5.5 create paymentRecord and link to donationTransaction
-    await prisma.paymentRecord.create({
-      data: {
-        amount: 500,
-        paymentStatus: PaymentStatusType.CONFIRMED,
-        paymentSlipUrl: "/uploads/slip-test.jpg",
-        paymentMethodId: payMethod.id,
-        donationTransactionId: donationTransaction.id,
-      },
-    });
-
-    // 5.6 increment project currentAmount
-    await prisma.donationProject.update({
-      where: { id: donationProject.id },
-      data: { currentAmount: { increment: 500 } },
-    });
-
-    // 5.7 create Donation (subsystem reference)
-    const donation = await prisma.donation.create({
-      data: {
-        userId: testUser.id,
-        amount: 500,
-        purpose: "seed test",
-        status: "completed",
-        souvenirItemId: souvenir.id,
-      },
-    });
-
-    // 5.8 create Entitlement (add redeemToken, check by stable key)
-    const existedEnt = await prisma.entitlement.findFirst({
-      where: {
-        userId: testUser.id,
-        itemId: souvenir.id,
-        donationId: donation.id,
-        source: EntitlementSource.DONATION,
-      },
-    });
-    if (!existedEnt) {
-      const { randomUUID } = await import('crypto');
-      await prisma.entitlement.create({
+    if (!existedTx) {
+      // 5.5 Create Transaction
+      const donationTransaction = await prisma.donationTransaction.create({
         data: {
+          projectId: targetProject.id,
+          amount: 500,
+          status: TransactionStatus.SUCCESS,
+          isPublic: true,
           userId: testUser.id,
-          itemId: souvenir.id,
-          source: EntitlementSource.DONATION,
-          donationId: donation.id,
-          qtyGranted: 1,
-          qtyUsed: 0,
-          redeemToken: randomUUID(),
+          fullName: testUser.fullName,
+          email: testUser.email,
+          phone: testUser.phone || "",
+          address: testUser.address || "",
+          subdistrict: testUser.subdistrict || "",
+          district: testUser.district || "",
+          province: testUser.province || "",
+          postalCode: testUser.postalCode || "",
         },
       });
-    }
 
-    console.log("✅ Seeded donation project + tx + payment + donation + entitlement (ครบ flow)");
-  } else {
-    console.log("ℹ️ Donation flow already exists, skipping to avoid duplicate increments");
+      // 5.6 Create Payment Record
+      await prisma.paymentRecord.create({
+        data: {
+          amount: 500,
+          paymentStatus: PaymentStatusType.CONFIRMED,
+          paymentSlipUrl: "/uploads/slip-test.jpg",
+          paymentMethodId: payMethod.id,
+          donationTransactionId: donationTransaction.id,
+        },
+      });
+
+      // 5.7 Increment Project Amount
+      await prisma.donationProject.update({
+        where: { id: targetProject.id }, 
+        data: { currentAmount: { increment: 500 } },
+      });
+
+      // 5.8 create Donation (Legacy Subsystem)
+      const donation = await prisma.donation.create({
+        data: {
+          userId: testUser.id,
+          amount: 500,
+          purpose: "seed test",
+          status: "completed",
+          souvenirItemId: targetProject.souvenirItemId, 
+        },
+      });
+
+      // 5.9 create Entitlement
+      if (targetProject.souvenirItemId) {
+        const existedEnt = await prisma.entitlement.findFirst({
+          where: {
+            userId: testUser.id,
+            itemId: targetProject.souvenirItemId,
+            donationId: donation.id,
+            source: EntitlementSource.DONATION,
+          },
+        });
+        
+        if (!existedEnt) {
+          await prisma.entitlement.create({
+            data: {
+              userId: testUser.id,
+              itemId: targetProject.souvenirItemId,
+              source: EntitlementSource.DONATION,
+              donationId: donation.id,
+              qtyGranted: 1,
+              qtyUsed: 0,
+              redeemToken: randomUUID(),
+            },
+          });
+        }
+      }
+
+      console.log("✅ Seeded transaction for Central Fund");
+    }
   }
 
   console.log("\n🎉 All seed data inserted successfully.");
   console.log("\n📋 Login credentials (password: sut12345):");
   console.log("   • admin@sut-eng.ac.th");
   console.log("   • b6631345@g.sut.ac.th");
-  console.log("   • b6610364@g.sut.ac.th");
-  console.log("   • alumni.2018@sut-eng.ac.th");
-  console.log("   • alumni.2020@sut-eng.ac.th");
-  console.log("   • alumni.2015@sut-eng.ac.th");
-  console.log("   • student.2ndyear@g.sut.ac.th");
 }
 
 main()

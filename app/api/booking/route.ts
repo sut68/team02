@@ -136,53 +136,55 @@ export async function POST(request: NextRequest) {
     // ✅ คำนวณยอดจาก bookingForm (server-side)
     const amount = computeAmountFromBookingForm(content.bookingForm, batchNumber);
 
+    // เตรียม Object สำหรับสร้าง Payment (แยกออกมาเพื่อให้โค้ดอ่านง่าย)
+    const paymentCreateData: any = {
+      amount: amount,
+      transactionCode: null,
+      paymentSlipUrl: null,
+      paymentStatus: "PENDING",
+    };
+
+    // เช็คว่ามีการส่ง paymentMethodId มาหรือไม่ (ถ้ามีให้ใส่เข้าไป)
+    if (bookingField?.paymentMethodId) {
+      paymentCreateData.paymentMethodId = Number(bookingField.paymentMethodId);
+    }
+
     const booking = await prisma.$transaction(async (tx) => {
-      // 1) BookingField
-      const bookingFieldRecord = await tx.bookingField.create({
-        data: {
-          BatchNumber: batchNumber,
-          BookingSeats: seats,
-          Name: name,
-          TotalPrice: amount, // ✅ server คำนวณให้
-          Souvenir: bookingField?.souvenir ?? null,
-          Note: bookingField?.note ?? null,
-        },
-      });
-
-      // 2) PaymentRecord (สร้างไปเลย)
-      const payment = await tx.paymentRecord.create({
-        data: {
-        
-
-          // schema เป็น Float แต่เราคิดเป็น number ได้เลย
-          amount: amount,
-          transactionCode: null,
-          paymentSlipUrl: null,
-
-          // แนะนำให้เริ่ม PENDING
-          paymentStatus: "PENDING", 
-
-          // ถ้ามี paymentMethod ในระบบ อาจ set เป็น "UNSPECIFIED" หรือปล่อย null
-          paymentMethodId: bookingField?.paymentMethodId ?? null,
-        },
-      });
-
-      // 3) Booking (ผูก PaymentID)
+      
+      // ✅ แก้ไข: ใช้ Nested Write สร้างทุกอย่างในคำสั่งเดียว
       const newBooking = await tx.booking.create({
         data: {
-          Userid: Number(userId),
-          ContentID: Number(contentId),
-          BookingFieldID: bookingFieldRecord.id,
-          PaymentID: payment.id,
+          // 1. เชื่อม Relation หลัก (User, Content)
+          user: { connect: { id: Number(userId) } },
+          content: { connect: { id: Number(contentId) } },
 
-          // ถ้าจะ sync สถานะฝั่ง booking ด้วย
-          // transactionStatus: amount === 0 ? "CONFIRMED" : "PENDING",
+          // 2. สร้าง BookingField ซ้อนเข้าไป
+          bookingField: {
+            create: {
+              BatchNumber: batchNumber,
+              BookingSeats: seats,
+              Name: name,
+              TotalPrice: amount,
+              Souvenir: bookingField?.souvenir ?? null,
+              Note: bookingField?.note ?? null,
+            }
+          },
+
+          // 3. สร้าง Payment ซ้อนเข้าไป (เหมือนตัวอย่าง Donation)
+          // หมายเหตุ: เช็คชื่อ relation ใน schema.prisma ว่าชื่อ 'payment' หรือ 'paymentRecord'
+          // จาก schema ก่อนหน้านี้คุณใช้ชื่อ 'payment'
+          payment: {
+            create: paymentCreateData
+          },
+
+          // กำหนดสถานะ Booking
+          transactionStatus: "PENDING",
         },
         include: {
           user: true,
           content: true,
           bookingField: true,
-          paymentRecord: true,
+          payment: true, // หรือ paymentRecord ตามชื่อ relation ใน schema
         },
       });
 
@@ -190,7 +192,12 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json(
-      { message: "สร้างการจอง + สร้างรายการชำระเงินสำเร็จ", booking },
+      { 
+        message: "สร้างการจอง + สร้างรายการชำระเงินสำเร็จ", 
+        booking,
+        // ส่ง paymentId กลับไปเผื่อ frontend ต้องใช้
+        paymentId: booking.payment?.id 
+      },
       { status: 201 }
     );
   } catch (error) {

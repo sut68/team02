@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { PrismaClient } from '@prisma/client';
 import PaymentClient from './PaymentClient'; 
+import { create } from 'domain';
 
 const prisma = new PrismaClient();
 
@@ -44,7 +45,6 @@ export default async function PaymentPage({ searchParams }: Props) {
     bookings: {
       include: {
         content: { select: { TitleName: true } },
-        bookingForm: { select: { Type: true } } // หรือ field ชื่อกิจกรรมอื่นที่คุณใช้
       }
     },
     // ดึงข้อมูลวิธีการชำระเงินด้วย
@@ -73,9 +73,10 @@ export default async function PaymentPage({ searchParams }: Props) {
       transaction={{
         paymentId: paymentData.id,
         amount: Number(paymentData.amount), // แปลง Decimal เป็น Number (ถ้าใช้ Prisma Decimal)
-        projectTitle: paymentData.budgetDonation?.project?.title || paymentData.transaction?.project?.title || 'โครงการบริจาคทั่วไป',
+        projectTitle: paymentData.budgetDonation?.project?.title || paymentData.transaction?.project?.title || paymentData.bookings?.content?.TitleName || 'โครงการบริจาคทั่วไป',
         refNo: `PM-${paymentData.id}`,
-        status: paymentData.paymentStatus
+        status: paymentData.paymentStatus,
+        createdAt: paymentData.createdAt,
       }}
       paymentMethods={paymentMethods} 
     />
