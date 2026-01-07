@@ -251,7 +251,7 @@ function DonationForm() {
     </div>
   );
 }
-
+// --- Page Component ---
 export default function CombinedDonationFormPage() {
   return (
     <Suspense fallback={
