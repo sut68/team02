@@ -3,15 +3,11 @@ import { prisma } from '@/app/lib/prisma';
 
 // GET - ดึงข้อมูลโครงการพร้อมรายละเอียดการบริจาค
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest, 
+  { params }: { params: Promise<{ id: string }> } 
 ) {
-// export async function GET(
-//   request: NextRequest,
-//   { params }: { params: Promise<{ id: string }> } 
-// ) {
   try {
-    const { id } = await params;
+    const { id } = await params; 
     const projectId = parseInt(id);
     const { searchParams } = new URL(request.url);
     const includeTransactions = searchParams.get('includeTransactions') === 'true';
