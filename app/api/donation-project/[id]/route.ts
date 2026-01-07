@@ -3,9 +3,13 @@ import { prisma } from '@/app/lib/prisma';
 
 // GET - ดึงข้อมูลโครงการพร้อมรายละเอียดการบริจาค
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> } 
+  request: Request,
+  { params }: { params: { id: string } }
 ) {
+// export async function GET(
+//   request: NextRequest,
+//   { params }: { params: Promise<{ id: string }> } 
+// ) {
   try {
     const { id } = await params;
     const projectId = parseInt(id);
