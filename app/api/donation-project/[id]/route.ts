@@ -3,7 +3,7 @@ import { prisma } from '@/app/lib/prisma';
 
 // GET - ดึงข้อมูลโครงการพร้อมรายละเอียดการบริจาค
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> } 
 ) {
   try {
@@ -84,23 +84,6 @@ export async function GET(
 
 // PUT - อัพเดทโครงการระดมทุน
 export async function PUT(
-  //   request: NextRequest,
-  //   { params }: { params: { id: string } } 
-  // ) {
-  //   try {
-  //     const idString = params.id;
-  //     const projectId = parseInt(idString);
-
-  //     const body = await request.json();
-  //     const { status, ...updateData } = body;
-
-  //     if (isNaN(projectId)) {
-  //       return NextResponse.json(
-  //         { error: 'Project ID ไม่ถูกต้อง' },
-  //         { status: 400 }
-  //       );
-  //     }  request: NextRequest,
-
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
