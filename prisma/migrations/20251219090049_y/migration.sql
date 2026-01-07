@@ -21,7 +21,6 @@ ALTER TABLE "DonationProject" ADD COLUMN     "isCentralFund" BOOLEAN NOT NULL DE
 
 -- AlterTable
 ALTER TABLE "DonationTransaction" ADD COLUMN     "donorPhone" TEXT,
-ADD COLUMN     "message" TEXT,
 ADD COLUMN     "paymentId" INTEGER;
 
 -- AlterTable

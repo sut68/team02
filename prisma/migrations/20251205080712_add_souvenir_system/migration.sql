@@ -34,17 +34,6 @@ CREATE TABLE "EventRegistration" (
     CONSTRAINT "EventRegistration_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "Donation" (
-    "id" SERIAL NOT NULL,
-    "userId" INTEGER NOT NULL,
-    "amount" DOUBLE PRECISION NOT NULL,
-    "donatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "purpose" TEXT,
-    "status" TEXT NOT NULL DEFAULT 'completed',
-
-    CONSTRAINT "Donation_pkey" PRIMARY KEY ("id")
-);
 
 -- CreateTable
 CREATE TABLE "SouvenirItem" (
@@ -144,9 +133,6 @@ ALTER TABLE "EventRegistration" ADD CONSTRAINT "EventRegistration_eventId_fkey" 
 ALTER TABLE "EventRegistration" ADD CONSTRAINT "EventRegistration_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Donation" ADD CONSTRAINT "Donation_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "StockMovement" ADD CONSTRAINT "StockMovement_itemId_fkey" FOREIGN KEY ("itemId") REFERENCES "SouvenirItem"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -162,7 +148,7 @@ ALTER TABLE "Entitlement" ADD CONSTRAINT "Entitlement_eventId_fkey" FOREIGN KEY 
 ALTER TABLE "Entitlement" ADD CONSTRAINT "Entitlement_eventRegistrationId_fkey" FOREIGN KEY ("eventRegistrationId") REFERENCES "EventRegistration"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Entitlement" ADD CONSTRAINT "Entitlement_donationId_fkey" FOREIGN KEY ("donationId") REFERENCES "Donation"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Entitlement" ADD CONSTRAINT "Entitlement_donationId_fkey" FOREIGN KEY ("donationId") REFERENCES "DonationProject"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Redemption" ADD CONSTRAINT "Redemption_entitlementId_fkey" FOREIGN KEY ("entitlementId") REFERENCES "Entitlement"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -174,7 +160,7 @@ ALTER TABLE "Redemption" ADD CONSTRAINT "Redemption_itemId_fkey" FOREIGN KEY ("i
 ALTER TABLE "Redemption" ADD CONSTRAINT "Redemption_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Shipment" ADD CONSTRAINT "Shipment_donationId_fkey" FOREIGN KEY ("donationId") REFERENCES "Donation"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Shipment" ADD CONSTRAINT "Shipment_donationId_fkey" FOREIGN KEY ("donationId") REFERENCES "DonationProject"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Shipment" ADD CONSTRAINT "Shipment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
