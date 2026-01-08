@@ -3,11 +3,11 @@ import { prisma } from '@/app/lib/prisma';
 
 // GET - ดึงข้อมูลโครงการพร้อมรายละเอียดการบริจาค
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  request: NextRequest, 
+  { params }: { params: Promise<{ id: string }> } 
 ) {
   try {
-    const { id } = await params;
+    const { id } = await params; 
     const projectId = parseInt(id);
     const { searchParams } = new URL(request.url);
     const includeTransactions = searchParams.get('includeTransactions') === 'true';
@@ -23,9 +23,16 @@ export async function GET(
             },
             select: {
               id: true,
+              fullName: true,
+              email: true,
+              phone: true,
+              postalCode: true,
+              address: true,
+              subdistrict: true,
+              district: true,
+              province: true,
               amount: true,
-              //message: true,
-              donorName: true,
+              message: true,
               createdAt: true,
               user: {
                 select: {
@@ -77,23 +84,6 @@ export async function GET(
 
 // PUT - อัพเดทโครงการระดมทุน
 export async function PUT(
-  //   request: NextRequest,
-  //   { params }: { params: { id: string } } 
-  // ) {
-  //   try {
-  //     const idString = params.id;
-  //     const projectId = parseInt(idString);
-
-  //     const body = await request.json();
-  //     const { status, ...updateData } = body;
-
-  //     if (isNaN(projectId)) {
-  //       return NextResponse.json(
-  //         { error: 'Project ID ไม่ถูกต้อง' },
-  //         { status: 400 }
-  //       );
-  //     }  request: NextRequest,
-
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {

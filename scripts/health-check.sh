@@ -65,10 +65,10 @@ check_api() {
     
     if [ -f "/.dockerenv" ] 2>/dev/null; then
         # Inside container
-        HEALTH_URL="http://api:8000/health"
+        HEALTH_URL="http://api:3000/health"
     else
         # Outside container
-        HEALTH_URL="http://localhost:8000/health"
+        HEALTH_URL="http://localhost:3000/health"
     fi
     
     RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" 2>/dev/null || echo "000")
