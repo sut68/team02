@@ -266,7 +266,7 @@ export default function SouvenirDonationPage() {
       {/* Section 1: รายการของที่ระลึกแต่ละโครงการบริจาค */}
       <section className="py-8">
         <div className="max-w-7xl mx-auto px-4 mb-8">
-          <h1 className="text-3xl font-medium text-gray-700 mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
             จัดการของที่ระลึกสำหรับโครงการบริจาค
           </h1>
         </div>
@@ -360,7 +360,7 @@ export default function SouvenirDonationPage() {
         {/* Section 2: โครงการบริจาค */}
         {/* Section 2: โครงการบริจาค (Carousel Style) */}
         <section className="mb-12">
-          <h2 className="text-3xl font-medium text-gray-700 mb-8">โครงการบริจาค</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">โครงการบริจาค</h2>
           <div className="relative">
             {/* Arrow Left */}
             <button
@@ -428,7 +428,7 @@ export default function SouvenirDonationPage() {
 
         {/* Section 3: การ์ดสถิติการบริจาค */}
         <section className="mb-12">
-          <h2 className="text-3xl font-medium text-gray-700 mb-8">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
             การบริจาค
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
@@ -514,10 +514,6 @@ export default function SouvenirDonationPage() {
 
         {/* Section 4: รายการผู้บริจาค */}
         <section>
-          <h2 className="text-3xl font-medium text-gray-700 mb-8">
-            รายการผู้บริจาค
-          </h2>
-          
           {donations.length > 0 ? (
             <div className="bg-white rounded-xl shadow-md overflow-hidden">
               <div className="overflow-x-auto">
