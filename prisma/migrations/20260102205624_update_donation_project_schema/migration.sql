@@ -28,6 +28,8 @@
   - Made the column `postalCode` on table `DonationTransaction` required. This step will fail if there are existing NULL values in that column.
 
 */
+TRUNCATE TABLE "BudgetDonation" CASCADE;
+TRUNCATE TABLE "DonationTransaction" CASCADE;
 -- AlterEnum
 BEGIN;
 CREATE TYPE "DonationProjectType_new" AS ENUM ('CENTRAL', 'SCHOLARSHIP', 'ACTIVITY', 'RESEARCH', 'BUILDING', 'EMERGENCY');
