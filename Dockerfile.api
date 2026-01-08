@@ -54,6 +54,8 @@ COPY --from=builder /app/prisma ./prisma
 # ก๊อปปี้ Prisma Client
 COPY --from=prisma-gen /app/node_modules/.prisma ./node_modules/.prisma
 
+RUN npm install -g prisma@6.19.0
+
 EXPOSE 3000
 
 # Healthcheck API
