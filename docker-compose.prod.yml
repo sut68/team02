@@ -68,6 +68,10 @@ services:
       context: .
       dockerfile: Dockerfile.api
     container_name: api
+    command: >
+      sh -c "npx prisma migrate resolve --applied 20260102205624_update_donation_project_schema && 
+             npx prisma migrate deploy && 
+             npm run start"
     expose:
       - "3000"  # ✅ เปิดพอร์ต 3000 แค่ภายใน (ไม่ให้ชนกับ web ข้างนอก)
     environment:
