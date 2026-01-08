@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT
+// PUT - อัปเดตข้อมูลและคำนวณสถานะใหม่ (Type-safe version)
 export async function PUT(request: NextRequest) {
   try {
     const user = getUserFromToken(request);
@@ -120,31 +120,81 @@ export async function PUT(request: NextRequest) {
 
     if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
 
-    const dataToUpdate: any = {};
+    const roundId = Number(id);
 
+    // 1. ดึงข้อมูลเก่ามาก่อน
+    const existingRound = await prisma.budgetRound.findUnique({
+      where: { id: roundId },
+    });
+
+    if (!existingRound) {
+      return NextResponse.json({ error: 'Budget round not found' }, { status: 404 });
+    }
+
+    // 2. กำหนด Type ของ dataToUpdate ให้ชัดเจน เพื่อป้องกันการส่งค่าผิดประเภท
+    const dataToUpdate: {
+      roundName?: string;
+      fiscalYear?: string;
+      totalBudget?: number;
+      startDate?: Date;
+      endDate?: Date;
+      isPublished?: boolean;
+      status?: 'PREPARING' | 'OPEN' | 'CLOSED';
+    } = {};
+
+    // อัปเดตข้อมูลทั่วไป
     if (updateData.roundName) dataToUpdate.roundName = updateData.roundName;
     if (updateData.fiscalYear) dataToUpdate.fiscalYear = updateData.fiscalYear.toString();
-
-    if (updateData.totalBudget !== undefined) {
+    
+    if (updateData.totalBudget !== undefined && updateData.totalBudget !== null) {
         dataToUpdate.totalBudget = parseFloat(updateData.totalBudget.toString());
     }
 
-    if (updateData.startDate) dataToUpdate.startDate = new Date(updateData.startDate);
-    if (updateData.endDate) dataToUpdate.endDate = new Date(updateData.endDate);
+    // 3. เตรียมข้อมูลสำหรับคำนวณ Status (ใช้ค่าใหม่ถ้ามี ถ้าไม่มีใช้ค่าเดิม)
+    // ใช้ existingRound.startDate (Date | null) ถ้าไม่มีการส่งค่าใหม่มา
+    const newStartDate = updateData.startDate ? new Date(updateData.startDate) : existingRound.startDate;
+    const newEndDate = updateData.endDate ? new Date(updateData.endDate) : existingRound.endDate;
+    const newIsPublished = (typeof isPublished === 'boolean') ? isPublished : existingRound.isPublished;
 
-    if (typeof isPublished === 'boolean') {
-      dataToUpdate.isPublished = isPublished;
+    // ใส่ข้อมูลวันที่และ isPublished ลงใน dataToUpdate
+    if (updateData.startDate) dataToUpdate.startDate = newStartDate || undefined;
+    if (updateData.endDate) dataToUpdate.endDate = newEndDate || undefined;
+    if (typeof isPublished === 'boolean') dataToUpdate.isPublished = newIsPublished;
+
+    // 4. คำนวณ Status ตาม Logic
+    let newStatus: 'PREPARING' | 'OPEN' | 'CLOSED' = 'PREPARING';
+    const now = new Date();
+
+    if (!newIsPublished) {
+      // ถ้ายังไม่ Publish -> PREPARING เสมอ
+      newStatus = 'PREPARING';
+    } else {
+      // ถ้า Publish แล้ว ต้องเช็คว่ามีวันที่ครบหรือไม่
+      if (newStartDate && newEndDate) {
+        if (now < newStartDate) {
+          newStatus = 'PREPARING';
+        } else if (now > newEndDate) {
+          newStatus = 'CLOSED';
+        } else {
+          newStatus = 'OPEN';
+        }
+      } else {
+        // กรณี Publish แต่ไม่มีวันที่ (Data inconsistency) ให้ fallback เป็น PREPARING
+        newStatus = 'PREPARING';
+      }
     }
-
+    dataToUpdate.status = newStatus;
     const budgetRound = await prisma.budgetRound.update({
-      where: { id: Number(id) },
+      where: { id: roundId },
       data: dataToUpdate,
     });
 
     return NextResponse.json({ message: 'Update success', budgetRound }, { status: 200 });
   } catch (error) {
     console.error('Update BudgetRound Error:', error);
-    return NextResponse.json({ error: 'Update failed' }, { status: 500 });
+    // จัดการ Error type ให้ปลอดภัย (Safe error handling)
+    const errorMessage = error instanceof Error ? error.message : 'Update failed';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
