@@ -104,7 +104,7 @@ jobs:
             
             # 8. รอและสั่ง Migration
             echo "Waiting for database..."
-            sleep 15
+            sleep 60
             docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
 
       - name: Run health check
