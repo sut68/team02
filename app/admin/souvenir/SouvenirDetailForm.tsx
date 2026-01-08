@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Edit2, Save, X, Upload, Trash2 } from 'lucide-react';
+// เพิ่ม ImageIcon เข้ามาใน imports
+import { Edit2, Save, X, Upload, Trash2, ImageIcon } from 'lucide-react';
 import Image from 'next/image';
 
 interface SouvenirFormData {
@@ -50,7 +51,7 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
       sku: '',
       name: '',
       description: '',
-      category: 'ACTIVITY',
+      category: 'กิจกรรม',
       unit: 'ชิ้น',
       initialStock: 0,
       active: true,
@@ -68,6 +69,7 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
       fetchItemData();
     }
     fetchLinkOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemId, isCreating]);
 
   const fetchLinkOptions = async () => {
@@ -368,29 +370,31 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
           
           {/* คอลัมน์ซ้าย: รูปภาพ */}
           <div className="md:col-span-4">
-            {/* รูปภาพ */}
-            <div className="w-full">
-              {uploading ? (
-                <div className="w-full aspect-square bg-gray-100 rounded-2xl flex items-center justify-center">
+            {/* รูปภาพ - แก้ไขส่วนนี้ */}
+            <div className="w-full mb-4">
+              <div className="relative w-full aspect-square bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden shadow-sm">
+                {uploading ? (
                   <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600">กำลังอัพโหลด...</p>
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-500 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">กำลังอัพโหลด...</p>
                   </div>
-                </div>
-              ) : (
-                <div className="w-full aspect-square bg-white rounded-2xl shadow-lg overflow-hidden">
-                  <div className="relative w-full h-full">
-                    <Image
-                      src={formData.imageUrl || "/souvenir/placeholder.png"}
-                      alt={formData.name || "ของที่ระลึก"}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 40vw"
-                      className="object-contain p-10 md:p-12"
-                      priority
-                    />
+                ) : formData.imageUrl ? (
+                  <Image
+                    src={formData.imageUrl}
+                    alt={formData.name || "ของที่ระลึก"}
+                    fill
+                    // แก้ไข padding ตรงนี้จาก p-10 md:p-12 เหลือ p-4 เพื่อให้รูปใหญ่ขึ้น
+                    className="object-contain p-4" 
+                    priority
+                  />
+                ) : (
+                  // แสดงไอคอนถ้าไม่มีรูป แทนการใช้ placeholder.png
+                  <div className="text-center text-gray-400">
+                    <ImageIcon className="w-16 h-16 mx-auto mb-2 opacity-50" />
+                    <span className="text-sm">ไม่มีรูปภาพ</span>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               <input
                 ref={fileInputRef}
@@ -404,7 +408,7 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
                 type="button"
                 disabled={!isEditing || uploading}
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full mt-4 border-2 border-orange-500 text-orange-500 text-sm font-medium hover:bg-orange-50 px-4 py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full mt-4 border-2 border-orange-500 text-orange-500 text-sm font-medium hover:bg-orange-50 px-4 py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 <Upload className="w-5 h-5 inline mr-2" />
                 {uploading ? "กำลังอัพโหลด..." : formData.imageUrl ? "เปลี่ยนรูปภาพ" : "เพิ่มรูปภาพ"}
@@ -425,7 +429,7 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
             )}
           </div>
 
-          {/* คอลัมน์ขวา: ฟอร์ม */}
+          {/* คอลัมน์ขวา: ฟอร์ม (ส่วนนี้เหมือนเดิม) */}
           <div className="md:col-span-6">
             <h2 className="text-2xl font-medium text-gray-800 mb-6">
               ของที่ระลึก
