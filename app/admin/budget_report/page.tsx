@@ -14,8 +14,9 @@ import {
   Plus,
   Loader2,
   Calendar,
-  Filter,
-  History
+  History,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 
 import { SummarySubmissionStatus } from "@/app/types/budget_report";
@@ -54,6 +55,9 @@ export default function BudgetReportPage() {
   const [filterYear, setFilterYear] = useState<string>("all");
   const [filterMonth, setFilterMonth] = useState<string>("all");
 
+  // Collapse State
+  const [isSummaryVisible, setIsSummaryVisible] = useState(true);
+
   // Modal State
   const [isSelectModalOpen, setIsSelectModalOpen] = useState(false);
   const [modalSearchTerm, setModalSearchTerm] = useState(""); 
@@ -86,20 +90,13 @@ export default function BudgetReportPage() {
     try {
       setIsLoading(true);
       
-      // สร้าง Query String
       const params = new URLSearchParams();
       if (isTrashMode) params.append("trash", "true");
-      
-      // ถ้าเลือกรายปี ให้ส่ง filter ปีงบประมาณไปด้วย (Optional: ถ้า API รองรับ)
       if (filterYear !== "all") params.append("year", filterYear);
-
-      // ถ้าเลือกรอบ ให้ส่ง roundId
       if (selectedRoundId !== "all") params.append("roundId", selectedRoundId);
 
-      // Fetch Reports
       const resReports = await fetch(`/api/budget-report?${params.toString()}`);
       
-      // Fetch Finance Overview (ตามรอบที่เลือก หรือตามปีที่เลือก)
       const financeParams = new URLSearchParams();
       if (selectedRoundId !== "all") {
          financeParams.append("roundId", selectedRoundId);
@@ -108,7 +105,6 @@ export default function BudgetReportPage() {
       }
       const resFinance = await fetch(`/api/budget-report/finance-overview?${financeParams.toString()}`);
       
-      // Fetch Projects (Approved) สำหรับ Modal
       const resProjects = await fetch("/api/budget-report/approved-projects");
 
       if (resReports.ok && resFinance.ok) {
@@ -133,74 +129,53 @@ export default function BudgetReportPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedRoundId, filterYear]); // Depend on selectedRoundId and filterYear
+  }, [selectedRoundId, filterYear]);
 
-  // เรียก fetchData เมื่อเงื่อนไขเปลี่ยน
   useEffect(() => {
     fetchData(activeFilter === "ถังขยะ");
   }, [fetchData, activeFilter]);
 
-  // ================= Logic การคำนวณปีและรอบ (ส่วนสำคัญที่แก้ไข) =================
-  
-  // 1. สร้างรายการปีงบประมาณ (Available Years) โดยรวมจาก Reports และ Budget Rounds
+  // ================= Logic การคำนวณปีและรอบ =================
   const availableYears = useMemo(() => {
     const years = new Set<number>();
-
-    // ก. ดึงจาก Reports (คำนวณปีงบประมาณจากวันที่ created_at)
     reports.forEach(r => {
         if (r.createdAt) {
             const d = new Date(r.createdAt);
-            // ถ้าเดือน >= 9 (ตุลาคม, พฤศจิกายน, ธันวาคม) ถือเป็นปีงบประมาณหน้า
-            // สูตร: (ปี ค.ศ. + (เดือน>=9 ? 1 : 0)) + 543
             const fiscalY = (d.getMonth() >= 9 ? d.getFullYear() + 1 : d.getFullYear()) + 543;
             years.add(fiscalY);
         }
     });
-
-    // ข. ดึงจาก Budget Rounds (ที่มีอยู่แล้วในระบบ) -> แก้ปัญหาปี 69 ไม่ขึ้น
     budgetRounds.forEach(b => {
         if (b.fiscalYear) {
             years.add(Number(b.fiscalYear));
         }
     });
-
     return Array.from(years).sort((a, b) => b - a);
   }, [reports, budgetRounds]);
 
-  // 2. Logic กรองรอบงบประมาณที่จะแสดงใน Dropdown
   const isYearSelected = filterYear !== "all";
   const roundsForDisplay = useMemo(() => {
     if (!isYearSelected) return [];
-    // กรองเอาเฉพาะรอบที่ fiscalYear ตรงกับที่เลือก
     return budgetRounds.filter(round => String(round.fiscalYear) === String(filterYear));
   }, [budgetRounds, filterYear, isYearSelected]);
 
-  // ================= Filtering Logic (Client Side) =================
+  // ================= Filtering Logic =================
   const filteredReports = reports.filter((report) => {
-    // 1. กรองตาม Status
     if (activeFilter === "ถังขยะ") {
-       // ไม่ต้องกรอง status เพิ่มเติม
+       // Pass
     } else if (activeFilter !== "ทั้งหมด") {
       const currentFilterKey = filters.find((f) => f.label === activeFilter)?.key;
       if (report.status !== currentFilterKey) return false;
     }
 
-    // 2. Search
     const searchLower = reportSearchTerm.toLowerCase();
     const matchSearch = 
       report.reportTitle?.toLowerCase().includes(searchLower) ||
-      report.proposal?.projectName?.toLowerCase().includes(searchLower); // แก้จาก project เป็น proposal ตาม schema
+      report.proposal?.projectName?.toLowerCase().includes(searchLower);
 
-    // 3. Date & Year Filter
     const dateToCheck = new Date(report.createdAt);
-    
-    // คำนวณปีงบประมาณของ Report นี้
     const reportFiscalYear = (dateToCheck.getMonth() >= 9 ? dateToCheck.getFullYear() + 1 : dateToCheck.getFullYear()) + 543;
-    
-    // เทียบกับ filterYear (ซึ่งตอนนี้เป็นพ.ศ. แล้ว)
     const matchYear = filterYear === "all" || String(reportFiscalYear) === filterYear;
-    
-    // (Optional) Month Filter
     const matchMonth = filterMonth === "all" || (dateToCheck.getMonth() + 1).toString() === filterMonth;
 
     return matchSearch && matchYear && matchMonth;
@@ -215,7 +190,6 @@ export default function BudgetReportPage() {
     return reports.filter((r) => r.status === filterKey).length;
   };
 
-  // Handlers
   const handleSelectProject = (projectId: number) => {
     router.push(`/admin/budget_report/create?projectId=${projectId}`);
   };
@@ -230,7 +204,6 @@ export default function BudgetReportPage() {
     } else {
         setActiveFilter("ถังขยะ");
     }
-    // useEffect จะเรียก fetchData เองเมื่อ activeFilter เปลี่ยน
   };
 
   const formatDate = (date: Date | string | null) => {
@@ -246,33 +219,54 @@ export default function BudgetReportPage() {
     <main className="min-h-screen bg-white py-4 px-4 font-sans">
       <div className="max-w-7xl mx-auto px-4 py-8">
 
-        {/* Header */}
+        {/* Header พร้อมปุ่มพับเก็บ */}
         <div className="flex items-center justify-between mb-8">
-            <h1 className="text-4xl font-semibold text-gray-800">
-                {activeFilter === "ถังขยะ" ? "รายการที่ถูกลบ (ถังขยะ)" : "รายงานงบประมาณ"}
-            </h1>
-        </div>
-        
-        {/* Financial Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-green-50 p-4 rounded-xl border border-green-100">
-                <h3 className="text-green-800 text-sm">งบประมาณที่ได้รับ (Income)</h3>
-                <p className="text-2xl font-bold text-green-600">฿{financialStats.income.toLocaleString()}</p>
-                <p className="text-xs text-green-500 mt-1">
-                    {filterYear === "all" ? "รวมทุกปีงบประมาณ" : `ปีงบประมาณ ${filterYear}`}
-                </p>
-            </div>
-            <div className="bg-red-50 p-4 rounded-xl border border-red-100">
-                <h3 className="text-red-800 text-sm">ใช้จ่ายจริง (Expense)</h3>
-                <p className="text-2xl font-bold text-red-600">฿{financialStats.expense.toLocaleString()}</p>
-            </div>
-            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                <h3 className="text-blue-800 text-sm">คงเหลือ (Balance)</h3>
-                <p className="text-2xl font-bold text-blue-600">฿{financialStats.balance.toLocaleString()}</p>
+            <div className="flex items-center gap-4">
+                <h1 className="text-4xl font-semibold text-gray-800">
+                    {activeFilter === "ถังขยะ" ? "รายการที่ถูกลบ (ถังขยะ)" : "รายงานงบประมาณ"}
+                </h1>
+                
+                {activeFilter !== "ถังขยะ" && (
+                  <button 
+                    onClick={() => setIsSummaryVisible(!isSummaryVisible)}
+                    className="flex items-center gap-1 text-sm text-gray-500 hover:text-orange-600 bg-gray-50 hover:bg-orange-50 px-3 py-1.5 rounded-full transition-all border border-transparent hover:border-orange-200"
+                  >
+                    {isSummaryVisible ? (
+                      <>
+                        <ChevronUp className="w-4 h-4" /> ซ่อนภาพรวม
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-4 h-4" /> แสดงภาพรวม
+                      </>
+                    )}
+                  </button>
+                )}
             </div>
         </div>
 
-        {/* Status Filter Cards */}
+        {/* Collapsible Section (เฉพาะ Financial Cards) */}
+        <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isSummaryVisible ? 'max-h-[500px] opacity-100 mb-8' : 'max-h-0 opacity-0 mb-0'}`}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-amber-50 p-6 rounded-2xl border border-amber-200">
+                    <h3 className="text-amber-900 text-sm font-semibold opacity-90">งบประมาณที่ได้รับ (Income)</h3>
+                    <p className="text-3xl font-semibold text-amber-800 mt-2">฿ {financialStats.income.toLocaleString()}</p>
+                    <p className="text-xs text-amber-900 mt-2 font-medium opacity-70">
+                        {filterYear === "all" ? "รวมทุกปีงบประมาณ" : `ปีงบประมาณ ${filterYear}`}
+                    </p>
+                </div>
+                <div className="bg-red-50 p-6 rounded-2xl border border-red-200">
+                    <h3 className="text-red-900 text-sm font-semibold opacity-90">ใช้จ่ายจริง (Expense)</h3>
+                    <p className="text-3xl font-semibold text-red-900 mt-2">฿ {financialStats.expense.toLocaleString()}</p>
+                </div>
+                <div className="bg-orange-50 p-6 rounded-2xl border border-orange-200">
+                    <h3 className="text-orange-900 text-sm font-semibold opacity-90">คงเหลือ (Balance)</h3>
+                    <p className="text-3xl font-semibold text-orange-700 mt-2">฿ {financialStats.balance.toLocaleString()}</p>
+                </div>
+            </div>
+        </div>
+
+        {/* Status Filter Cards (อยู่นอกส่วนพับเก็บ แสดงตลอดเวลา) */}
         {activeFilter !== "ถังขยะ" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
             {filters.map((filter) => {
@@ -284,21 +278,21 @@ export default function BudgetReportPage() {
                     key={filter.label}
                     onClick={() => setActiveFilter(filter.label)}
                     className={`
-                      cursor-pointer border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all 
-                      ${isActive ? "border-orange-300 shadow-md" : "border-orange-100"}
+                    cursor-pointer border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all 
+                    ${isActive ? "border-orange-300 shadow-md" : "border-orange-100"}
                     `}
                 >
                     <div className="mb-4 flex justify-center">
-                      <Icon 
+                    <Icon 
                         className={`w-14 h-14 ${isActive ? "text-orange-500" : "text-orange-300"}`} 
                         strokeWidth={1.3} 
-                      />
+                    />
                     </div>
                     <h3 className={`text-base ${isActive ? "text-gray-900" : "text-gray-500"}`}>
-                      {filter.label}
+                    {filter.label}
                     </h3>
                     <p className={`text-2xl font-medium mt-2 ${isActive ? "text-orange-600" : "text-gray-400"}`}>
-                      {getStatusCount(filter.key)}
+                    {getStatusCount(filter.key)}
                     </p>
                 </div>
                 );
@@ -330,7 +324,7 @@ export default function BudgetReportPage() {
                         value={filterYear}
                         onChange={(e) => {
                             setFilterYear(e.target.value);
-                            setSelectedRoundId("all"); // รีเซ็ตรอบเมื่อเปลี่ยนปี
+                            setSelectedRoundId("all");
                         }}
                         className="pl-9 pr-8 h-10 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 appearance-none cursor-pointer hover:bg-gray-50 min-w-[120px]"
                     >
@@ -353,16 +347,11 @@ export default function BudgetReportPage() {
                     `}
                   >
                     <option value="all">ทุกรอบการพิจารณา</option>
-                    
-                    {/* ✅ Logic: เรียงลำดับ และ ดึงเลขรอบมาแสดงผลใหม่ */}
                     {roundsForDisplay
                       .sort((a, b) => a.roundName.localeCompare(b.roundName))
                       .map((round) => {
-                        // 1. ใช้ Regex หาตัวเลขหลังคำว่า "ที่" (เช่น "รอบที่ 1..." จะได้เลข 1)
                         const match = round.roundName.match(/ที่\s*(\d+)/);
                         const roundNumber = match ? match[1] : null;
-
-                        // 2. ถ้าเจอเลข ให้แสดง "รอบการพิจารณาที่ X" ถ้าไม่เจอให้แสดงชื่อเดิม
                         const displayName = roundNumber 
                             ? `รอบการพิจารณาที่ ${roundNumber}` 
                             : round.roundName;
@@ -414,7 +403,7 @@ export default function BudgetReportPage() {
           )}
         </div>
 
-        {/* Report List */}
+        {/* Report List Content... */}
         {isLoading ? (
           <div className="text-center py-16 text-gray-500 flex flex-col items-center">
             <Loader2 className="w-10 h-10 animate-spin text-orange-500 mb-2" />

@@ -107,7 +107,7 @@ export async function GET(req: NextRequest) {
 
     const formattedReports = reports.map(r => ({
         ...r, 
-        reportTitle: `รายงานสรุปผลโครงการ ${r.proposal?.projectName || ''}`,
+        reportTitle: `รายงานสรุปผล ${r.proposal?.projectName || ''}`,
         imageSrc: r.images[0]?.imagePath || null, 
     }));
 

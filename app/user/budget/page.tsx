@@ -77,7 +77,7 @@ export default function BudgetReportPage() {
   const [chartData, setChartData] = useState<ChartDataItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // 1. Fetch Available Years (Logic: มีปีหน้า + Default ปีปัจจุบัน)
+  // 1. Fetch Available Years
   useEffect(() => {
     const fetchYears = async () => {
       try {
@@ -115,11 +115,9 @@ export default function BudgetReportPage() {
             }
         }
 
-        // เรียงลำดับจากมากไปน้อย
         availableYears.sort((a, b) => b.localeCompare(a));
         setYears(availableYears);
 
-        // ตั้งค่า Default Year
         if (!year || !availableYears.includes(year)) {
              if (availableYears.includes(currentThaiYear)) {
                  setYear(currentThaiYear);
@@ -151,13 +149,10 @@ export default function BudgetReportPage() {
         setLoading(true);
         setError(null);
 
-        // 3.1 หา Budget Round ของปีที่เลือก
         const currentRound = budgetRounds.find(r => r.fiscalYear === year);
-        // ✅ ใช้ totalBudget (ตาม Schema)
         const budgetLimit = currentRound?.totalBudget || 0; 
         setTotalBudget(budgetLimit);
 
-        // 3.2 ดึงข้อมูล Reports
         const res = await fetch(`/api/budget-report?year=${year}&status=APPROVED`, { cache: "no-store" });
         
         let fetchedReports: (BudgetReport & { imageSrc?: string })[] = [];
@@ -167,7 +162,6 @@ export default function BudgetReportPage() {
         }
         setReports(fetchedReports);
 
-        // 3.3 คำนวณ Chart Data
         const totalUsed = fetchedReports.reduce((sum, r) => sum + (r.totalActualExpense || 0), 0);
         let remaining = budgetLimit - totalUsed;
         if (remaining < 0) remaining = 0;
@@ -176,16 +170,15 @@ export default function BudgetReportPage() {
             { 
                 name: "งบประมาณที่ใช้ไป (Projects)", 
                 value: totalUsed, 
-                color: "#F97316" // สีส้ม
+                color: "#F97316"
             },
             { 
                 name: "งบประมาณคงเหลือ", 
                 value: remaining, 
-                color: "#CBD5E1" // สีเทา
+                color: "#CBD5E1"
             }
         ];
 
-        // ถ้าไม่มีงบและไม่มีการใช้จ่าย ให้กราฟว่างเปล่า
         if (budgetLimit === 0 && totalUsed === 0) {
             setChartData([]);
         } else {
@@ -211,11 +204,11 @@ export default function BudgetReportPage() {
       <section className="relative h-[400px] w-full overflow-hidden bg-slate-200">
         <div className="absolute inset-0">
              <Image
-                src="/25.jpg"
+                src="/budget/covers/22-01.jpg"
                 alt="Budget cover"
                 fill
                 priority
-                className="object-cover opacity-90"
+                className="object-cover"
                 onError={(e) => {
                     e.currentTarget.srcset = "";
                     e.currentTarget.src = PLACEHOLDER_SRC;
@@ -257,8 +250,7 @@ export default function BudgetReportPage() {
         </div>
 
         {/* ================= Chart ================= */}
-        <div className="grid md:grid-cols-2 gap-10 mb-16 items-center">
-          {/* ✅ Container สูง 400px (ขนาดใหญ่) */}
+        <div className="grid md:grid-cols-2 gap-10 mb-24 items-center">
           <div className="h-[400px] relative">
             {loading ? (
               <div className="h-full w-full rounded-xl bg-slate-50 animate-pulse flex items-center justify-center text-slate-400">
@@ -270,7 +262,6 @@ export default function BudgetReportPage() {
                  <span>{error}</span>
               </div>
             ) : chartData.length === 0 ? (
-              // ✅ Placeholder Chart: วงกลมเทาจางๆ เมื่อไม่มีข้อมูล
               <div className="relative h-full w-full flex items-center justify-center">
                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -292,7 +283,6 @@ export default function BudgetReportPage() {
                  </div>
               </div>
             ) : (
-              // ✅ Real Chart: วงกลมจริง ขนาด 180
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -328,7 +318,6 @@ export default function BudgetReportPage() {
                 <p className="mb-4 text-sm text-slate-700">
                     แสดงสัดส่วนงบประมาณที่เบิกจ่ายจริงตามรายงานผลโครงการประจำปี {year}
                 </p>
-                {/* Legend */}
                 {chartData.length > 0 ? (
                     <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                         {chartData.map((item, i) => {
@@ -351,16 +340,11 @@ export default function BudgetReportPage() {
 
         {/* ================= Reports List ================= */}
         <div>
-            <h3 className="text-3xl font-bold text-slate-700 mb-6 border-l-4 border-orange-500 pl-3">
-                รายงานสรุปผลโครงการ
-            </h3>
-            
             {loading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                     {[1,2,3,4].map(i => <div key={i} className="h-64 bg-slate-100 rounded-2xl animate-pulse"/>)}
                 </div>
             ) : reports.length === 0 ? (
-                // ✅ Empty State: Folder Icon
                 <div className="flex flex-col items-center justify-center py-20 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
                     <div className="bg-white p-4 rounded-full shadow-sm mb-4">
                         <FolderOpen className="w-12 h-12 text-slate-300" />
@@ -369,12 +353,13 @@ export default function BudgetReportPage() {
                     <p className="text-slate-400 text-sm">ยังไม่มีโครงการที่ได้รับการอนุมัติและส่งรายงานสรุปในปีงบประมาณ {year}</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {reports.map((report) => {
                     const title = report.reportTitle || report.proposal?.projectName || "ไม่ระบุชื่อโครงการ";
+                    const responsibilityUnit = report.proposal?.responsibilityUnit || "ไม่ระบุหน่วยงาน";
                     const hasImage = report.imageSrc || (report.images && report.images.length > 0);
                     const imageSrc = hasImage 
-                        ? (report.imageSrc || report.images![0].imagePath) 
+                        ? (report.imageSrc || report.images![0].imagePath)
                         : PLACEHOLDER_SRC;
 
                     return (
@@ -382,12 +367,12 @@ export default function BudgetReportPage() {
                         key={report.id}
                         className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-lg transition-all duration-300 group flex flex-col"
                         >
-                        <div className="relative h-40 bg-slate-200 overflow-hidden shrink-0">
+                        <div className="relative h-48 bg-slate-200 overflow-hidden shrink-0">
                             <Image
                                 src={imageSrc}
                                 alt={title}
                                 fill
-                                className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                className="object-cover"
                                 onError={(e) => {
                                     e.currentTarget.srcset = "";
                                     e.currentTarget.src = PLACEHOLDER_SRC;
@@ -395,24 +380,19 @@ export default function BudgetReportPage() {
                             />
                         </div>
 
-                        <div className="p-4 flex flex-col grow">
-                            <h4 className="font-bold text-base text-slate-800 mb-2 line-clamp-2 group-hover:text-orange-500 transition-colors">
+                        <div className="p-5 flex flex-col grow">
+                            <h4 className="font-bold text-xl text-slate-800">
                                 {title}
                             </h4>
-                            
-                            <div className="text-xs text-slate-500 mb-4 space-y-1">
-                                <p className="truncate">หน่วยงาน: {report.proposal?.responsibilityUnit || "-"}</p>
-                                <p>งบที่ใช้จริง: <span className="font-semibold text-slate-700">฿{(report.totalActualExpense || 0).toLocaleString()}</span></p>
-                            </div>
-
-                            <div className="mt-auto pt-2">
-                                {/* ✅ ปุ่มไปหน้า Detail (ใช้ Link) */}
+                            <p className="text-sm text-slate-500 flex-1">
+                                {responsibilityUnit}
+                            </p>
+                            <div className="mt-2 pt-4 flex justify-end border-t border-slate-100">
                                 <Link 
                                     href={`/user/budget/${report.id}`} 
-                                    className="block w-full"
                                 >
-                                    <PrimaryButton className="rounded-full text-xs px-4 py-2 w-full shadow-sm">
-                                        ดูรายละเอียด
+                                    <PrimaryButton className="rounded-full text-sm px-6 py-2 shadow-sm">
+                                        ดูรายละเอียดเพิ่มเติม
                                     </PrimaryButton>
                                 </Link>
                             </div>
