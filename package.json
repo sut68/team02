@@ -78,7 +78,6 @@
     "jsdom": "^27.3.0",
     "node-fetch": "^2.7.0",
     "node-mocks-http": "^1.17.2",
-    "prisma": "^6.19.0",
     "selenium-webdriver": "^4.39.0",
     "tailwindcss": "^4.1.17",
     "ts-jest": "^29.4.6",
