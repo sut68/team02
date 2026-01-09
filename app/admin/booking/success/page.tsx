@@ -15,11 +15,15 @@ export default function AdminScanPage() {
   /* =========================
      Fetch booking by QR token
   ========================== */
-function fetchBookingDetails(text: string) {
+const fetchBookingDetails = useCallback((text: string) => {
   let token = text;
+
   if (text.includes("?")) {
     const url = new URL(text);
-    token = url.searchParams.get("token") || url.searchParams.get("qrToken") || "";
+    token =
+      url.searchParams.get("token") ||
+      url.searchParams.get("qrToken") ||
+      "";
   }
 
   if (!token) {
@@ -27,19 +31,19 @@ function fetchBookingDetails(text: string) {
     return;
   }
 
-  setLoading(true); // เพิ่มการโหลด
+  setLoading(true);
   fetch(`/api/booking?token=${token}`)
     .then((res) => res.json())
     .then((data) => {
       if (data.success) {
-        setScanResult(data.booking); // <--- ต้องใส่บรรทัดนี้เพื่อให้ข้อมูลขึ้นจอ
+        setScanResult(data.booking);
       } else {
         setError(data.error || "ไม่พบข้อมูล");
       }
     })
     .catch(() => setError("เกิดข้อผิดพลาดในการเชื่อมต่อ"))
     .finally(() => setLoading(false));
-}
+}, []);
 
   /* =========================
      Confirm actions
@@ -121,7 +125,7 @@ function fetchBookingDetails(text: string) {
         scannerRef.current = null;
       }
     };
-  }, [fetchBookingDetails, scanResult]); // เพิ่ม scanResult ใน dependency เพื่อให้เริ่มใหม่เมื่อกด "แสกนคนถัดไป"
+  }, [fetchBookingDetails, ]); 
 
   /* =========================
      Derived states

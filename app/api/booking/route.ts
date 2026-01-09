@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
       const payment = await tx.paymentRecord.create({
         data: {
           amount: price,
-          paymentMethodId: bookingField?.paymentMethodId ?? null,
+          paymentStatus: "CONFIRMED",
         },
       });
 
@@ -131,11 +131,12 @@ export async function POST(request: NextRequest) {
           Userid: Number(userId),
           ContentID: Number(contentId),
           BookingFieldID: bookingFieldRecord.id,
-          PaymentID: payment.id,
+          payment: { connect: { id: payment.id }},
           qrToken,
           bookingNumber,
           transactionStatus: "SUCCESS", // ✅ สำคัญมาก
         },
+        
       });
 
       await tx.attendee.create({
@@ -162,17 +163,18 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      return newBooking;
+      return { booking: newBooking, paymentId: payment.id };
     });
 
     return NextResponse.json({
       success: true,
       booking: {
-        id: booking.id,
-        bookingNumber: booking.bookingNumber,
-        qrToken: booking.qrToken,
+        id: booking.booking.id,
+        bookingNumber: booking.booking.bookingNumber,
+        qrToken: booking.booking.qrToken,
         eventName: content.TitleName,
       },
+      paymentId: booking.paymentId,
     });
   } catch (err) {
     console.error(err);
@@ -187,27 +189,28 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token = searchParams.get("token");
+const id = searchParams.get("id");
 
-  if (!token) {
-    return NextResponse.json(
-      { success: false, error: "ไม่มี token ส่งมา" },
-      { status: 400 }
-    );
-  }
+if (!token && !id) {
+  return NextResponse.json(
+    { success: false, error: "ไม่มี token หรือ id ส่งมา" },
+    { status: 400 }
+  );
+}
 
-  const booking = await prisma.booking.findUnique({
-    where: { qrToken: token },
-    include: {
-      bookingField: true,
-      content: {
-        include: {
-          bookingForm: true,
-        },
-      },
-      entitlement: { include: { item: true } },
-      attendees: { include: { checkins: true } },
-    },
-  });
+
+  const booking = await prisma.booking.findFirst({
+  where: token
+    ? { qrToken: token }
+    : { id: Number(id) },
+  include: {
+    bookingField: true,
+    content: { include: { bookingForm: true } },
+    entitlement: { include: { item: true } },
+    attendees: { include: { checkins: true } },
+  },
+});
+
 
   if (!booking) {
     console.log("❌ Search failed for qrToken:", token);

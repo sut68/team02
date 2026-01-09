@@ -239,17 +239,15 @@ function UserBookingPageInner() {
       if (!res.ok) throw new Error(await res.text());
 
       const json = await res.json();
-      const bookingId = json.booking?.id || json.id; // ✅ ป้องกัน bookingId undefined
-      const paymentId = json.paymentId;
+const bookingId = json.booking?.id;
+const paymentId = json.paymentId; // ต้องตรงกับที่ API ส่งกลับมา
 
-      if (pricing.totalPrice === 0) {
-        alert("จองสำเร็จเรียบร้อยแล้ว ✅");
-        router.push(`/user/booking/success?bookingId=${bookingId}`);
-      } else if (paymentId) {
-        router.push(`/user/payment?paymentId=${paymentId}`);
-      } else {
-        router.push(`/user/payment?bookingId=${bookingId}`);
-      }
+if (pricing.totalPrice === 0) {
+    router.push(`/user/booking/success?bookingId=${bookingId}`);
+} else {
+    // ส่งไปหน้าชำระเงินพร้อม ID ที่จำเป็น
+    router.push(`/user/payment?paymentId=${paymentId}&bookingId=${bookingId}`);
+}
     } catch (err: any) {
       alert("จองไม่สำเร็จ: " + err.message);
     }
