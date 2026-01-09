@@ -27,7 +27,7 @@ async function main() {
   const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
   // -----------------------------
-  // 1) USER (คงเดิม)
+  // 1) USER
   // -----------------------------
   const userData = [
     {
@@ -131,7 +131,7 @@ async function main() {
   if (!adminId) throw new Error("admin user not found after seeding");
 
   // -----------------------------
-  // 2) EDUCATION RECORD (คงเดิม)
+  // 2) EDUCATION RECORD
   // -----------------------------
   const eduData = [
     {
@@ -210,7 +210,7 @@ async function main() {
   console.log("✅ Seeded education records");
 
   // -----------------------------
-  // 3) VERIFICATION (คงเดิม)
+  // 3) VERIFICATION
   // -----------------------------
   const verificationData = [
     {
@@ -281,7 +281,7 @@ async function main() {
   console.log("✅ Seeded verifications");
 
   // -----------------------------
-  // 4) SOUVENIR ITEMS (จัดหมวดใหม่ตามที่ขอ)
+  // 4) SOUVENIR ITEMS (จัดหมวดใหม่)
   // -----------------------------
   const souvenirData = [
     // === หมวด ACTIVITY (กิจกรรม): หมวก, เข็มกลัด, กระเป๋าผ้า ===
@@ -309,7 +309,7 @@ async function main() {
       sku: "BAG-NEW-2025",
       name: "กระเป๋าผ้า มทส.",
       description: "กระเป๋าผ้าแคนวาส สกรีนลาย มทส.",
-      category: "ACTIVITY", // ✅ ย้ายมาอยู่ ACTIVITY ตามที่ขอ
+      category: "ACTIVITY", // ย้ายมาอยู่ ACTIVITY
       imageUrl: "/souvenir/Bag_new.png",
       unit: "ใบ",
       initialStock: 80,
@@ -341,7 +341,7 @@ async function main() {
       sku: "UMBRELLA-NEW-2025",
       name: "ร่ม มทส.",
       description: "ร่มพับ 3 ตอน พร้อมโลโก้ มทส.",
-      category: "DONATION", // ✅ ร่ม อยู่ DONATION
+      category: "DONATION", // ร่ม อยู่ DONATION
       imageUrl: "/souvenir/Umbrella_new.png",
       unit: "คัน",
       initialStock: 120,
@@ -367,7 +367,7 @@ async function main() {
   console.log("✅ Seeded souvenir items (Re-categorized: Bag->Activity)");
 
   // -----------------------------
-  // 4.1) BookingForm (คงเดิม)
+  // 4.1) BookingForm
   // -----------------------------
   const bookingFormsData = [
     {
@@ -440,7 +440,7 @@ async function main() {
   }
 
   // -----------------------------
-  // 4.2) Content + PictureContent (คงเดิม + ลิงก์ SKU)
+  // 4.2) Content + PictureContent (ลิงก์ SKU)
   // -----------------------------
   const contentData: Array<{
     TitleName: string;
@@ -589,7 +589,7 @@ async function main() {
   // 5) Donation flow
   // =========================================================
 
-  // 5.0 Create Payment Methods (คงเดิม)
+  // 5.0 Create Payment Methods
   const paymentMethodsList = [
     {
       methodName: PaymentMethodType.PROMPTPAY,
@@ -663,7 +663,7 @@ async function main() {
       ownerName: "สมาคมศิษย์เก่า",
       contact: "044-223-344",
       posterUrl: "/uploads/posters/1766588375462-3ac8382dfe3a.png",
-      skuToLink: "BOTTLE-ENGI-2025" 
+      skuToLink: null // CENTRAL type should not link souvenir
     },
     {
       title: "โครงการทุนการศึกษา ENGI 2026",
@@ -687,7 +687,7 @@ async function main() {
       ownerName: "สโมสรนักศึกษา",
       contact: "089-999-9999",
       posterUrl: "/donation_poster/flood.jpg",
-      skuToLink: "UMBRELLA-NEW-2025" // ✅ แก้จาก BAG เป็น UMBRELLA (Donation Item)
+      skuToLink: "UMBRELLA-NEW-2025" // ✅ เปลี่ยนจาก BAG เป็น UMBRELLA (Donation Item)
     },
     {
       title: "ทุนวิจัย AI เพื่อการเกษตร Smart Farm",
@@ -753,7 +753,7 @@ async function main() {
   }
 
   // ---------------------------------------------------------
-  // 5.3 Prepare Test User & Project for Transaction (คงเดิม)
+  // 5.3 Prepare Test User & Project for Transaction
   // ---------------------------------------------------------
   
   const testUser = await prisma.user.findFirst({

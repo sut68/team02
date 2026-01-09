@@ -92,7 +92,8 @@ export default function SouvenirDonationPage() {
         // Fetch Projects
         const projectsRes = await fetch('/api/donation-project?status=OPEN');
         const projectsData = projectsRes.ok ? await projectsRes.json() : {};
-        const projectsList: DonationProject[] = projectsData.projects || [];
+        // Filter out CENTRAL type projects
+        const projectsList: DonationProject[] = (projectsData.projects || []).filter((p: any) => p.projectType !== 'CENTRAL');
         setDonationProjects(projectsList);
         if (projectsList.length > 0) setSelectedProject(projectsList[0]);
       } catch (error) {
