@@ -121,7 +121,8 @@ export async function POST(request: NextRequest) {
 
       const payment = await tx.paymentRecord.create({
         data: {
-          amount: price,
+          amount: String(price),
+          paymentStatus: "PENDING",
           paymentMethodId: bookingField?.paymentMethodId ?? null,
         },
       });
@@ -131,11 +132,16 @@ export async function POST(request: NextRequest) {
           Userid: Number(userId),
           ContentID: Number(contentId),
           BookingFieldID: bookingFieldRecord.id,
-          PaymentID: payment.id,
           qrToken,
           bookingNumber,
           transactionStatus: "SUCCESS", // ✅ สำคัญมาก
         },
+      });
+
+      // Link payment to booking
+      await tx.paymentRecord.update({
+        where: { id: payment.id },
+        data: { bookingId: newBooking.id },
       });
 
       await tx.attendee.create({
@@ -197,8 +203,9 @@ export async function GET(request: NextRequest) {
           bookingForm: true // ✅ ต้องดึงอันนี้มาเพื่อเอา TotalSeats
         }
       },
-      entitlement: { include: { item: true } },
+      payment: true,
       attendees: { include: { checkins: true } },
+      entitlement: { include: { item: true } },
     },
   });
 
@@ -209,7 +216,7 @@ export async function GET(request: NextRequest) {
     );
   }
   // ✅ คำนวณสถานะเช็คอินจาก attendee ทุกคน (ถ้ามีหลายคน) หรือคนแรก
-  const isCheckedIn = booking.attendees.some(a => a.checkins.length > 0);
+  const isCheckedIn = booking.attendees.some((a) => a.checkins.length > 0);
 
   return NextResponse.json({
     success: true,
@@ -235,7 +242,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const { qrToken, action } = await request.json();
 
-    const booking = await prisma.booking.findUnique({
+    const booking = await prisma.booking.findFirst({
       where: { qrToken },
       include: {
         attendees: { include: { checkins: true } },

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/app/lib/prisma';
-import { validatePassword, validateEmail, sanitizeInput } from '@/app/lib/validation';
+import { validatePassword, validateEmail, sanitizeInput, validatePhoneNumber } from '@/app/lib/security';
 import { registerLimiter } from '@/app/lib/rate-limit';
+import { validateFileUpload, logSecurityEvent, createSafeErrorResponse } from '@/app/lib/security';
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
@@ -31,6 +32,8 @@ function pickExtension(file: File): string {
 }
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+  
   // ตรวจสอบ rate limit
   const rateLimitResult = await registerLimiter(request);
   if (rateLimitResult) {
@@ -57,49 +60,46 @@ export async function POST(request: NextRequest) {
 
     // Validation - Basic fields
     if (!email || !password || !fullName || !phone || !address || !subdistrict || !district || !province || !postalCode) {
-      return NextResponse.json(
-        { error: 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน' },
-        { status: 400 }
-      );
+      logSecurityEvent('REGISTER_MISSING_FIELDS', 'Missing required registration fields', ip);
+      return createSafeErrorResponse(400, 'กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน');
     }
 
     // Validate education fields
     if (!studentCode || !major) {
-      return NextResponse.json(
-        { error: 'กรุณากรอกข้อมูลการศึกษาให้ครบถ้วน' },
-        { status: 400 }
-      );
+      logSecurityEvent('REGISTER_MISSING_EDUCATION', 'Missing education fields', ip);
+      return createSafeErrorResponse(400, 'กรุณากรอกข้อมูลการศึกษาให้ครบถ้วน');
     }
 
     // Validate gradYear for alumni
     if (userType === 'alumni' && !gradYear) {
-      return NextResponse.json(
-        { error: 'กรุณาระบุปีที่จบการศึกษา' },
-        { status: 400 }
-      );
+      logSecurityEvent('REGISTER_MISSING_GRADYEAR', 'Alumni missing grad year', ip);
+      return createSafeErrorResponse(400, 'กรุณาระบุปีที่จบการศึกษา');
     }
 
     // Validate email format
     if (!validateEmail(email)) {
-      return NextResponse.json(
-        { error: 'รูปแบบอีเมลไม่ถูกต้อง' },
-        { status: 400 }
-      );
+      logSecurityEvent('REGISTER_INVALID_EMAIL', `Invalid email format: ${email}`, ip);
+      return createSafeErrorResponse(400, 'รูปแบบอีเมลไม่ถูกต้อง');
+    }
+
+    // Validate phone number
+    if (!validatePhoneNumber(phone)) {
+      logSecurityEvent('REGISTER_INVALID_PHONE', `Invalid phone format: ${phone}`, ip);
+      return createSafeErrorResponse(400, 'รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง (ต้องเป็น 10 หลัก)');
     }
 
     // Validate password strength
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
-      return NextResponse.json(
-        { error: passwordValidation.error },
-        { status: 400 }
-      );
+      logSecurityEvent('REGISTER_WEAK_PASSWORD', `Weak password attempt for ${email}`, ip);
+      return createSafeErrorResponse(400, passwordValidation.error || 'รหัสผ่านไม่เข้มแข็งพอ');
     }
 
     // Sanitize inputs
     const sanitizedFullName = sanitizeInput(fullName);
     const sanitizedEmail = email.toLowerCase().trim();
     const sanitizedStudentCode = sanitizeInput(studentCode);
+    const sanitizedPhone = phone.replace(/[\s-]/g, '');
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -107,10 +107,8 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: 'อีเมลนี้ถูกใช้งานแล้ว' },
-        { status: 400 }
-      );
+      logSecurityEvent('REGISTER_EMAIL_EXISTS', `Duplicate email registration: ${sanitizedEmail}`, ip);
+      return createSafeErrorResponse(400, 'อีเมลนี้ถูกใช้งานแล้ว');
     }
 
     // Check if student code already exists
@@ -119,10 +117,8 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingStudentCode) {
-      return NextResponse.json(
-        { error: 'รหัสนักศึกษานี้ถูกใช้งานแล้ว' },
-        { status: 400 }
-      );
+      logSecurityEvent('REGISTER_STUDENTCODE_EXISTS', `Duplicate student code: ${sanitizedStudentCode}`, ip);
+      return createSafeErrorResponse(400, 'รหัสนักศึกษานี้ถูกใช้งานแล้ว');
     }
 
     // Hash password
@@ -136,18 +132,21 @@ export async function POST(request: NextRequest) {
     let storedTranscriptPath: string | null = null;
     if (transcriptFile && transcriptFile.size > 0) {
       try {
+        // Validate file upload
+        const fileValidation = validateFileUpload(transcriptFile.name, transcriptFile.size);
+        if (!fileValidation.valid) {
+          logSecurityEvent('REGISTER_INVALID_FILE', `Invalid transcript file: ${fileValidation.error}`, ip);
+          return createSafeErrorResponse(400, fileValidation.error || 'ไฟล์ไม่ถูกต้อง');
+        }
+
         const arrayBuffer = await transcriptFile.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
         const uploadDir = resolveUploadDir();
         await fs.mkdir(uploadDir, { recursive: true });
-        const allowedMime = ['application/pdf', 'image/png', 'image/jpeg'];
-        if (transcriptFile.type && !allowedMime.includes(transcriptFile.type)) {
-          return NextResponse.json({ error: 'ชนิดไฟล์ไม่รองรับ (รองรับ: PDF, PNG, JPG)' }, { status: 400 });
-        }
+        
         const ext = pickExtension(transcriptFile);
         const uniqueName = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ext}`;
         const fullPath = path.join(uploadDir, uniqueName);
-        await fs.writeFile(fullPath, buffer);
         // Ensure public path prefix: if uploadDir is under public, compute relative
         const publicDir = path.join(process.cwd(), 'public');
         if (uploadDir.startsWith(publicDir)) {
@@ -158,10 +157,8 @@ export async function POST(request: NextRequest) {
         }
       } catch (e) {
         console.error('Transcript upload failed:', e);
-        return NextResponse.json(
-          { error: 'ไม่สามารถบันทึกไฟล์เอกสารได้' },
-          { status: 500 }
-        );
+        logSecurityEvent('REGISTER_FILE_SAVE_ERROR', `Failed to save transcript for ${sanitizedEmail}`, ip);
+        return createSafeErrorResponse(500, 'ไม่สามารถบันทึกไฟล์เอกสารได้');
       }
     }
 
@@ -173,7 +170,7 @@ export async function POST(request: NextRequest) {
           email: sanitizedEmail,
           password: hashedPassword,
           fullName: sanitizedFullName,
-          phone: sanitizeInput(phone),
+          phone: sanitizedPhone,
           address: sanitizeInput(address),
           subdistrict: sanitizeInput(subdistrict),
           district: sanitizeInput(district),
@@ -206,6 +203,8 @@ export async function POST(request: NextRequest) {
       return user;
     });
 
+    logSecurityEvent('REGISTER_SUCCESS', `New registration for ${sanitizedEmail}`, ip, result.id.toString());
+
     return NextResponse.json(
       {
         message: 'ลงทะเบียนสำเร็จ กรุณารอการอนุมัติจากแอดมิน',
@@ -219,9 +218,22 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('Register error:', error);
-    return NextResponse.json(
-      { error: 'เกิดข้อผิดพลาดในการลงทะเบียน' },
-      { status: 500 }
+    logSecurityEvent('REGISTER_EXCEPTION', 'Unexpected error during registration', ip);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    if (error instanceof Error && process.env.NODE_ENV === 'development') {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      });
+    }
+
+    return createSafeErrorResponse(
+      500,
+      'เกิดข้อผิดพลาดในการลงทะเบียน',
+      process.env.NODE_ENV === 'development' ? errorMessage : undefined
     );
   }
 }

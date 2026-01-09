@@ -1,6 +1,7 @@
 generator client {
   provider = "prisma-client-js"
 }
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -193,6 +194,13 @@ model User {
   jobPostings      JobPosting[]
   approvalLogs     ApprovalLog[]
   jobEditHistories JobEditHistory[]
+
+  // Scalability Indexes
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model EducationRecord {
@@ -879,6 +887,13 @@ model DonationProject {
   budgetDonations BudgetDonation[]
   souvenirItemId Int?              
   souvenirItem   SouvenirItem?     @relation(fields: [souvenirItemId], references: [id])
+
+  // Scalability Indexes
+  @@index([status])
+  @@index([projectType])
+  @@index([createdAt])
+  @@index([endDate])
+  @@index([currentAmount])
 }
 
 // ธุรกรรมการบริจาค (DonationTransaction)
