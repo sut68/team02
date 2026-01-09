@@ -1,4 +1,3 @@
-// app/dashboard/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react'; 
@@ -14,7 +13,7 @@ import {
 import { Card, CardHeader, CardContent } from '../../components/ui/Card';
 
 import { AdminSubmissionPage } from '../../admin/news/appove/page';
-import { FileText, PlusCircle, List } from 'lucide-react';
+import { FileText, PlusCircle, Camera } from 'lucide-react';
 
 // ----------------------------------------------------------------------
 // Dashboard Menu Card
@@ -61,17 +60,6 @@ const DashboardMenuCard = ({
   );
 };
 
-// ----------------------------------------------------------------------
-// Mock Data (ยังใช้เฉพาะฝั่ง registrations)
-// ----------------------------------------------------------------------
-const mockAllRegistrationData = [
-  { id: 1, name: 'งานเลี้ยงรุ่นวิศวกรรมคอมพิวเตอร์', registrations: 120 },
-  { id: 2, name: 'โครงการฝึกอบรมเชิงปฏิบัติการ AI', registrations: 45 },
-  { id: 3, name: 'แข่งขัน DSA Mascot Contest 2025', registrations: 89 },
-];
-
-type ViewType = 'all_registrations' | 'all_posts' | 'joined_registrations';
-
 // row ที่ใช้ render ในตาราง “โพสต์ทั้งหมด”
 type PostRow = {
   id: number;
@@ -84,18 +72,16 @@ type PostRow = {
 // Dashboard Page
 // ----------------------------------------------------------------------
 export default function DashboardPage() {
-  const [currentView, setCurrentView] = useState<ViewType>('all_registrations');
-
-  //  state สำหรับโพสต์ที่ดึงจาก DB
+  // state สำหรับโพสต์ที่ดึงจาก DB
   const [posts, setPosts] = useState<PostRow[]>([]);
   const [loadingPosts, setLoadingPosts] = useState<boolean>(false);
 
-  //  ดึง Content จาก /api/content แค่ครั้งแรก
+  // ดึง Content จาก /api/content แค่ครั้งแรก
   useEffect(() => {
     const fetchContents = async () => {
       try {
         setLoadingPosts(true);
-        const res = await fetch('/api/content'); // ใช้ API ที่ bro สร้าง
+        const res = await fetch('/api/content'); 
         const data = await res.json();
 
         if (!res.ok) {
@@ -103,7 +89,6 @@ export default function DashboardPage() {
           return;
         }
 
-        // map ข้อมูลจาก Content ให้มาอยู่ในรูป PostRow
         const mapped: PostRow[] = (data.contents || []).map((c: any) => ({
           id: c.id,
           title: c.TitleName || '(ไม่มีชื่อเรื่อง)',
@@ -123,45 +108,15 @@ export default function DashboardPage() {
     fetchContents();
   }, []);
 
-  const renderTableContent = () => {
-    switch (currentView) {
-      case 'all_posts':
-        return {
-          title: 'รายการโพสต์ทั้งหมด',
-          headers: ['ลำดับ', 'ชื่อกิจกรรม / เนื้อหา', 'ผู้สร้าง', 'สถานะ'],
-          data: posts.map((p) => [p.id, p.title, p.author, p.status]),
-        };
-
-      case 'joined_registrations':
-        return {
-          title: 'รายการลงทะเบียนที่ผู้ใช้เข้าร่วม',
-          headers: ['ลำดับ', 'ชื่อกิจกรรม', 'จำนวนผู้ลงทะเบียน'],
-          data: mockAllRegistrationData
-            .filter((r) => r.id === 1)
-            .map((r) => [r.id, r.name, r.registrations]),
-        };
-
-      default:
-        return {
-          title: 'รายการลงทะเบียนทั้งหมด',
-          headers: ['ลำดับ', 'ชื่อกิจกรรม', 'จำนวนผู้ลงทะเบียน'],
-          data: mockAllRegistrationData.map((r) => [r.id, r.name, r.registrations]),
-        };
-    }
-  };
-
-  const { title, headers, data } = renderTableContent();
+  // ✅ ปรับส่วนแสดงผลตารางให้เหลือเฉพาะข้อมูลโพสต์
+  const title = 'รายการโพสต์ทั้งหมด';
+  const headers = ['ลำดับ', 'ชื่อกิจกรรม / เนื้อหา', 'ผู้สร้าง', 'สถานะ'];
+  const data = posts.map((p) => [p.id, p.title, p.author, p.status]);
 
   return (
     <div className="container mx-auto px-4 py-10 space-y-12">
-      {/* --------------------------------------------------------------- */}
-      {/*       ⬆️  Admin Submission Section (ยังคงอยู่ด้านบน)        */}
-      {/* --------------------------------------------------------------- */}
       <AdminSubmissionPage />
 
-      {/* --------------------------------------------------------------- */}
-      {/*       ⬇️  Dashboard Section (หน้าใหม่สไตล์เดียว Submission) */}
-      {/* --------------------------------------------------------------- */}
       <Card className="shadow-sm rounded-xl">
         <CardHeader>
           <h2 className="text-2xl font-medium text-gray-800">
@@ -175,8 +130,7 @@ export default function DashboardPage() {
             <DashboardMenuCard
               icon={FileText}
               title="โพสต์ทั้งหมด"
-              onClick={() => setCurrentView('all_posts')}
-              isActive={currentView === 'all_posts'}
+              isActive={true} // บังคับ Active ไว้เสมอ
             />
 
             <DashboardMenuCard
@@ -186,10 +140,9 @@ export default function DashboardPage() {
             />
 
             <DashboardMenuCard
-              icon={List}
-              title="รายการลงทะเบียนทั้งหมด"
-              onClick={() => setCurrentView('all_registrations')}
-              isActive={currentView === 'all_registrations'}
+              icon={Camera}
+              title="เช็คอินเข้างาน"
+              link="/admin/booking/success"
             />
           </div>
 
@@ -207,23 +160,20 @@ export default function DashboardPage() {
               </TableHeader>
 
               <TableBody>
-                {/* แสดงสถานะกำลังโหลดเฉพาะตอนอยู่หน้าโพสต์ทั้งหมด */}
-                {currentView === 'all_posts' && loadingPosts && (
+                {/* แสดงสถานะกำลังโหลด */}
+                {loadingPosts ? (
                   <TableRow>
-                    <TableCell colSpan={headers.length} className="py-4 text-gray-500">
+                    <TableCell colSpan={headers.length} className="py-4 text-center text-gray-500">
                       กำลังโหลดข้อมูลโพสต์...
                     </TableCell>
                   </TableRow>
-                )}
-
-                {!loadingPosts && data.length === 0 ? (
+                ) : data.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={headers.length} className="py-4 text-gray-500">
+                    <TableCell colSpan={headers.length} className="py-4 text-center text-gray-500">
                       ยังไม่มีข้อมูล
                     </TableCell>
                   </TableRow>
                 ) : (
-                  !loadingPosts &&
                   data.map((row, rowIdx) => (
                     <TableRow key={rowIdx}>
                       {row.map((cell, cellIdx) => (
@@ -237,7 +187,6 @@ export default function DashboardPage() {
               </TableBody>
             </Table>
 
-            {/* ลูกศรล่างให้เหมือนกัน */}
             <div className="flex justify-end px-4 py-1 text-xs text-gray-400">
               &raquo;
             </div>

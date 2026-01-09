@@ -331,9 +331,11 @@ model Entitlement {
   qtyUsed     Int               @default(0) // ใช้สิทธิ์ไปแล้วกี่ชิ้น
   // ✅ เพิ่มอันนี้
   redeemToken String?           @unique
+  bookingId   Int?
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  booking     Booking?     @relation(fields: [bookingId], references: [id])
   user        User         @relation(fields: [userId], references: [id])
   item        SouvenirItem @relation(fields: [itemId], references: [id])
   donation    Donation?    @relation(fields: [donationId], references: [id])
@@ -485,6 +487,8 @@ model Booking {
   BookingFieldID    Int?              @unique
   //PaymentID         Int?              @unique
   transactionStatus TransactionStatus @default(PENDING)
+  qrToken           String?           @unique // สำหรับ QR Code
+  bookingNumber     String?           @unique // รหัสการจอง (BK20250108xxxx)
 
   // createdAt DateTime @default(now())
   // updatedAt DateTime @updatedAt
@@ -497,6 +501,7 @@ model Booking {
 
   // bookingFormId Int?
   attendees     Attendee[]
+  entitlement   Entitlement[]
 
   // Relation to SouvenirItem (กิจกรรมแจกของที่ระลึก)
   souvenirItems SouvenirItem[] @relation("BookingToSouvenirItem")

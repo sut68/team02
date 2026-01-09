@@ -346,7 +346,7 @@ export default function SouvenirDetailPage({
                     />
                      <span className="absolute right-4 top-2 text-gray-500 text-sm">{formData.unit}</span>
                   </div>
-                  <p className="text-xs text-orange-500 mt-1">*การปรับจำนวนสินค้า ต้องทำผ่านเมนู "จัดการสต็อก"</p>
+                  <p className="text-xs text-orange-500 mt-1">*การปรับจำนวนสินค้า ต้องทำผ่านเมนู &quot;จัดการสต็อก&quot</p>
                 </div>
 
                 {/* สถานะ */}

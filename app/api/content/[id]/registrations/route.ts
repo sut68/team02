@@ -43,7 +43,7 @@ export async function GET(
     // 3. ประกอบร่างข้อมูล เพื่อเช็คว่า User แต่ละคนได้รับของ (Entitlement) หรือยัง
     const results = await Promise.all(
       bookings.map(async (booking) => {
-        let entitlements: any[] = [];
+        const entitlements: any[] = [];
 
         // ถ้ากิจกรรมนี้มีของแจก และ Booking มี User
         if (content?.souvenirItemId && booking.Userid) {

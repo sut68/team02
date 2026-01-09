@@ -16,10 +16,8 @@ import {
 
 type ContentCategoryType =
   | 'NEWS'
-  | 'EVENT'
-  | 'ANNOUNCEMENT'
   | 'ACTIVITY'
-  | 'GENERAL';
+
 
 type Option = 'HAVE' | 'NOT';
 
@@ -176,7 +174,7 @@ function EditPostPageInner() {
   }
 
   alert("🎉 เผยแพร่โพสต์สำเร็จ!");
-  router.push("/admin/news");
+  router.push("/admin/news/dashboard");
 };
 
   return (
@@ -217,11 +215,8 @@ function EditPostPageInner() {
                       className="mt-1 w-full border border-gray-300 rounded-lg p-2 text-sm"
                     >
                       <option value="NEWS">NEWS – ข่าวสาร</option>
-                      <option value="EVENT">EVENT – กิจกรรม</option>
-                      <option value="ANNOUNCEMENT">
-                        ANNOUNCEMENT – ประกาศ
-                      </option>
-                      <option value="GENERAL">GENERAL – ทั่วไป</option>
+                      <option value="ACTIVITY">ACTIVITY – กิจกรรม</option>
+
                     </select>
                   </div>
 
