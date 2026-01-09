@@ -228,7 +228,7 @@ export default function UserManagementClient({ initialUsers }: Props) {
         {/* Members Table */}
         <Card>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-100 border-b border-gray-200">
