@@ -5,6 +5,11 @@ import { Html5QrcodeScanner } from "html5-qrcode";
 import { Card, CardHeader, CardContent } from "../../../components/ui/Card";
 import { PrimaryButton } from "../../../components/ui/Button";
 
+function isInAppBrowser() {
+      const ua = navigator.userAgent || "";
+      return /Line|FBAN|FBAV|Instagram/i.test(ua);
+    } 
+
 export default function AdminScanPage() {
   const [scanResult, setScanResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -84,48 +89,49 @@ const fetchBookingDetails = useCallback((text: string) => {
       QR Scanner (ฉบับปรับปรุง)
   ========================== */
   useEffect(() => {
-    // 1. ตรวจสอบว่ามี element "reader" หรือยัง
-    const node = document.getElementById("reader");
-    if (!node || scannerRef.current) return;
+  if (isInAppBrowser()) {
+    alert("❌ ระบบสแกน QR ไม่รองรับ LINE / IG\nกรุณาเปิดผ่าน Chrome หรือ Safari");
+    return;
+  }
 
-    // 2. สร้าง instance ใหม่
-    const scanner = new Html5QrcodeScanner(
-      "reader",
-      {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        rememberLastUsedCamera: true,
-        supportedScanTypes: [0], // camera only
-      },
-      false
-    );
+  const node = document.getElementById("reader");
+  if (!node || scannerRef.current) return;
 
-    // 3. สั่ง Render
-    scanner.render(
-      (text) => {
-        if (text) {
-          // หยุดการทำงานของกล้องก่อนไป fetch ข้อมูล
-          scanner.clear().then(() => {
-            scannerRef.current = null; // ล้างค่า ref
-            fetchBookingDetails(text);
-          }).catch(err => console.error("Scanner clear error", err));
-        }
-      },
-      (error) => {
-        // ไม่ต้องจัดการ error ทุกเฟรมเพื่อป้องกัน log รก
-      }
-    );
+  const scanner = new Html5QrcodeScanner(
+    "reader",
+    {
+      fps: 10,
+      qrbox: { width: 250, height: 250 },
+      rememberLastUsedCamera: true,
+      supportedScanTypes: [0],
+    },
+    false
+  );
 
-    scannerRef.current = scanner;
+  scanner.render(
+    (text) => {
+      if (!text) return;
 
-    // 4. Cleanup function: สำคัญมากเพื่อป้องกันกล้องค้าง
-    return () => {
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch((err) => console.error("Cleanup error", err));
+      // 🔥 ปิดกล้องทันทีหลังแสกน
+      scanner.clear().then(() => {
         scannerRef.current = null;
-      }
-    };
-  }, [fetchBookingDetails, ]); 
+        fetchBookingDetails(text);
+      });
+    },
+    () => {}
+  );
+
+  scannerRef.current = scanner;
+
+  // 🔥 cleanup สำคัญมาก
+  return () => {
+    if (scannerRef.current) {
+      scannerRef.current.clear().catch(() => {});
+      scannerRef.current = null;
+    }
+  };
+}, [fetchBookingDetails]); // ✅ ต้องมี dependency
+
 
   /* =========================
      Derived states
