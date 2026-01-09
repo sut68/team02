@@ -15,7 +15,7 @@ import {
 import { Card, CardHeader, CardContent } from '../../components/ui/Card';
 
 // Dynamically import AdminSubmissionPage client-side to avoid HMR issues with nested lucide-react icons
-const AdminSubmissionPage = dynamic(
+const AdminSubmissionPageComponent = dynamic(
   () => import('./appove/page').then(m => ({ default: m.AdminSubmissionPage })),
   { ssr: false, loading: () => <div className="bg-gray-100 rounded-lg p-8 animate-pulse min-h-[300px]" /> }
 );
@@ -120,7 +120,7 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-10 space-y-12">
-      <AdminSubmissionPage />
+      <AdminSubmissionPageComponent />
 
       <Card className="shadow-sm rounded-xl">
         <CardHeader>
