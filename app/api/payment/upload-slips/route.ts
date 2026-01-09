@@ -38,6 +38,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error("Upload error:", error);
-    return NextResponse.json({ error: "เกิดข้อผิดพลาดในการอัปโหลดไฟล์" }, { status: 500 });
+    return NextResponse.json({ error: "เกิดข้อผิดพลาดในการอัปโหลดสลิป" }, { status: 500 });
   }
 }
