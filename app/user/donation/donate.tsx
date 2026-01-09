@@ -129,7 +129,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
             
             <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
                 <div 
-                    className="bg-gradient-to-r from-orange-400 to-[#F26522] h-full rounded-full transition-all duration-500 ease-out" 
+                    className="bg-linear-to-r from-orange-400 to-[#F26522] h-full rounded-full transition-all duration-500 ease-out" 
                     style={{ width: `${Math.min(project.progress, 100)}%` }}
                 ></div>
             </div>

@@ -480,7 +480,7 @@ function UserBookingPageInner() {
                 sizes="(max-width: 1024px) 100vw, 50vw"
               />
             ) : (
-              <div className="w-full aspect-[16/9] rounded-lg bg-gray-200 flex items-center justify-center text-gray-500 text-sm">
+              <div className="w-full aspect-video rounded-lg bg-gray-200 flex items-center justify-center text-gray-500 text-sm">
                 ไม่มีรูปภาพ
               </div>
             )}

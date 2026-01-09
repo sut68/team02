@@ -310,7 +310,7 @@ export default function PaymentClient({ transaction, paymentMethods }: PaymentCl
                     
                     <button 
                         onClick={handleProceed}
-                        className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
+                        className="w-full bg-linear-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
                     >
                         {currentMethod?.methodName === PaymentMethodType.PROMPTPAY ? (
                             <><Wallet className="w-5 h-5"/> สร้าง QR Code</>
@@ -410,7 +410,7 @@ export default function PaymentClient({ transaction, paymentMethods }: PaymentCl
                                 <button 
                                     onClick={handleConfirmPayment}
                                     disabled={!slipFile || isSubmitting}
-                                    className={`flex-[2] py-3 rounded-xl font-bold text-white shadow-lg flex items-center justify-center gap-2
+                                    className={`flex-2 py-3 rounded-xl font-bold text-white shadow-lg flex items-center justify-center gap-2
                                         ${!slipFile || isSubmitting ? 'bg-gray-300 cursor-not-allowed shadow-none' : 'bg-orange-600 hover:bg-orange-700'}`
                                     }
                                 >

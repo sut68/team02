@@ -365,7 +365,7 @@ export default function SouvenirDonationPage() {
                       <table className="w-full">
                         <thead>
                           <tr className="bg-gray-100 border-b border-gray-200">
-                            <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[40px]">ลำดับ</th>
+                            <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-10">ลำดับ</th>
                             <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[100px]">ชื่อ-สกุล</th>
                             <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[140px]">ที่อยู่</th>
                             <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[90px]">เบอร์โทร</th>
@@ -480,7 +480,7 @@ export default function SouvenirDonationPage() {
                                           <option value="PENDING">รอดำเนินการ</option>
                                           <option value="DELIVERED" disabled={!editState.trackingNo.trim()}>จัดส่งแล้ว</option>
                                         </select>
-                                        <svg className="w-3 h-3 flex-shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="w-3 h-3 shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 10l5 5 5-5" />
                                         </svg>
                                       </div>
