@@ -73,7 +73,7 @@ export default function SouvenirDonationPage() {
   const [loading, setLoading] = useState(true);
   const [currentProjectIndex, setCurrentProjectIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<'all' | 'remaining' | 'registered' | 'claimed'>('all');
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'remaining' | 'registered' | 'claimed'>('registered');
   const [searchTerm, setSearchTerm] = useState('');
   
   // ✅ Edit State Management per Shipment
@@ -195,11 +195,10 @@ export default function SouvenirDonationPage() {
   const filteredDonations = React.useMemo(() => {
     if (!selectedProject) return [];
     return donations.filter(d => {
-      if (selectedStatus === 'all') return true;
       const delivered = d.shipments[0]?.status === 'DELIVERED';
-      if (selectedStatus === 'claimed') return delivered;
-      if (selectedStatus === 'remaining') return !delivered;
-      if (selectedStatus === 'registered') return true;
+      if (selectedStatus === 'remaining') return !delivered;  // Not delivered
+      if (selectedStatus === 'claimed') return delivered;      // Delivered
+      if (selectedStatus === 'registered') return true;        // All donations
       return true;
     });
   }, [donations, selectedProject, selectedStatus]);
@@ -308,7 +307,17 @@ export default function SouvenirDonationPage() {
                 <section>
                   <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">{selectedProject.title}</h2>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Card 1: คงเหลือ */}
+                    {/* Card 1: ทั้งหมด */}
+                    <div onClick={() => setSelectedStatus('registered')} className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${selectedStatus === 'registered' ? 'border-orange-300 shadow-xl' : 'border-orange-100 hover:shadow-lg'}`}>
+                      <div className="p-10 text-center w-full">
+                        <div className="flex items-center justify-center mb-4">
+                          <Layers className="w-8 h-8 text-orange-500" />
+                        </div>
+                        <div className={`text-5xl font-bold mb-2 ${selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-800'}`}>{donations.length}</div>
+                        <div className={`font-medium ${selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-600'}`}>ทั้งหมด</div>
+                      </div>
+                    </div>
+                    {/* Card 2: คงเหลือ */}
                     <div onClick={() => setSelectedStatus('remaining')} className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${selectedStatus === 'remaining' ? 'border-orange-300 shadow-xl' : 'border-orange-100 hover:shadow-lg'}`}>
                       <div className="p-10 text-center w-full">
                         <div className="flex items-center justify-center mb-4">
@@ -316,16 +325,6 @@ export default function SouvenirDonationPage() {
                         </div>
                         <div className={`text-5xl font-bold mb-2 ${selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-800'}`}>{donations.filter(d => d.shipments[0]?.status !== 'DELIVERED').length}</div>
                         <div className={`font-medium ${selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-600'}`}>คงเหลือ</div>
-                      </div>
-                    </div>
-                    {/* Card 2: รอดำเนินการ */}
-                    <div onClick={() => setSelectedStatus('registered')} className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${selectedStatus === 'registered' ? 'border-orange-300 shadow-xl' : 'border-orange-100 hover:shadow-lg'}`}>
-                      <div className="p-10 text-center w-full">
-                        <div className="flex items-center justify-center mb-4">
-                          <Layers className="w-8 h-8 text-orange-500" />
-                        </div>
-                        <div className={`text-5xl font-bold mb-2 ${selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-800'}`}>{donations.length}</div>
-                        <div className={`font-medium ${selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-600'}`}>รอดำเนินการ</div>
                       </div>
                     </div>
                     {/* Card 3: จัดส่งแล้ว */}
@@ -497,9 +496,11 @@ export default function SouvenirDonationPage() {
                                         <span>
                                           {status === 'PENDING' ? 'รอดำเนินการ' : 'จัดส่งแล้ว'}
                                         </span>
-                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 10l5 5 5-5" />
-                                        </svg>
+                                        {status === 'PENDING' && (
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 10l5 5 5-5" />
+                                          </svg>
+                                        )}
                                       </span>
                                     )}
                                   </td>

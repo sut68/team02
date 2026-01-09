@@ -701,7 +701,7 @@ async function main() {
       ownerName: "ศูนย์วิจัย AI Center",
       contact: "044-223-366",
       posterUrl: "/donation_poster/research.jpg",
-      skuToLink: null 
+      skuToLink: "BOOK-NEW-2025"
     }
   ];
 
@@ -863,186 +863,252 @@ async function main() {
   // =========================================================
   console.log("🚀 Seeding Participants & Donors for Dashboard...");
 
-  // 6.1 Get IDs
-  const iesutContent = await prisma.content.findFirst({ where: { TitleName: "IESUT FAMILY 2025" } });
-  const floodProj = await prisma.donationProject.findFirst({ where: { title: "CPE Flood Relief 2026" } });
   const pm = await prisma.paymentMethodRecord.findFirst();
 
-  // 6.2 Simulate Activity Participants (IESUT)
-  if (iesutContent && iesutContent.souvenirItemId) {
-      // Target users: b6631345, b6610364, student.2ndyear
-      const targetEmails = ["b6631345@g.sut.ac.th", "b6610364@g.sut.ac.th", "student.2ndyear@g.sut.ac.th"];
+  // 6.1 Get all activities and seed participants for each (with varying numbers)
+  const allActivities = await prisma.content.findMany({
+    where: { categories: ContentCategoryType.ACTIVITY }
+  });
 
-      for (const [index, email] of targetEmails.entries()) {
-            const uid = userMap[email]?.id;
-            if (!uid) continue;
+  const allParticipantEmails = [
+    "b6631345@g.sut.ac.th",
+    "b6610364@g.sut.ac.th", 
+    "student.2ndyear@g.sut.ac.th",
+    "alumni.2018@sut-eng.ac.th",
+    "alumni.2020@sut-eng.ac.th"
+  ];
 
-            // Check existing booking
-            const existingBooking = await prisma.booking.findFirst({
-              where: { Userid: uid, ContentID: iesutContent.id }
-            });
+  // Vary participant count per activity: 2, 4, 3, 5
+  const participantCounts = [2, 4, 3, 5];
 
-            if (!existingBooking) {
-                // Create Booking (without bookingField)
-                const booking = await prisma.booking.create({
-                  data: {
-                    Userid: uid,
-                    ContentID: iesutContent.id,
-                    transactionStatus: TransactionStatus.SUCCESS,
-                    payment: {
-                      create: {
-                        amount: 500,
-                        paymentStatus: PaymentStatusType.CONFIRMED,
-                        paymentSlipUrl: "/uploads/slip-test.jpg",
-                        paymentMethodId: pm?.id
-                      }
-                    }
-                  }
-                });
+  for (const [actIndex, activity] of allActivities.entries()) {
+    if (!activity.souvenirItemId) continue;
 
-                // Create BookingField and link to booking
-                const bookingField = await prisma.bookingField.create({
-                  data: {
-                    BookingSeats: 1,
-                    Name: `Participant ${index+1}`,
-                    TotalPrice: 500,
-                    Souvenir: "HAVE"
-                  }
-                });
-                await prisma.booking.update({
-                  where: { id: booking.id },
-                  data: { BookingFieldID: bookingField.id }
-                });
+    console.log(`\n📌 Seeding participants for: ${activity.TitleName}`);
 
-                // Create Entitlement
-                const ent = await prisma.entitlement.create({
-                  data: {
-                    userId: uid,
-                    itemId: iesutContent.souvenirItemId,
-                    source: EntitlementSource.BOOKING,
-                    qtyGranted: 1,
-                    qtyUsed: index === 0 ? 1 : 0, // 1 person redeemed
-                    redeemToken: randomUUID()
-                  }
-                });
+    // Get count for this activity (cycle through the counts)
+    const count = participantCounts[actIndex % participantCounts.length];
+    const selectedEmails = allParticipantEmails.slice(0, count);
 
-                // Create Redemption for the first one
-                if (index === 0) {
-                  await prisma.redemption.create({
-                    data: {
-                      entitlementId: ent.id,
-                      itemId: iesutContent.souvenirItemId,
-                      userId: uid,
-                      method: RedeemMethod.QR_SCAN,
-                      handledBy: adminId,
-                      redeemedAt: new Date()
-                    }
-                  });
-                }
-            }
-      }
-  }
+    for (const [index, email] of selectedEmails.entries()) {
+      const uid = userMap[email]?.id;
+      if (!uid) continue;
 
-  // 6.3 Simulate Donors (Flood Relief)
-  if (floodProj && floodProj.souvenirItemId) {
-         const donorEmails = ["alumni.2018@sut-eng.ac.th", "alumni.2020@sut-eng.ac.th", "alumni.2015@sut-eng.ac.th"];
+      // Check if already booked to avoid duplicates
+      const existingBooking = await prisma.booking.findFirst({
+        where: { Userid: uid, ContentID: activity.id }
+      });
 
-         for (const [index, email] of donorEmails.entries()) {
-          const userObj = userMap[email];
-          if (!userObj) continue;
-          const uid = userObj.id;
-          const amt = 1000;
-
-          // Fetch user details from DB (for up-to-date info)
-          const user = await prisma.user.findUnique({ where: { id: uid } });
-          if (!user) continue;
-
-          // Check if already donated to avoid dups in seed re-runs
-          const existingDonation = await prisma.donationTransaction.findFirst({
-            where: { projectId: floodProj.id, userId: uid }
-          });
-
-          if (!existingDonation) {
-            // 1. Transaction
-            const tx = await prisma.donationTransaction.create({
-              data: {
-                projectId: floodProj.id,
-                userId: uid,
-                amount: amt,
-                status: TransactionStatus.SUCCESS,
-                isPublic: true,
-                fullName: user.fullName,
-                email: user.email,
-                phone: user.phone || "",
-                address: user.address || "",
-                subdistrict: user.subdistrict || "",
-                district: user.district || "",
-                province: user.province || "",
-                postalCode: user.postalCode || ""
-              }
-            });
-
-            // 2. Payment
-            await prisma.paymentRecord.create({
-              data: {
-                amount: amt,
+      if (!existingBooking) {
+        // Create Booking
+        const booking = await prisma.booking.create({
+          data: {
+            Userid: uid,
+            ContentID: activity.id,
+            transactionStatus: TransactionStatus.SUCCESS,
+            payment: {
+              create: {
+                amount: 500,
                 paymentStatus: PaymentStatusType.CONFIRMED,
                 paymentSlipUrl: "/uploads/slip-test.jpg",
-                paymentMethodId: pm?.id,
-                donationTransactionId: tx.id
+                paymentMethodId: pm?.id
               }
-            });
-
-            // 3. Update Project
-            await prisma.donationProject.update({
-              where: { id: floodProj.id },
-              data: { currentAmount: { increment: amt } }
-            });
-
-            // 4. Legacy Donation
-            const donation = await prisma.donation.create({
-              data: {
-                userId: uid,
-                amount: amt,
-                status: "completed",
-                souvenirItemId: floodProj.souvenirItemId
-              }
-            });
-
-            // 5. Entitlement & Shipment (Admin fills tracking number later)
-            // ทั้งหมด pending ให้ admin กรอก tracking number และเปลี่ยนสถานะ
-            await prisma.entitlement.create({
-              data: {
-                userId: uid,
-                itemId: floodProj.souvenirItemId,
-                source: EntitlementSource.DONATION,
-                donationId: donation.id,
-                qtyGranted: 1,
-                qtyUsed: 0, // ยังไม่ deliver ให้ admin
-                redeemToken: randomUUID()
-              }
-            });
-
-            await prisma.shipment.create({
-              data: {
-                donationId: donation.id,
-                userId: uid,
-                itemId: floodProj.souvenirItemId,
-                receiverName: user.fullName,
-                addressLine: user.address || "",
-                subdistrict: user.subdistrict || "",
-                district: user.district || "",
-                province: user.province || "",
-                postalCode: user.postalCode || "",
-                phone: user.phone || "",
-                status: ShipStatus.PENDING, // รอให้ admin กรอก tracking number
-                trackingNo: null, // admin จะกรอกเอง
-                deliveredAt: null // admin จะเซตเอง
-              }
-            });
+            }
           }
-         }
+        });
+
+        // Create BookingField
+        const bookingField = await prisma.bookingField.create({
+          data: {
+            BookingSeats: 1,
+            Name: `Participant ${index + 1}`,
+            TotalPrice: 500,
+            Souvenir: "HAVE"
+          }
+        });
+
+        // Link BookingField to Booking
+        await prisma.booking.update({
+          where: { id: booking.id },
+          data: { BookingFieldID: bookingField.id }
+        });
+
+        // Create Entitlement
+        const ent = await prisma.entitlement.create({
+          data: {
+            userId: uid,
+            itemId: activity.souvenirItemId,
+            source: EntitlementSource.BOOKING,
+            qtyGranted: 1,
+            qtyUsed: index === 0 ? 1 : 0, // First participant redeems
+            redeemToken: randomUUID()
+          }
+        });
+
+        // Create Redemption for first participant only
+        if (index === 0) {
+          await prisma.redemption.create({
+            data: {
+              entitlementId: ent.id,
+              itemId: activity.souvenirItemId,
+              userId: uid,
+              method: RedeemMethod.QR_SCAN,
+              handledBy: adminId,
+              redeemedAt: new Date()
+            }
+          });
+        }
+      }
+    }
   }
+
+  console.log(`✅ Seeded ${allActivities.length} activities with participants`);
+
+  // 6.2 Get all donation projects and seed donors for each (with varying numbers)
+  const allProjects = await prisma.donationProject.findMany();
+
+  const allDonorEmails = [
+    "alumni.2018@sut-eng.ac.th",
+    "alumni.2020@sut-eng.ac.th",
+    "alumni.2015@sut-eng.ac.th",
+    "b6631345@g.sut.ac.th",
+    "b6610364@g.sut.ac.th"
+  ];
+
+  // Vary donor count per project: 3, 2, 5, 4
+  const donorCounts = [3, 2, 5, 4];
+
+  for (const [projIndex, project] of allProjects.entries()) {
+    if (!project.souvenirItemId) continue;
+
+    console.log(`\n💝 Seeding donors for: ${project.title}`);
+
+    // Get count for this project (cycle through the counts)
+    const count = donorCounts[projIndex % donorCounts.length];
+    const selectedEmails = allDonorEmails.slice(0, count);
+
+    for (const email of selectedEmails) {
+      const userObj = userMap[email];
+      if (!userObj) continue;
+      const uid = userObj.id;
+      const amt = 1000;
+
+      // Fetch user from DB
+      const user = await prisma.user.findUnique({ where: { id: uid } });
+      if (!user) continue;
+
+      // Avoid duplicates in seed re-runs
+      const existingDonation = await prisma.donationTransaction.findFirst({
+        where: { projectId: project.id, userId: uid }
+      });
+
+      if (!existingDonation) {
+        // 1. Create Transaction
+        const tx = await prisma.donationTransaction.create({
+          data: {
+            projectId: project.id,
+            userId: uid,
+            amount: amt,
+            status: TransactionStatus.SUCCESS,
+            isPublic: true,
+            fullName: user.fullName,
+            email: user.email,
+            phone: user.phone || "",
+            address: user.address || "",
+            subdistrict: user.subdistrict || "",
+            district: user.district || "",
+            province: user.province || "",
+            postalCode: user.postalCode || ""
+          }
+        });
+
+        // 2. Create Payment
+        await prisma.paymentRecord.create({
+          data: {
+            amount: amt,
+            paymentStatus: PaymentStatusType.CONFIRMED,
+            paymentSlipUrl: "/uploads/slip-test.jpg",
+            paymentMethodId: pm?.id,
+            donationTransactionId: tx.id
+          }
+        });
+
+        // 3. Update Project Amount
+        await prisma.donationProject.update({
+          where: { id: project.id },
+          data: { currentAmount: { increment: amt } }
+        });
+
+        // 4. Create Donation (legacy)
+        const donation = await prisma.donation.create({
+          data: {
+            userId: uid,
+            amount: amt,
+            status: "completed",
+            souvenirItemId: project.souvenirItemId
+          }
+        });
+
+        // 5. Create Entitlement & Shipment
+        await prisma.entitlement.create({
+          data: {
+            userId: uid,
+            itemId: project.souvenirItemId,
+            source: EntitlementSource.DONATION,
+            donationId: donation.id,
+            qtyGranted: 1,
+            qtyUsed: 0,
+            redeemToken: randomUUID()
+          }
+        });
+
+        await prisma.shipment.create({
+          data: {
+            donationId: donation.id,
+            userId: uid,
+            itemId: project.souvenirItemId,
+            receiverName: user.fullName,
+            addressLine: user.address || "",
+            subdistrict: user.subdistrict || "",
+            district: user.district || "",
+            province: user.province || "",
+            postalCode: user.postalCode || "",
+            phone: user.phone || "",
+            status: ShipStatus.PENDING,
+            trackingNo: null,
+            deliveredAt: null
+          }
+        });
+      }
+    }
+  }
+
+  console.log(`✅ Seeded ${allProjects.length} donation projects with donors`);
+
+  // 6.3 Mark some shipments as delivered (test data for delivered status)
+  console.log("\n📦 Marking some shipments as DELIVERED...");
+  
+  const allShipments = await prisma.shipment.findMany({
+    where: { status: ShipStatus.PENDING },
+    take: 3 // Mark only 3 as delivered, leave rest as PENDING for testing
+  });
+
+  for (const [index, shipment] of allShipments.entries()) {
+    const trackingNum = `TRK${Date.now()}-${index}`;
+    const deliveryDate = new Date();
+    deliveryDate.setDate(deliveryDate.getDate() - (3 - index)); // Stagger delivery dates
+
+    await prisma.shipment.update({
+      where: { id: shipment.id },
+      data: {
+        status: ShipStatus.DELIVERED,
+        trackingNo: trackingNum,
+        deliveredAt: deliveryDate
+      }
+    });
+  }
+
+  console.log(`✅ Marked ${allShipments.length} shipments as DELIVERED (others remain PENDING for testing)`);
 
   console.log("\n🎉 All seed data inserted successfully.");
   console.log("\n📋 Login credentials (password: sut12345):");
