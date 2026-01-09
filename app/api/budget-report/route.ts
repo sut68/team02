@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
 import { Prisma } from "@prisma/client";
-import path from "path";
-import { promises as fs } from "fs";
 import jwt from "jsonwebtoken";
+import { uploadToAzureBlob } from '@/lib/azureBlob'; 
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-this-in-production";
 
@@ -17,25 +16,18 @@ function getUserFromToken(req: NextRequest) {
   }
 }
 
-// ✅ ฟังก์ชันบันทึกไฟล์ลง Local
-async function saveFile(file: File, subFolder: string): Promise<string> {
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "budget", subFolder);
-  await fs.mkdir(uploadDir, { recursive: true });
-
+async function saveFileToCloud(file: File, subFolder: string): Promise<string> {
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
   const safeName = file.name.replace(/\s+/g, "_");
-  const fileNameOnDisk = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}_${safeName}`;
-  const filePathOnDisk = path.join(uploadDir, fileNameOnDisk);
-  
-  await fs.writeFile(filePathOnDisk, buffer);
-  return `/uploads/budget/${subFolder}/${fileNameOnDisk}`;
+  const cloudPath = `uploads/budget/${subFolder}/${Date.now()}_${Math.random().toString(36).slice(2, 7)}_${safeName}`;
+
+  // ส่งไป Azure (Return เป็น URL เต็มๆ กลับมา)
+  return await uploadToAzureBlob(buffer, cloudPath, file.type);
 }
 
-// ============================================================================
-// GET: ดึงข้อมูลรายงาน
-// ============================================================================
+// GET: ดึงข้อมูลรายงาน (ส่วนนี้เหมือนเดิม 100%)
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -43,10 +35,9 @@ export async function GET(req: NextRequest) {
     const projectId = searchParams.get("projectId");
     const status = searchParams.get("status");
     const year = searchParams.get("year"); 
-    const roundId = searchParams.get("roundId"); // ✅ รับค่า roundId
+    const roundId = searchParams.get("roundId");
     const showTrash = searchParams.get("trash") === "true"; 
 
-    // 1. กรณีดึงรายการเดียว (Detail)
     if (id) {
       const report = await prisma.summarySubmission.findUnique({
         where: { id: Number(id) },
@@ -63,28 +54,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ report }, { status: 200 });
     }
 
-    // 2. กรณีดึงเป็น List
     const where: Prisma.SummarySubmissionWhereInput = {};
 
-    if (showTrash) {
-      where.deletedAt = { not: null };
-    } else {
-      where.deletedAt = null;
-    }
+    if (showTrash) where.deletedAt = { not: null };
+    else where.deletedAt = null;
 
     if (projectId) where.proposalId = Number(projectId);
     
-    if (status && status !== "ทั้งหมด") {
-        where.status = status as any;
-    }
+    if (status && status !== "ทั้งหมด") where.status = status as any;
 
-    // ✅ เพิ่ม Logic กรองตาม ปีงบประมาณ และ รอบงบประมาณ
     if (year || (roundId && roundId !== "all")) {
         where.proposal = {
             budgetRound: {
-                // ถ้ามี year ให้กรอง fiscalYear
                 ...(year && { fiscalYear: year }),
-                // ถ้ามี roundId ให้กรอง id (แปลงเป็น Number ก่อน)
                 ...(roundId && roundId !== "all" && { id: Number(roundId) })
             }
         };
@@ -119,9 +101,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ============================================================================
 // POST: สร้างรายงานใหม่
-// ============================================================================
 export async function POST(req: NextRequest) {
   try {
     const user = getUserFromToken(req);
@@ -141,13 +121,13 @@ export async function POST(req: NextRequest) {
 
     let summaryFilePath = "";
     if (evidenceFiles.length > 0 && evidenceFiles[0].size > 0) {
-        summaryFilePath = await saveFile(evidenceFiles[0], "evidence");
+        summaryFilePath = await saveFileToCloud(evidenceFiles[0], "evidence");
     }
 
     const imagePaths: string[] = [];
     for (const file of activityImages) {
         if (file.size > 0) {
-            const path = await saveFile(file, "images");
+            const path = await saveFileToCloud(file, "images");
             imagePaths.push(path);
         }
     }
@@ -180,9 +160,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ============================================================================
 // PUT: แก้ไขข้อมูล
-// ============================================================================
 export async function PUT(req: NextRequest) {
   try {
     const user = getUserFromToken(req);
@@ -217,7 +195,7 @@ export async function PUT(req: NextRequest) {
     if (actualExpense) updatePayload.totalActualExpense = Number(actualExpense);
 
     if (newEvidenceFiles.length > 0 && newEvidenceFiles[0].size > 0) {
-        const path = await saveFile(newEvidenceFiles[0], "evidence");
+        const path = await saveFileToCloud(newEvidenceFiles[0], "evidence");
         updatePayload.summaryFilePath = path;
     }
 
@@ -225,6 +203,7 @@ export async function PUT(req: NextRequest) {
         if (deletedFileIds) {
             const idsToDelete = String(deletedFileIds).split(',').map(Number).filter(n => !isNaN(n));
             if (idsToDelete.length > 0) {
+                // (Optional: ลบไฟล์จริงออกจาก Cloud ด้วย)
                 await tx.submissionImage.deleteMany({
                     where: { id: { in: idsToDelete }, submissionId: Number(id) }
                 });
@@ -234,7 +213,7 @@ export async function PUT(req: NextRequest) {
         if (newActivityImages.length > 0) {
             for (const file of newActivityImages) {
                 if (file.size > 0) {
-                    const path = await saveFile(file, "images");
+                    const path = await saveFileToCloud(file, "images");
                     await tx.submissionImage.create({
                         data: { submissionId: Number(id), imagePath: path }
                     });
@@ -257,7 +236,7 @@ export async function PUT(req: NextRequest) {
 }
 
 // ============================================================================
-// DELETE: ย้ายลงถังขยะ
+// DELETE: ย้ายลงถังขยะ (เหมือนเดิม)
 // ============================================================================
 export async function DELETE(req: NextRequest) {
   try {
