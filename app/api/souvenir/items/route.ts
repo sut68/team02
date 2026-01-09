@@ -9,8 +9,8 @@ export async function GET(request: NextRequest) {
 
     const items = await prisma.souvenirItem.findMany({
       where: {
-        active: true, // เฉพาะของที่กำลังใช้งาน
-        ...(category && { category }), // กรองตาม category ถ้ามี
+        active: true,
+        ...(category && { category }),
       },
       orderBy: { createdAt: 'desc' },
       include: {
@@ -27,12 +27,30 @@ export async function GET(request: NextRequest) {
             title: true,
           },
         },
+        donations: {
+          select: {
+            id: true,
+            userId: true,
+            status: true,
+            donatedAt: true,
+            shipments: {
+              select: {
+                id: true,
+                status: true,
+                trackingNo: true,
+                shippedAt: true,
+                deliveredAt: true,
+              },
+            },
+          },
+        },
         _count: {
           select: {
             movements: true,
             entitlements: true,
             redemptions: true,
             shipments: true,
+            donations: true,
           },
         },
       },
@@ -46,6 +64,8 @@ export async function GET(request: NextRequest) {
         });
         const totalDelta = movements.reduce((sum: number, m) => sum + m.delta, 0);
         const currentStock = item.initialStock + totalDelta;
+        // filter เฉพาะ donations ที่ status เป็น completed/success
+        const validDonations = item.donations?.filter(d => d.status === 'completed' || d.status === 'success') || [];
         return {
           id: item.id,
           sku: item.sku,
@@ -58,6 +78,8 @@ export async function GET(request: NextRequest) {
           active: item.active,
           contents: item.contents,
           donationProjects: item.donationProjects,
+          donationCount: validDonations.length,
+          donations: validDonations,
         };
       })
     );

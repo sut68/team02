@@ -25,13 +25,16 @@ interface EventOption {
   name: string;
   startDate: Date;
   souvenirItemId: number | null;
+  linkedItemName?: string;
 }
 
 interface DonationProjectOption {
   id: number;
-  title: string;
-  goalAmount: number;
-  currentAmount: number;
+  name: string;
+  souvenirItemId: number | null;
+  linkedItemName?: string;
+  goalAmount?: number;
+  currentAmount?: number;
 }
 
 interface SouvenirDetailFormProps {
@@ -90,45 +93,17 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
 
   const fetchItemData = async () => {
     if (!itemId) return;
-    
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/souvenir/items/${itemId}`);
       if (res.ok) {
         const data = await res.json();
-        
-        // ตรวจสอบว่าของชิ้นนี้ผูกกับ Event ไหนอยู่
         let linkedType: 'none' | 'event' | 'donation' = 'none';
-        let linkedEventId: number | undefined;
-        let linkedDonationProjectId: number | undefined;
-        
-        // ดึงข้อมูล Events ที่ผูกกับของชิ้นนี้
-        const eventsRes = await fetch('/api/content');
-        if (eventsRes.ok) {
-          const events = await eventsRes.json();
-          const eventList = Array.isArray(events)
-            ? events
-            : (events.data ?? events.events ?? []);
-          const linkedEvent = eventList.find((e: any) => e.souvenirItemId === itemId);
-          if (linkedEvent) {
-            linkedType = 'event';
-            linkedEventId = linkedEvent.id;
-          }
+        if (data.linkedEventId) {
+          linkedType = 'event';
+        } else if (data.linkedDonationProjectId) {
+          linkedType = 'donation';
         }
-        
-        // ถ้ายังไม่เจอ ลองเช็ค Donations (ถ้ามี projectId ในอนาคต)
-        if (linkedType === 'none') {
-          const donationsRes = await fetch('/api/admin/donations');
-          if (donationsRes.ok) {
-            const donations = await donationsRes.json();
-            const linkedDonation = donations.find((d: any) => d.souvenirItemId === itemId);
-            if (linkedDonation) {
-              linkedType = 'donation';
-              // Note: ปัจจุบัน Donation ไม่มี projectId จึงไม่สามารถระบุได้
-            }
-          }
-        }
-        
         setFormData({
           id: data.id,
           sku: data.sku,
@@ -140,8 +115,8 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
           active: data.active,
           imageUrl: data.imageUrl || '',
           linkedType,
-          linkedEventId,
-          linkedDonationProjectId,
+          linkedEventId: data.linkedEventId,
+          linkedDonationProjectId: data.linkedDonationProjectId,
         });
         setCurrentStock(data.currentStock);
       }
@@ -633,21 +608,24 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
                         className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:border-orange-400 focus:outline-none disabled:bg-gray-50"
                       >
                         <option value="">-- เลือกกิจกรรม --</option>
-                        {events.map((event) => (
-                          <option 
-                            key={event.id} 
-                            value={event.id}
-                            disabled={event.souvenirItemId !== null && event.souvenirItemId !== itemId}
-                          >
-                            {event.name} ({new Date(event.startDate).toLocaleDateString('th-TH')})
-                            {event.souvenirItemId !== null && event.souvenirItemId !== itemId && ' - ผูกแล้ว'}
-                          </option>
-                        ))}
+                        {events.map((event) => {
+                          const isOccupied = event.souvenirItemId !== null && event.souvenirItemId !== itemId;
+                          const label = isOccupied
+                            ? `${event.name}${event.linkedItemName ? ` (ผูกกับ: ${event.linkedItemName})` : ''}`
+                            : event.name;
+                          return (
+                            <option 
+                              key={event.id} 
+                              value={event.id}
+                              disabled={isOccupied}
+                              className={isOccupied ? 'text-gray-400' : ''}
+                            >
+                              {label}
+                            </option>
+                          );
+                        })}
                       </select>
                     )}
-                    <p className="text-xs text-gray-400 mt-1">
-                      {events.filter(e => e.souvenirItemId === null || e.souvenirItemId === itemId).length} กิจกรรมที่พร้อมใช้งาน
-                    </p>
                   </div>
                 )}
 
@@ -672,11 +650,22 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
                         className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:border-orange-400 focus:outline-none disabled:bg-gray-50"
                       >
                         <option value="">-- เลือกโครงการบริจาค --</option>
-                        {donationProjects.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.title} ( {p.currentAmount.toLocaleString()} / {p.goalAmount.toLocaleString()} )
-                          </option>
-                        ))}
+                        {donationProjects.map((proj) => {
+                          const isOccupied = proj.souvenirItemId !== null && proj.souvenirItemId !== itemId;
+                          const label = isOccupied
+                            ? `${proj.name}${proj.linkedItemName ? ` (ผูกกับ: ${proj.linkedItemName})` : ''}`
+                            : proj.name;
+                          return (
+                            <option
+                              key={proj.id}
+                              value={proj.id}
+                              disabled={isOccupied}
+                              className={isOccupied ? 'text-gray-400' : ''}
+                            >
+                              {label}
+                            </option>
+                          );
+                        })}
                       </select>
                     )}
                   </div>
