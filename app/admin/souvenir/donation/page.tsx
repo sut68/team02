@@ -2,7 +2,9 @@
 import React, { useState, useEffect } from "react";
 import { CATEGORY_LABEL } from "@/constants/category";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, Calendar, RefreshCw, Layers, CheckCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, RefreshCw, Layers, CheckCircle, Search } from "lucide-react";
+import { Card, CardContent } from "@/app/components/ui/Card";
+import { Input } from "@/app/components/ui/Input";
 
 // --- Interfaces ---
 interface SouvenirItem {
@@ -34,7 +36,6 @@ interface Donation {
   donatedAt: string;
   user: {
     fullName: string;
-    email: string;
     phone?: string;
     address?: string;
     subdistrict?: string;
@@ -72,7 +73,8 @@ export default function SouvenirDonationPage() {
   const [loading, setLoading] = useState(true);
   const [currentProjectIndex, setCurrentProjectIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<'all' | 'remaining' | 'registered' | 'claimed'>('all');
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'remaining' | 'registered' | 'claimed'>('registered');
+  const [searchTerm, setSearchTerm] = useState('');
   
   // ✅ Edit State Management per Shipment
   const [editModes, setEditModes] = useState<Map<number, {
@@ -193,14 +195,25 @@ export default function SouvenirDonationPage() {
   const filteredDonations = React.useMemo(() => {
     if (!selectedProject) return [];
     return donations.filter(d => {
-      if (selectedStatus === 'all') return true;
       const delivered = d.shipments[0]?.status === 'DELIVERED';
-      if (selectedStatus === 'claimed') return delivered;
-      if (selectedStatus === 'remaining') return !delivered;
-      if (selectedStatus === 'registered') return true;
+      if (selectedStatus === 'remaining') return !delivered;  // Not delivered
+      if (selectedStatus === 'claimed') return delivered;      // Delivered
+      if (selectedStatus === 'registered') return true;        // All donations
       return true;
     });
   }, [donations, selectedProject, selectedStatus]);
+
+  // Filtered donations by search term
+  const searchedDonations = React.useMemo(() => {
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return filteredDonations;
+    return filteredDonations.filter(d => {
+      const fullName = d.user.fullName?.toLowerCase() || '';
+      const phone = d.user.phone?.toLowerCase() || '';
+      const address = `${d.user.address || ''} ${d.user.subdistrict || ''} ${d.user.district || ''} ${d.user.province || ''}`.toLowerCase();
+      return fullName.includes(term) || phone.includes(term) || address.includes(term);
+    });
+  }, [filteredDonations, searchTerm]);
 
   return (
     <main className="min-h-screen bg-white pt-10">
@@ -294,7 +307,17 @@ export default function SouvenirDonationPage() {
                 <section>
                   <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">{selectedProject.title}</h2>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Card 1: คงเหลือ */}
+                    {/* Card 1: ทั้งหมด */}
+                    <div onClick={() => setSelectedStatus('registered')} className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${selectedStatus === 'registered' ? 'border-orange-300 shadow-xl' : 'border-orange-100 hover:shadow-lg'}`}>
+                      <div className="p-10 text-center w-full">
+                        <div className="flex items-center justify-center mb-4">
+                          <Layers className="w-8 h-8 text-orange-500" />
+                        </div>
+                        <div className={`text-5xl font-bold mb-2 ${selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-800'}`}>{donations.length}</div>
+                        <div className={`font-medium ${selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-600'}`}>ทั้งหมด</div>
+                      </div>
+                    </div>
+                    {/* Card 2: คงเหลือ */}
                     <div onClick={() => setSelectedStatus('remaining')} className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${selectedStatus === 'remaining' ? 'border-orange-300 shadow-xl' : 'border-orange-100 hover:shadow-lg'}`}>
                       <div className="p-10 text-center w-full">
                         <div className="flex items-center justify-center mb-4">
@@ -302,16 +325,6 @@ export default function SouvenirDonationPage() {
                         </div>
                         <div className={`text-5xl font-bold mb-2 ${selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-800'}`}>{donations.filter(d => d.shipments[0]?.status !== 'DELIVERED').length}</div>
                         <div className={`font-medium ${selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-600'}`}>คงเหลือ</div>
-                      </div>
-                    </div>
-                    {/* Card 2: รอดำเนินการ */}
-                    <div onClick={() => setSelectedStatus('registered')} className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${selectedStatus === 'registered' ? 'border-orange-300 shadow-xl' : 'border-orange-100 hover:shadow-lg'}`}>
-                      <div className="p-10 text-center w-full">
-                        <div className="flex items-center justify-center mb-4">
-                          <Layers className="w-8 h-8 text-orange-500" />
-                        </div>
-                        <div className={`text-5xl font-bold mb-2 ${selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-800'}`}>{donations.length}</div>
-                        <div className={`font-medium ${selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-600'}`}>รอดำเนินการ</div>
                       </div>
                     </div>
                     {/* Card 3: จัดส่งแล้ว */}
@@ -327,8 +340,26 @@ export default function SouvenirDonationPage() {
                   </div>
                 </section>
 
-                {/* Section 4: Table */}
+                {/* Section 4: Search & Table */}
                 <section className="mt-12">
+                  {/* Search Bar */}
+                  <Card className="mb-6">
+                    <CardContent className="p-6">
+                      <div className="relative">
+                        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <Input
+                          type="text"
+                          placeholder="ค้นหาด้วยชื่อ อีเมล เบอร์โทร หรือที่อยู่"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-12"
+                          size="md"
+                          radius="md"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
                   <div className="bg-white rounded-xl shadow-md overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full">
@@ -337,7 +368,6 @@ export default function SouvenirDonationPage() {
                             <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[40px]">ลำดับ</th>
                             <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[100px]">ชื่อ-สกุล</th>
                             <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[140px]">ที่อยู่</th>
-                            <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[120px]">อีเมล</th>
                             <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[90px]">เบอร์โทร</th>
                             <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[100px]">วันที่บริจาค</th>
                             <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[110px]">ของที่ระลึก</th>
@@ -346,12 +376,14 @@ export default function SouvenirDonationPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {filteredDonations.length === 0 ? (
+                          {searchedDonations.length === 0 ? (
                             <tr>
-                              <td colSpan={9} className="px-6 py-10 text-center text-gray-500">ไม่มีรายการขอรับของที่ระลึกในโครงการนี้</td>
+                              <td colSpan={8} className="px-6 py-10 text-center text-gray-500">
+                                {searchTerm ? 'ไม่พบผลการค้นหา' : 'ไม่มีรายการขอรับของที่ระลึกในโครงการนี้'}
+                              </td>
                             </tr>
                           ) : (
-                            filteredDonations.map((donation, index) => {
+                            searchedDonations.map((donation, index) => {
                               const donatedDate = new Date(donation.donatedAt);
                               const thaiDate = donatedDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
                               const hasShipment = donation.shipments.length > 0;
@@ -433,7 +465,6 @@ export default function SouvenirDonationPage() {
                                   <td className="px-3 py-2 text-xs md:text-sm text-gray-800">{index + 1}</td>
                                   <td className="px-3 py-2 text-xs md:text-sm text-gray-800 font-medium truncate">{donation.user.fullName}</td>
                                   <td className="px-3 py-2 text-xs md:text-sm text-gray-600 truncate" title={fullAddress}>{fullAddress}</td>
-                                  <td className="px-3 py-2 text-xs md:text-sm text-gray-600 truncate">{donation.user.email}</td>
                                   <td className="px-3 py-2 text-xs md:text-sm text-gray-600">{donation.user.phone || '-'}</td>
                                   <td className="px-3 py-2 text-xs md:text-sm text-gray-600">{thaiDate}</td>
                                   <td className="px-3 py-2 text-xs md:text-sm text-orange-600 truncate">{souvenirName}</td>
@@ -465,9 +496,11 @@ export default function SouvenirDonationPage() {
                                         <span>
                                           {status === 'PENDING' ? 'รอดำเนินการ' : 'จัดส่งแล้ว'}
                                         </span>
-                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 10l5 5 5-5" />
-                                        </svg>
+                                        {status === 'PENDING' && (
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 10l5 5 5-5" />
+                                          </svg>
+                                        )}
                                       </span>
                                     )}
                                   </td>

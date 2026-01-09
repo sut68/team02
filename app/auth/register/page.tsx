@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GraduationCap, Book, Upload, UserCheck, UserCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -70,6 +70,27 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [registrationSuccess, setRegistrationSuccess] = useState<boolean>(false);
+
+  // Check if user is already authenticated on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me', {
+          method: 'GET',
+        });
+        
+        // If user is already logged in, redirect away from register page
+        if (response.ok) {
+          router.replace('/user/news');
+        }
+      } catch (err) {
+        // If there's an error checking auth, allow register page to show
+        console.log('Auth check failed, showing register page');
+      }
+    };
+
+    checkAuth();
+  }, [router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

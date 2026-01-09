@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -11,6 +11,63 @@ const LoginClient: React.FC = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Check if user is already authenticated on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/me', {
+          method: 'GET',
+        });
+        
+        // If user is already logged in, redirect away from login page
+        if (response.ok) {
+          router.replace('/user/news');
+        }
+      } catch (err) {
+        // If there's an error checking auth, allow login page to show
+        console.log('Auth check failed, showing login page');
+      }
+    };
+
+    checkAuth();
+  }, [router]);
+
+  // Store and manage login state in sessionStorage
+  useEffect(() => {
+    if (loading) {
+      sessionStorage.setItem('isLoginInProgress', 'true');
+    } else {
+      sessionStorage.removeItem('isLoginInProgress');
+    }
+  }, [loading]);
+
+  // Prevent navigation while login is in progress
+  useEffect(() => {
+    if (!loading) return;
+
+    // Prevent page unload
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    };
+
+    // Prevent back button
+    const handlePopState = (e: PopStateEvent) => {
+      e.preventDefault();
+      window.history.pushState(null, '', window.location.href);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    window.history.pushState(null, '', window.location.href);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [loading]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -60,6 +117,8 @@ const LoginClient: React.FC = () => {
       
       console.log('Redirecting to:', redirectUrl);
       
+      // Clear login flag and redirect
+      sessionStorage.removeItem('isLoginInProgress');
       // Use window.location for immediate redirect
       window.location.href = redirectUrl;
     } catch (err) {
@@ -137,9 +196,13 @@ const LoginClient: React.FC = () => {
                   </button>
                 </div>
                 <div className="text-right mt-2">
-                  <Link href="/auth/forgot-password" className="text-sm text-orange-500 hover:underline">
+                  <a 
+                    href="/auth/forgot-password" 
+                    onClick={(e) => loading && e.preventDefault()}
+                    className={`text-sm text-orange-500 hover:underline ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
                     ลืมรหัสผ่าน?
-                  </Link>
+                  </a>
                 </div>
               </div>
 
@@ -158,7 +221,11 @@ const LoginClient: React.FC = () => {
               {/* Register Link */}
               <div className="text-center text-sm text-gray-600">
                 ยังไม่ได้เป็นสมาชิกใช่ไหม?{' '}
-                <a href="/auth/register" className="text-orange-500 hover:underline font-medium">
+                <a 
+                  href="/auth/register" 
+                  onClick={(e) => loading && e.preventDefault()}
+                  className={`text-orange-500 hover:underline font-medium ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
                   สมัครสมาชิกที่นี่
                 </a>
               </div>
