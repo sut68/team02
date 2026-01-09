@@ -15,7 +15,7 @@ export default function JobPostPage() {
     address: '',
     contact: '',
     transportation: '',
-    qualifications: '', // 1. เพิ่มสถานะข้อมูลคุณสมบัติ
+    qualifications: '',
   });
 
   const [files, setFiles] = useState<{
@@ -73,7 +73,7 @@ export default function JobPostPage() {
       address: '',
       contact: '',
       transportation: '',
-      qualifications: '', // 2. รีเซ็ตข้อมูลคุณสมบัติเมื่อยกเลิก
+      qualifications: '',
     });
     setFiles({ attachment: null, logo: null, image: null });
     setPreviews({ attachment: null, logo: null, image: null });
@@ -90,10 +90,8 @@ export default function JobPostPage() {
     setIsSubmitting(true);
 
     try {
-      // Create FormData
       const submitFormData = new FormData();
 
-      // Add text fields
       submitFormData.append('jobTitle', formData.jobTitle);
       if (formData.title) submitFormData.append('title', formData.title);
       if (formData.position)
@@ -113,13 +111,11 @@ export default function JobPostPage() {
       if (formData.qualifications)
         submitFormData.append('qualifications', formData.qualifications);
 
-      // Add files
       if (files.attachment)
         submitFormData.append('attachment', files.attachment);
       if (files.logo) submitFormData.append('logo', files.logo);
       if (files.image) submitFormData.append('image', files.image);
 
-      // Submit to API
       const response = await fetch('/api/job', {
         method: 'POST',
         body: submitFormData,
@@ -161,7 +157,7 @@ export default function JobPostPage() {
               </label>
               <input
                 type='text'
-                className='w-full px-4 py-3 border border-[#D1D5DB] rounded-full text-sm focus:border-[#FB923C] focus:outline-none'
+                className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none'
                 placeholder='ระบุชื่อหัวข้อของงาน'
                 value={formData.jobTitle}
                 onChange={(e) => handleInputChange('jobTitle', e.target.value)}
@@ -173,53 +169,14 @@ export default function JobPostPage() {
               <label className='block text-sm text-[#6B7280] mb-2'>title</label>
               <input
                 type='text'
-                className='w-full px-4 py-3 border border-[#D1D5DB] rounded-full text-sm focus:border-[#FB923C] focus:outline-none'
+                className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none'
                 placeholder='ระบุ title'
                 value={formData.title}
                 onChange={(e) => handleInputChange('title', e.target.value)}
               />
             </div>
 
-            {/* ตำแหน่งงาน และ ประเภทของงาน */}
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-              <div>
-                <label className='block text-sm text-[#6B7280] mb-2'>
-                  ตำแหน่งงาน
-                </label>
-                <input
-                  type='text'
-                  className='w-full px-4 py-3 border border-[#D1D5DB] rounded-full text-sm focus:border-[#FB923C] focus:outline-none'
-                  placeholder='ระบุตำแหน่งงาน'
-                  value={formData.position}
-                  onChange={(e) =>
-                    handleInputChange('position', e.target.value)
-                  }
-                />
-              </div>
-              <div>
-                <label className='block text-sm text-[#6B7280] mb-2'>
-                  ประเภทของงาน
-                </label>
-                <div className='relative'>
-                  <select
-                    className='w-full px-4 py-3 border border-[#D1D5DB] rounded-full text-sm text-[#9CA3AF] focus:border-[#FB923C] focus:outline-none appearance-none bg-[#E5E7EB] cursor-pointer pr-10'
-                    value={formData.jobType}
-                    onChange={(e) =>
-                      handleInputChange('jobType', e.target.value)
-                    }
-                  >
-                    <option>Select Type</option>
-                    <option>Full-time</option>
-                    <option>Part-time</option>
-                    <option>Contract</option>
-                    <option>Internship</option>
-                  </select>
-                  <ChevronDown className='absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#6B7280] pointer-events-none' />
-                </div>
-              </div>
-            </div>
-
-            {/* ระดับการศึกษา และ รายได้เฉลี่ย */}
+            {/* ระดับการศึกษา และ ประเภทของงาน */}
             <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
               <div>
                 <label className='block text-sm text-[#6B7280] mb-2'>
@@ -227,7 +184,7 @@ export default function JobPostPage() {
                 </label>
                 <div className='relative'>
                   <select
-                    className='w-full px-4 py-3 border border-[#D1D5DB] rounded-full text-sm text-[#9CA3AF] focus:border-[#FB923C] focus:outline-none appearance-none bg-[#E5E7EB] cursor-pointer pr-10'
+                    className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm text-[#9CA3AF] focus:border-[#FB923C] focus:outline-none appearance-none bg-[#E5E7EB] cursor-pointer pr-10'
                     value={formData.education}
                     onChange={(e) =>
                       handleInputChange('education', e.target.value)
@@ -245,11 +202,50 @@ export default function JobPostPage() {
               </div>
               <div>
                 <label className='block text-sm text-[#6B7280] mb-2'>
+                  ประเภทของงาน
+                </label>
+                <div className='relative'>
+                  <select
+                    className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm text-[#9CA3AF] focus:border-[#FB923C] focus:outline-none appearance-none bg-[#E5E7EB] cursor-pointer pr-10'
+                    value={formData.jobType}
+                    onChange={(e) =>
+                      handleInputChange('jobType', e.target.value)
+                    }
+                  >
+                    <option>Select Type</option>
+                    <option>Full-time</option>
+                    <option>Part-time</option>
+                    <option>Contract</option>
+                    <option>Internship</option>
+                  </select>
+                  <ChevronDown className='absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#6B7280] pointer-events-none' />
+                </div>
+              </div>
+            </div>
+
+            {/* ตำแหน่งงาน และ รายได้เฉลี่ย */}
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+              <div>
+                <label className='block text-sm text-[#6B7280] mb-2'>
+                  ตำแหน่งงาน
+                </label>
+                <input
+                  type='text'
+                  className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none'
+                  placeholder='ระบุตำแหน่งงาน'
+                  value={formData.position}
+                  onChange={(e) =>
+                    handleInputChange('position', e.target.value)
+                  }
+                />
+              </div>
+              <div>
+                <label className='block text-sm text-[#6B7280] mb-2'>
                   รายได้เฉลี่ย
                 </label>
                 <input
                   type='text'
-                  className='w-full px-4 py-3 border border-[#D1D5DB] rounded-full text-sm focus:border-[#FB923C] focus:outline-none'
+                  className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none'
                   placeholder='ระบุรายได้เฉลี่ย'
                   value={formData.salary}
                   onChange={(e) => handleInputChange('salary', e.target.value)}
@@ -265,7 +261,7 @@ export default function JobPostPage() {
                 </label>
                 <input
                   type='text'
-                  className='w-full px-4 py-3 border border-[#D1D5DB] rounded-full text-sm focus:border-[#FB923C] focus:outline-none'
+                  className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none'
                   placeholder='ระบุชื่อบริษัท'
                   value={formData.companyName}
                   onChange={(e) =>
@@ -279,7 +275,7 @@ export default function JobPostPage() {
                 </label>
                 <input
                   type='number'
-                  className='w-full px-4 py-3 border border-[#D1D5DB] rounded-full text-sm focus:border-[#FB923C] focus:outline-none'
+                  className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none'
                   placeholder='ระบุจำนวนอัตรา'
                   value={formData.positions}
                   onChange={(e) =>
@@ -333,7 +329,7 @@ export default function JobPostPage() {
               />
             </div>
 
-            {/* คุณสมบัติ - 3. เพิ่มช่องกรอกคุณสมบัติใน UI */}
+            {/* คุณสมบัติ */}
             <div>
               <label className='block text-sm text-[#6B7280] mb-2'>
                 คุณสมบัติ

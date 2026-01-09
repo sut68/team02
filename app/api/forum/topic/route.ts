@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
+import jwt from 'jsonwebtoken';
 
 // GET - ดึงรายการกระทู้
 export async function GET(request: NextRequest) {
@@ -66,7 +67,6 @@ export async function GET(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error fetching topics:', error);
     return NextResponse.json(
       { error: 'เกิดข้อผิดพลาดในการดึงข้อมูล' },
       { status: 500 }
@@ -116,7 +116,6 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error creating topic:', error);
     return NextResponse.json(
       { error: 'เกิดข้อผิดพลาดในการสร้างกระทู้' },
       { status: 500 }
@@ -137,11 +136,46 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // บันทึกประวัติการแก้ไข
-    const oldTopic = await prisma.topic.findUnique({
+    // Get current user from token
+    const token = request.cookies.get('token')?.value;
+    if (!token) {
+      return NextResponse.json(
+        { error: 'กรุณาเข้าสู่ระบบก่อน' },
+        { status: 401 }
+      );
+    }
+
+    // Verify token and get user ID
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || '') as {
+      userId: number;
+      email: string;
+      role: string;
+    };
+    const currentUserId = decoded.userId;
+
+    // Get topic to check ownership
+    const existingTopic = await prisma.topic.findUnique({
       where: { id },
-      select: { content: true },
+      select: { user_id: true, content: true },
     });
+
+    if (!existingTopic) {
+      return NextResponse.json(
+        { error: 'ไม่พบกระทู้' },
+        { status: 404 }
+      );
+    }
+
+    // Check if user is the owner (or admin)
+    if (existingTopic.user_id !== currentUserId && decoded.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'คุณไม่มีสิทธิ์แก้ไขกระทู้นี้' },
+        { status: 403 }
+      );
+    }
+
+    // บันทึกประวัติการแก้ไข
+    const oldTopic = existingTopic;
 
     const topic = await prisma.$transaction(async (tx) => {
       // สร้างประวัติการแก้ไข
@@ -187,7 +221,6 @@ export async function PUT(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error updating topic:', error);
     return NextResponse.json(
       { error: 'เกิดข้อผิดพลาดในการอัพเดทกระทู้' },
       { status: 500 }
@@ -236,7 +269,6 @@ export async function DELETE(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error deleting topic:', error);
     return NextResponse.json(
       { error: 'เกิดข้อผิดพลาดในการลบกระทู้' },
       { status: 500 }

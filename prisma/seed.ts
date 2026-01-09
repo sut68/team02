@@ -283,6 +283,45 @@ async function main() {
   console.log("✅ Seeded verifications");
 
   // -----------------------------
+  //  JOB TYPE
+  // -----------------------------
+  const jobTypes: Array<'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERNSHIP'> =
+    ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERNSHIP'];
+  for (const typename of jobTypes) {
+    await prisma.jobType.upsert({
+      where: { typename },
+      update: {},
+      create: { typename },
+    });
+  }
+  console.log('✅ Seeded job types');
+
+  // -----------------------------
+  //  CATEGORY (Forum Categories)
+  // -----------------------------
+  const categoryData = [
+    { categoryname: 'ทั่วไป' },
+    { categoryname: 'การศึกษา' },
+    { categoryname: 'เทคโนโลยี' },
+    { categoryname: 'ข่าวสาร' },
+    { categoryname: 'กีฬา' },
+  ];
+
+  for (const cat of categoryData) {
+    const existing = await prisma.category.findFirst({
+      where: { categoryname: cat.categoryname },
+    });
+
+    if (!existing) {
+      await prisma.category.create({
+        data: {
+          categoryname: cat.categoryname,
+        },
+      });
+    }
+  }
+  console.log('✅ Seeded forum categories');
+  // -----------------------------
   // 4) SOUVENIR ITEMS (จัดหมวดใหม่)
   // -----------------------------
   const souvenirData = [

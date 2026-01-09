@@ -190,7 +190,7 @@ export default function Navbar() {
               </div>
             </div>
 
-            <Link href="/user/job" className="hover:text-gray-900">รับสมัครงาน</Link>
+            <Link href="/admin/job" className="hover:text-gray-900">รับสมัครงาน</Link>
 
             <div className="relative group/l0">
               <span className="flex items-center hover:text-[#F26522] transition-colors duration-200 cursor-pointer">
