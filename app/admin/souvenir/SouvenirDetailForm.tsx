@@ -93,45 +93,17 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
 
   const fetchItemData = async () => {
     if (!itemId) return;
-    
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/souvenir/items/${itemId}`);
       if (res.ok) {
         const data = await res.json();
-        
-        // ตรวจสอบว่าของชิ้นนี้ผูกกับ Event ไหนอยู่
         let linkedType: 'none' | 'event' | 'donation' = 'none';
-        let linkedEventId: number | undefined;
-        let linkedDonationProjectId: number | undefined;
-        
-        // ดึงข้อมูล Events ที่ผูกกับของชิ้นนี้
-        const eventsRes = await fetch('/api/content');
-        if (eventsRes.ok) {
-          const events = await eventsRes.json();
-          const eventList = Array.isArray(events)
-            ? events
-            : (events.data ?? events.events ?? []);
-          const linkedEvent = eventList.find((e: any) => e.souvenirItemId === itemId);
-          if (linkedEvent) {
-            linkedType = 'event';
-            linkedEventId = linkedEvent.id;
-          }
+        if (data.linkedEventId) {
+          linkedType = 'event';
+        } else if (data.linkedDonationProjectId) {
+          linkedType = 'donation';
         }
-        
-        // ถ้ายังไม่เจอ ลองเช็ค Donations (ถ้ามี projectId ในอนาคต)
-        if (linkedType === 'none') {
-          const donationsRes = await fetch('/api/admin/donations');
-          if (donationsRes.ok) {
-            const donations = await donationsRes.json();
-            const linkedDonation = donations.find((d: any) => d.souvenirItemId === itemId);
-            if (linkedDonation) {
-              linkedType = 'donation';
-              // Note: ปัจจุบัน Donation ไม่มี projectId จึงไม่สามารถระบุได้
-            }
-          }
-        }
-        
         setFormData({
           id: data.id,
           sku: data.sku,
@@ -143,8 +115,8 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
           active: data.active,
           imageUrl: data.imageUrl || '',
           linkedType,
-          linkedEventId,
-          linkedDonationProjectId,
+          linkedEventId: data.linkedEventId,
+          linkedDonationProjectId: data.linkedDonationProjectId,
         });
         setCurrentStock(data.currentStock);
       }
