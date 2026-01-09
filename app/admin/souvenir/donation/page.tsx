@@ -1,14 +1,10 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { CATEGORY_LABEL } from "@/constants/category";
-
-export const CATEGORY = {
-  ACTIVITY: "ACTIVITY",
-  DONATION: "DONATION",
-} as const;
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, Calendar, RefreshCw, Layers, CheckCircle, Package } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, RefreshCw, Layers, CheckCircle } from "lucide-react";
 
+// --- Interfaces ---
 interface SouvenirItem {
   id: number;
   sku: string;
@@ -23,32 +19,22 @@ interface SouvenirItem {
 interface DonationProject {
   id: number;
   title: string;
-  description: string;
-  goalAmount: number;
-  currentAmount: number;
   startDate: string;
-  endDate: string;
-  status: string;
-  posterUrl: string | null;
+  souvenirItem?: {
+    id: number;
+    name: string;
+    imageUrl: string | null;
+    sku: string;
+  } | null;
 }
 
 interface Donation {
   id: number;
   userId: number;
-  amount: number;
   donatedAt: string;
-  purpose: string | null;
-  status: string;
   user: {
-    id: number;
     fullName: string;
     email: string;
-    phone: string;
-    address: string;
-    subdistrict: string;
-    district: string;
-    province: string;
-    postalCode: string;
   };
   souvenirItem?: {
     id: number;
@@ -63,7 +49,8 @@ interface Donation {
     shippedAt: string | null;
   }>;
 }
-// Shipment status options and label helper
+
+// Shipment status options
 const STATUS_OPTIONS = [
   { value: "PENDING", label: "รอดำเนินการ" },
   { value: "IN_TRANSIT", label: "กำลังจัดส่ง" },
@@ -71,107 +58,70 @@ const STATUS_OPTIONS = [
   { value: "FAILED", label: "มีปัญหา" },
 ] as const;
 
-const statusLabel = (s?: string) =>
-  STATUS_OPTIONS.find(x => x.value === s)?.label ?? "รอดำเนินการ";
 
 export default function SouvenirDonationPage() {
+  // Data States
   const [souvenirItems, setSouvenirItems] = useState<SouvenirItem[]>([]);
   const [donationProjects, setDonationProjects] = useState<DonationProject[]>([]);
+  const [selectedProject, setSelectedProject] = useState<DonationProject | null>(null);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentProjectIndex, setCurrentProjectIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<'all' | 'pending' | 'delivered'>('all');
-  const [updatingShipmentId, setUpdatingShipmentId] = useState<number | null>(null);
-  
-  // Update shipment status function with confirmation
-  const updateShipmentStatus = async (shipmentId: number, status: string, donationId: number) => {
-    const statusObj = STATUS_OPTIONS.find(opt => opt.value === status);
-    const statusLabelText = statusObj ? statusObj.label : status;
-    let trackingNo = null;
-    if (status === 'DELIVERED') {
-      trackingNo = window.prompt('กรุณากรอกเลขแทรก (Tracking Number) เพื่อเปลี่ยนสถานะเป็น "จัดส่งแล้ว"');
-      if (!trackingNo || trackingNo.trim() === '') {
-        window.alert('กรุณากรอกเลขแทรกก่อนเปลี่ยนสถานะ');
-        return;
-      }
-    }
-    const confirmed = window.confirm(`คุณต้องการเปลี่ยนสถานะการจัดส่งเป็น "${statusLabelText}" ใช่หรือไม่?`);
-    if (!confirmed) return;
-    try {
-      setUpdatingShipmentId(shipmentId);
-      const res = await fetch(`/api/admin/shipments/${shipmentId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(status === 'DELIVERED' ? { status, trackingNo } : { status }),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        console.error("update shipment failed", res.status, text);
-        return;
-      }
-      setDonations(prev =>
-        prev.map(d => {
-          if (d.id !== donationId) return d;
-          const shipments = (d.shipments ?? []).map(s =>
-            s.id === shipmentId ? { ...s, status, trackingNo: status === 'DELIVERED' ? trackingNo : s.trackingNo } : s
-          );
-          return { ...d, shipments };
-        })
-      );
-    } finally {
-      setUpdatingShipmentId(null);
-    }
-  };
-  // Section 1 (Souvenir Carousel) refs
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'remaining' | 'registered' | 'claimed'>('all');
+  // Carousel refs
+  const projectScrollRef = React.useRef<HTMLDivElement>(null);
   const souvenirScrollRef = React.useRef<HTMLDivElement>(null);
   const souvenirTrackRef = React.useRef<HTMLDivElement>(null);
-  // Section 2 (Donation Project Carousel) ref
-  const projectScrollRef = React.useRef<HTMLDivElement>(null);
   const offsetRef = React.useRef(0);
   const loopWidthRef = React.useRef(0);
   const cardWidthRef = React.useRef(0);
   const speedRef = React.useRef(50);
 
-  // Fetch data from API
+  // Fetch Data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch souvenir items
+        setLoading(true);
+        // Fetch Souvenir Items
         const itemsRes = await fetch('/api/admin/souvenir/items');
-        if (itemsRes.ok) {
-          const itemsData = await itemsRes.json();
-          if (Array.isArray(itemsData)) {
-            setSouvenirItems(itemsData.filter((item: SouvenirItem) => item.category === CATEGORY.DONATION));
-          }
+        const itemsData = itemsRes.ok ? await itemsRes.json() : [];
+        if (Array.isArray(itemsData)) {
+          setSouvenirItems(itemsData.filter((item: SouvenirItem) => item.category === 'DONATION'));
         }
-
-        // Fetch donations
-        const donationsRes = await fetch('/api/admin/donations');
-        if (donationsRes.ok) {
-          const donationsData = await donationsRes.json();
-          if (Array.isArray(donationsData)) {
-            setDonations(donationsData);
-          }
-        }
-
-        // Fetch donation projects
+        // Fetch Projects
         const projectsRes = await fetch('/api/donation-project?status=OPEN');
-        if (projectsRes.ok) {
-          const projectsData = await projectsRes.json();
-          if (projectsData.projects && Array.isArray(projectsData.projects)) {
-            setDonationProjects(projectsData.projects);
-          }
-        }
+        const projectsData = projectsRes.ok ? await projectsRes.json() : {};
+        const projectsList: DonationProject[] = projectsData.projects || [];
+        setDonationProjects(projectsList);
+        if (projectsList.length > 0) setSelectedProject(projectsList[0]);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
+  // Fetch donations when project is selected
+  useEffect(() => {
+    const fetchDonations = async () => {
+      if (!selectedProject) return;
+      try {
+        const res = await fetch(`/api/donation-project/${selectedProject.id}/donations`);
+        if (res.ok) {
+          const data = await res.json();
+          setDonations(data);
+        }
+      } catch (error) {
+        console.error('Error fetching donations:', error);
+      }
+    };
+    fetchDonations();
+  }, [selectedProject]);
+
+  // Carousel logic
   const stepBy = (px: number) => {
     const loopW = loopWidthRef.current || 0;
     if (loopW <= 0) return;
@@ -182,48 +132,25 @@ export default function SouvenirDonationPage() {
       souvenirTrackRef.current.style.transform = `translateX(${-offsetRef.current}px)`;
     }
   };
-
-  const handleNextDonation = () => {
-    stepBy(cardWidthRef.current || 0);
-  };
-  const handlePrevDonation = () => {
-    stepBy(-(cardWidthRef.current || 0));
-  };
-
-  const loopItems = React.useMemo(() => {
-    const items = [...souvenirItems, ...souvenirItems, ...souvenirItems, ...souvenirItems];
-    return items;
-  }, [souvenirItems]);
-
-  // Measure widths for seamless loop
+  const loopItems = React.useMemo(() => [...souvenirItems, ...souvenirItems, ...souvenirItems, ...souvenirItems], [souvenirItems]);
   React.useEffect(() => {
     if (souvenirItems.length === 0) return;
     const measure = () => {
       const track = souvenirTrackRef.current;
-      const container = souvenirScrollRef.current;
-      if (!track || !container) return;
+      if (!track) return;
       track.offsetHeight;
       const firstCard = track.querySelector('[data-souvenir-card]');
       const gap = parseFloat(getComputedStyle(track).gap || '0');
-      if (firstCard) {
-        cardWidthRef.current = (firstCard as HTMLElement).offsetWidth + gap;
-      }
-      const fullWidth = track.scrollWidth;
-      loopWidthRef.current = fullWidth / 4;
+      if (firstCard) cardWidthRef.current = (firstCard as HTMLElement).offsetWidth + gap;
+      loopWidthRef.current = track.scrollWidth / 4;
     };
     measure();
     const timer = setTimeout(measure, 100);
     window.addEventListener('resize', measure);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', measure);
-    };
+    return () => { clearTimeout(timer); window.removeEventListener('resize', measure); };
   }, [souvenirItems.length]);
-
-  // Auto-scroll animation
   React.useEffect(() => {
-    if (souvenirItems.length === 0) return;
-    if (isPaused) return;
+    if (souvenirItems.length === 0 || isPaused) return;
     let lastTime = performance.now();
     let rafId: number;
     const animate = (currentTime: number) => {
@@ -243,17 +170,19 @@ export default function SouvenirDonationPage() {
     return () => cancelAnimationFrame(rafId);
   }, [isPaused, souvenirItems.length]);
 
-  // Helper for formatting date (Thai)
-  const formatDate = (d?: string | Date | null) => {
-    if (!d) return "-";
-    const date = typeof d === "string" ? new Date(d) : d;
-    if (Number.isNaN(date.getTime())) return "-";
-    return date.toLocaleDateString("th-TH", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
+  // Filtered donations by status
+  const filteredDonations = React.useMemo(() => {
+    if (!selectedProject) return [];
+    return donations.filter(d => {
+      if (selectedStatus === 'all') return true;
+      const hasShipment = d.shipments && d.shipments.length > 0;
+      const delivered = hasShipment && d.shipments?.[0]?.status === 'DELIVERED';
+      if (selectedStatus === 'claimed') return delivered;
+      if (selectedStatus === 'remaining') return !delivered;
+      if (selectedStatus === 'registered') return true;
+      return true;
     });
-  };
+  }, [donations, selectedProject, selectedStatus]);
 
   return (
     <main className="min-h-screen bg-white pt-10">
@@ -263,362 +192,180 @@ export default function SouvenirDonationPage() {
         </div>
       ) : (
         <>
-      {/* Section 1: รายการของที่ระลึกแต่ละโครงการบริจาค */}
-      <section className="py-8">
-        <div className="max-w-7xl mx-auto px-4 mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
-            จัดการของที่ระลึกสำหรับโครงการบริจาค
-          </h1>
-        </div>
-        
-        {/* Carousel Container */}
-        {souvenirItems.length > 0 ? (
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="relative">
-              <button
-                onClick={handlePrevDonation}
-                onMouseEnter={() => setIsPaused(true)}
-                onMouseLeave={() => setIsPaused(false)}
-                className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
-                aria-label="Previous"
-              >
-                <ChevronLeft className="w-6 h-6 text-gray-700" />
-              </button>
+          {/* Section 1: Carousel ของที่ระลึก */}
+          <section className="py-8">
+            <div className="max-w-7xl mx-auto px-4 mb-8">
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
+                จัดการของที่ระลึกสำหรับโครงการบริจาค
+              </h1>
+            </div>
+            <div className="max-w-7xl mx-auto px-4">
+              <div className="relative">
+                <button onClick={() => { setIsPaused(true); stepBy(-cardWidthRef.current); }}
+                  onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)}
+                  className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all">
+                  <ChevronLeft className="w-6 h-6 text-gray-700" />
+                </button>
+                <div ref={souvenirScrollRef} className="overflow-hidden py-4" onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)}>
+                  <div ref={souvenirTrackRef} className="flex gap-6 will-change-transform" style={{ transform: 'translateX(0)', transition: 'none' }}>
+                    {loopItems.map((item, index) => (
+                      <div data-souvenir-card key={`${item.id}-${index}`} className="shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)]">
+                        <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                          <div className="relative h-72 md:h-80 bg-white flex items-center justify-center">
+                            <Image src={item.imageUrl || "/souvenir/placeholder.png"} alt={item.name} width={600} height={600} className="max-h-[75%] w-auto object-contain" />
+                          </div>
+                        </div>
+                        <div className="pt-6 pb-8 text-center">
+                          <h3 className="text-xl md:text-2xl font-bold text-orange-500 mb-2 line-clamp-1">{item.name}</h3>
+                          <div className="text-gray-500 text-sm mb-2">จำนวนคงเหลือ: <span className="font-semibold">{item.currentStock}</span> {item.unit || "ชิ้น"}</div>
+                          <span className="inline-flex items-center justify-center px-4 py-1.5 rounded-full text-sm bg-orange-100 text-orange-700 font-medium">ใช้งาน</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <button onClick={() => { setIsPaused(true); stepBy(cardWidthRef.current); }}
+                  onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)}
+                  className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all">
+                  <ChevronRight className="w-6 h-6 text-gray-700" />
+                </button>
+              </div>
+            </div>
+          </section>
 
-              <div
-                ref={souvenirScrollRef}
-                className="overflow-hidden py-4"
-                onMouseEnter={() => setIsPaused(true)}
-                onMouseLeave={() => setIsPaused(false)}
-              >
-                <div
-                  ref={souvenirTrackRef}
-                  className="flex gap-6 will-change-transform"
-                  style={{ transform: 'translateX(0)', transition: 'none' }}
-                >
-                  {loopItems.map((item, index) => (
+          <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
+            {/* Section 2: เลือกโครงการบริจาค (Clickable Cards) */}
+            <section className="mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">โครงการบริจาค</h2>
+              <div className="relative">
+                <button onClick={() => projectScrollRef.current?.scrollBy({ left: -300, behavior: 'smooth' })} className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all">
+                  <ChevronLeft className="w-6 h-6 text-gray-700" />
+                </button>
+                <div ref={projectScrollRef} className="overflow-x-auto px-2 py-4 scrollbar-hide flex gap-6" style={{ scrollBehavior: 'smooth' }}>
+                  {donationProjects.length > 0 ? donationProjects.map((p, index) => (
                     <div
-                      data-souvenir-card
-                      key={`${item.id}-${index}`}
-                      className="shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)]"
+                      key={p.id}
+                      onClick={() => {
+                        setSelectedProject(p);
+                        setCurrentProjectIndex(index);
+                      }}
+                      className={`shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)] bg-white rounded-xl transition-all duration-300 cursor-pointer ${selectedProject?.id === p.id ? "shadow-xl" : "shadow-md hover:shadow-lg"}`}
                     >
-                      {/* ✅ Card เฉพาะรูป */}
-                      <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
-                        <div className="relative h-72 md:h-80 bg-white flex items-center justify-center">
-                          <Image
-                            src={item.imageUrl || "/souvenir/placeholder.png"}
-                            alt={item.name}
-                            width={600}
-                            height={600}
-                            className="max-h-[75%] w-auto object-contain"
-                            priority={index < 3}
-                          />
+                      <div className="p-10 text-center min-h-[250px] flex flex-col items-center justify-center">
+                        <h3 className={`text-lg font-medium mb-3 text-orange-500`}>{p.title}</h3>
+                        <div className="flex items-center justify-center gap-2 text-gray-600">
+                          <Calendar className="w-5 h-5" />
+                          <span className="text-base">{new Date(p.startDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                         </div>
-                      </div>
-                      {/* ✅ เนื้อหาอยู่นอกกรอบ (แต่ยังเลื่อนไปพร้อมกันเพราะอยู่ใน item wrapper เดียวกัน) */}
-                      <div className="pt-6 pb-8 text-center">
-                        <h3 className="text-xl md:text-2xl font-bold text-orange-500 mb-2 line-clamp-1">
-                          {item.name}
-                        </h3>
-                        <div className="text-gray-500 text-sm mb-2">
-                          จำนวนคงเหลือ: <span className="font-semibold">{item.currentStock}</span>{" "}
-                          {item.unit || "ชิ้น"}
-                        </div>
-                        <div className="text-gray-400 text-sm mb-4">
-                          หมวดหมู่: {CATEGORY_LABEL[item.category as keyof typeof CATEGORY_LABEL] || "บริจาค"}
-                        </div>
-                        <span className="inline-flex items-center justify-center px-4 py-1.5 rounded-full text-sm bg-orange-100 text-orange-700 font-medium">
-                          ใช้งาน
-                        </span>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="w-full text-center text-gray-500">ไม่มีโครงการบริจาคที่เปิดรับ</div>
+                  )}
                 </div>
+                <button onClick={() => projectScrollRef.current?.scrollBy({ left: 300, behavior: 'smooth' })} className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all">
+                  <ChevronRight className="w-6 h-6 text-gray-700" />
+                </button>
               </div>
+            </section>
 
-              <button
-                onClick={handleNextDonation}
-                onMouseEnter={() => setIsPaused(true)}
-                onMouseLeave={() => setIsPaused(false)}
-                className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
-                aria-label="Next"
-              >
-                <ChevronRight className="w-6 h-6 text-gray-700" />
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="bg-gray-50 rounded-xl p-8 text-center">
-              <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">ยังไม่มีของที่ระลึกสำหรับโครงการบริจาค</p>
-            </div>
-          </div>
-        )}
-      </section>
-      <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
-        {/* Section 2: โครงการบริจาค */}
-        {/* Section 2: โครงการบริจาค (Carousel Style) */}
-        <section className="mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">โครงการบริจาค</h2>
-          <div className="relative">
-            {/* Arrow Left */}
-            <button
-              onClick={() => {
-                const el = projectScrollRef.current;
-                if (!el) return;
-                el.scrollBy({ left: -el.clientWidth, behavior: 'smooth' });
-              }}
-              className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
-              aria-label="Previous donation project"
-            >
-              <ChevronLeft className="w-6 h-6 text-gray-700" />
-            </button>
-
-            {/* Donation Project Cards Container - Carousel (manual scroll) */}
-            <div
-              ref={projectScrollRef}
-              className="overflow-x-auto px-2 py-4 scrollbar-hide"
-              style={{ scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch' }}
-            >
-              <div className="flex gap-6">
-                {donationProjects.length > 0 ? donationProjects.map((p, index) => (
-                  <div
-                    key={p.id}
-                    className={
-                      `shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)] bg-white rounded-xl transition-all duration-300 cursor-pointer ` +
-                      `shadow-md hover:shadow-lg`
-                    }
-                  >
-                    <div className="p-10 text-center min-h-[300px] flex flex-col items-center justify-center">
-                      <h3 className="text-lg font-medium mb-3 text-orange-500">
-                        {p.title}
-                      </h3>
-                      <div className="flex items-center justify-center gap-2 text-gray-600">
-                        <Calendar className="w-5 h-5" />
-                        <span className="text-base">
-                          {formatDate(p.startDate)} – {formatDate(p.endDate)}
-                        </span>
+            {/* Section 3 & 4: Only show when project is selected */}
+            {selectedProject && (
+              <>
+                {/* Section 3: สถิติของโครงการที่เลือก */}
+                <section>
+                  <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">{selectedProject.title}</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Card 1: คงเหลือ */}
+                    <div onClick={() => setSelectedStatus('remaining')} className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${selectedStatus === 'remaining' ? 'border-orange-300 shadow-xl' : 'border-orange-100 hover:shadow-lg'}`}>
+                      <div className="p-10 text-center w-full">
+                        <div className="flex items-center justify-center mb-4">
+                          <RefreshCw className="w-8 h-8 text-orange-500" />
+                        </div>
+                        <div className={`text-5xl font-bold mb-2 ${selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-800'}`}>{donations.filter(d => !(d.shipments && d.shipments[0]?.status === 'DELIVERED')).length}</div>
+                        <div className={`font-medium ${selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-600'}`}>คงเหลือ</div>
+                      </div>
+                    </div>
+                    {/* Card 2: ลงทะเบียน */}
+                    <div onClick={() => setSelectedStatus('registered')} className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${selectedStatus === 'registered' ? 'border-orange-300 shadow-xl' : 'border-orange-100 hover:shadow-lg'}`}>
+                      <div className="p-10 text-center w-full">
+                        <div className="flex items-center justify-center mb-4">
+                          <Layers className="w-8 h-8 text-orange-500" />
+                        </div>
+                        <div className={`text-5xl font-bold mb-2 ${selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-800'}`}>{donations.length}</div>
+                        <div className={`font-medium ${selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-600'}`}>ลงทะเบียน</div>
+                      </div>
+                    </div>
+                    {/* Card 3: รับของแล้ว */}
+                    <div onClick={() => setSelectedStatus('claimed')} className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${selectedStatus === 'claimed' ? 'border-orange-300 shadow-xl' : 'border-orange-100 hover:shadow-lg'}`}>
+                      <div className="p-10 text-center w-full">
+                        <div className="flex items-center justify-center mb-4">
+                          <CheckCircle className="w-8 h-8 text-orange-500" />
+                        </div>
+                        <div className={`text-5xl font-bold mb-2 ${selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-800'}`}>{donations.filter(d => d.shipments && d.shipments[0]?.status === 'DELIVERED').length}</div>
+                        <div className={`font-medium ${selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-600'}`}>รับของแล้ว</div>
                       </div>
                     </div>
                   </div>
-                )) : (
-                  <div className="bg-gray-50 rounded-xl p-8 text-center w-full">
-                    <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 text-lg">ยังไม่มีโครงการบริจาคที่เปิดรับ</p>
+                </section>
+
+                {/* Section 4: Table */}
+                <section className="mt-12">
+                  <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gray-100 border-b border-gray-200">
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">ลำดับ</th>
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">ชื่อ-สกุล</th>
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">อีเมล</th>
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">วันที่บริจาค</th>
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">ของที่ระลึก</th>
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">สถานะ</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredDonations.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="px-6 py-10 text-center text-gray-500">ไม่มีรายการขอรับของที่ระลึกในโครงการนี้</td>
+                            </tr>
+                          ) : (
+                            filteredDonations.map((donation, index) => {
+                              const donatedDate = new Date(donation.donatedAt);
+                              const thaiDate = donatedDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+                              const hasShipment = donation.shipments && donation.shipments.length > 0;
+                              const delivered = hasShipment && donation.shipments?.[0]?.status === 'DELIVERED';
+                              const souvenirName = donation.souvenirItem?.name || selectedProject.souvenirItem?.name || 'ของที่ระลึกบริจาค';
+                              let statusText = 'รอรับ';
+                              let statusColor = 'bg-gray-100 text-gray-700';
+                              if (delivered) {
+                                statusText = 'รับแล้ว';
+                                statusColor = 'bg-orange-100 text-orange-700';
+                              }
+                              return (
+                                <tr key={donation.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                  <td className="px-6 py-4 text-sm text-gray-800">{index + 1}</td>
+                                  <td className="px-6 py-4 text-sm text-gray-800 font-medium">{donation.user.fullName}</td>
+                                  <td className="px-6 py-4 text-sm text-gray-600">{donation.user.email}</td>
+                                  <td className="px-6 py-4 text-sm text-gray-600">{thaiDate}</td>
+                                  <td className="px-6 py-4 text-sm text-orange-600">{souvenirName}</td>
+                                  <td className="px-6 py-4">
+                                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}>{statusText}</span>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                )}
-              </div>
-            </div>
-
-            {/* Arrow Right */}
-            <button
-              onClick={() => {
-                const el = projectScrollRef.current;
-                if (!el) return;
-                el.scrollBy({ left: el.clientWidth, behavior: 'smooth' });
-              }}
-              className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
-              aria-label="Next donation project"
-            >
-              <ChevronRight className="w-6 h-6 text-gray-700" />
-            </button>
+                </section>
+              </>
+            )}
           </div>
-        </section>
-
-        {/* Section 3: การ์ดสถิติการบริจาค */}
-        <section className="mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
-            การบริจาค
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            {/* Card 1: ทั้งหมด */}
-            <div 
-              onClick={() => setSelectedStatus('all')}
-              className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
-                selectedStatus === 'all' 
-                  ? 'border-orange-300 shadow-xl' 
-                  : 'border-orange-100 hover:shadow-lg'
-              }`}
-            >
-              <div className="p-10 text-center w-full">
-                <div className="flex items-center justify-center mb-4">
-                  <Layers className="w-8 h-8 text-orange-500" />
-                </div>
-                <div className={`text-5xl font-bold mb-2 ${
-                  selectedStatus === 'all' ? 'text-orange-500' : 'text-gray-800'
-                }`}>
-                  {donations.length}
-                </div>
-                <div className={`font-medium ${
-                  selectedStatus === 'all' ? 'text-orange-500' : 'text-gray-600'
-                }`}>ทั้งหมด</div>
-              </div>
-            </div>
-
-            {/* Card 2: รอดำเนินการ */}
-            <div 
-              onClick={() => setSelectedStatus('pending')}
-              className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
-                selectedStatus === 'pending' 
-                  ? 'border-orange-300 shadow-xl' 
-                  : 'border-orange-100 hover:shadow-lg'
-              }`}
-            >
-              <div className="p-10 text-center w-full">
-                <div className="flex items-center justify-center mb-4">
-                  <RefreshCw className="w-8 h-8 text-orange-500" />
-                </div>
-                <div className={`text-5xl font-bold mb-2 ${
-                  selectedStatus === 'pending' ? 'text-orange-500' : 'text-gray-800'
-                }`}>
-                  {donations.filter(d => {
-                    const shipmentStatus = d.shipments?.[0]?.status || 'PENDING';
-                    return shipmentStatus === 'PENDING' || shipmentStatus === 'IN_TRANSIT' || shipmentStatus === 'FAILED';
-                  }).length}
-                </div>
-                <div className={`font-medium ${
-                  selectedStatus === 'pending' ? 'text-orange-500' : 'text-gray-600'
-                }`}>รอดำเนินการ</div>
-              </div>
-            </div>
-
-            {/* Card 3: จัดส่งแล้ว */}
-            <div 
-              onClick={() => setSelectedStatus('delivered')}
-              className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
-                selectedStatus === 'delivered' 
-                  ? 'border-orange-300 shadow-xl' 
-                  : 'border-orange-100 hover:shadow-lg'
-              }`}
-            >
-              <div className="p-10 text-center w-full">
-                <div className="flex items-center justify-center mb-4">
-                  <CheckCircle className="w-8 h-8 text-orange-500" />
-                </div>
-                <div className={`text-5xl font-bold mb-2 ${
-                  selectedStatus === 'delivered' ? 'text-orange-500' : 'text-gray-800'
-                }`}>
-                  {donations.filter(d => {
-                    const shipmentStatus = d.shipments?.[0]?.status || 'PENDING';
-                    return shipmentStatus === 'DELIVERED';
-                  }).length}
-                </div>
-                <div className={`font-medium ${
-                  selectedStatus === 'delivered' ? 'text-orange-500' : 'text-gray-600'
-                }`}>จัดส่งแล้ว</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Section 4: รายการผู้บริจาค */}
-        <section>
-          {donations.length > 0 ? (
-            <div className="bg-white rounded-xl shadow-md overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full table-fixed">
-                  <thead>
-                    <tr className="bg-gray-100 border-b border-gray-200">
-                      <th className="w-16 px-4 py-4 text-left text-sm font-medium text-gray-600">ลำดับ</th>
-                      <th className="w-40 px-4 py-4 text-left text-sm font-medium text-gray-600">ชื่อ-สกุล</th>
-                      <th className="w-48 px-4 py-4 text-left text-sm font-medium text-gray-600">อีเมล</th>
-                      <th className="w-32 px-4 py-4 text-left text-sm font-medium text-gray-600">เบอร์โทร</th>
-                      <th className="px-4 py-4 text-left text-sm font-medium text-gray-600">ที่อยู่</th>
-                      <th className="w-40 px-4 py-4 text-left text-sm font-medium text-gray-600">ของที่ระลึก</th>
-                      <th className="w-32 px-4 py-4 text-left text-sm font-medium text-gray-600">เลขแทรก</th>
-                      <th className="w-32 px-4 py-4 text-left text-sm font-medium text-gray-600">สถานะจัดส่ง</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {donations
-                      .filter(donation => {
-                        if (selectedStatus === 'all') return true;
-                        const shipmentStatus = donation.shipments?.[0]?.status || 'PENDING';
-                        if (selectedStatus === 'delivered') return shipmentStatus === 'DELIVERED';
-                        if (selectedStatus === 'pending') return shipmentStatus !== 'DELIVERED';
-                        return true;
-                      })
-                      .map((donation, index) => {
-                      const donatedDate = new Date(donation.donatedAt);
-                      const thaiDate = donatedDate.toLocaleDateString('th-TH', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric'
-                      });
-                      
-                      const fullAddress = `${donation.user.address} ต.${donation.user.subdistrict} อ.${donation.user.district} จ.${donation.user.province} ${donation.user.postalCode}`;
-                      const souvenirName = donation.souvenirItem?.name || '-';
-                      const trackingNo = donation.shipments?.[0]?.trackingNo || '-';
-                      const shipmentStatus = donation.shipments?.[0]?.status || 'PENDING';
-                      
-                      let statusText = 'รอดำเนินการ';
-                      let statusColor = 'bg-gray-100 text-gray-700';
-                      
-                      if (shipmentStatus === 'DELIVERED') {
-                        statusText = 'จัดส่งแล้ว';
-                        statusColor = 'bg-orange-100 text-orange-700';
-                      }
-                      
-                      return (
-                        <tr key={donation.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-4 text-sm text-gray-800 text-center">{index + 1}</td>
-                          <td className="px-4 py-4 text-sm text-gray-800 font-medium truncate" title={donation.user.fullName}>{donation.user.fullName}</td>
-                          <td className="px-4 py-4 text-sm text-gray-600 truncate" title={donation.user.email}>{donation.user.email}</td>
-                          <td className="px-4 py-4 text-sm text-gray-600">{donation.user.phone}</td>
-                          <td className="px-4 py-4 text-sm text-gray-600 truncate" title={fullAddress}>
-                            {fullAddress}
-                          </td>
-                          <td className="px-4 py-4 text-sm text-orange-600 truncate" title={souvenirName}>{souvenirName}</td>
-                          <td className="px-4 py-4 text-sm text-gray-600 truncate" title={trackingNo}>{trackingNo}</td>
-                          <td className="px-4 py-4">
-                            {donation.shipments?.[0]?.id ? (
-                              <div className="relative inline-block">
-                                <select
-                                  value={donation.shipments?.[0]?.status ?? "PENDING"}
-                                  disabled={updatingShipmentId === donation.shipments[0].id}
-                                  onChange={(e) =>
-                                    updateShipmentStatus(
-                                      donation.shipments![0].id,
-                                      e.target.value,
-                                      donation.id
-                                    )
-                                  }
-                                  className={`appearance-none px-3 py-1 pr-8 rounded-full text-xs font-medium border-0 outline-none cursor-pointer transition-colors
-                                    ${donation.shipments?.[0]?.status === 'PENDING'
-                                      ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                      : donation.shipments?.[0]?.status === 'DELIVERED'
-                                      ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-                                      : 'bg-red-100 text-red-700 hover:bg-red-200'}
-                                  `}
-                                >
-                                  <option value="PENDING">รอดำเนินการ</option>
-                                  <option value="DELIVERED">จัดส่งแล้ว</option>
-                                </select>
-                                <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-                              </div>
-                            ) : (
-                              <span className="text-sm text-gray-500">-</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-gray-50 rounded-xl p-8 text-center">
-              <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">ยังไม่มีรายการบริจาค</p>
-            </div>
-          )}
-        </section>
-      </div>
         </>
       )}
     </main>
   );
 }
-
