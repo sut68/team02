@@ -227,7 +227,7 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
   const renderStep1 = () => (
     <div className="grid grid-cols-2 gap-16">
       <div className="space-y-6">
-        <h2 className="text-2xl font-medium text-gray-800 mb-8">ข้อมูลส่วนตัว</h2>
+        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">ข้อมูลส่วนตัว</h2>
         <div>
           <label className="block text-sm text-gray-500 mb-2">
             ชื่อ-นามสกุล <span className="text-red-500">*</span>
@@ -396,10 +396,10 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
     <div className="py-30 px-20 pb-40">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-20">
-          <h2 className="text-3xl font-medium text-gray-700 mb-6">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
             กรุณาเลือกประเภทของคุณ
           </h2>
-          <p className="text-gray-500 text-sm">
+          <p className="text-gray-500 text-base font-normal">
             เพื่อเริ่มต้นการลงทะเบียนในระบบศิษย์เก่าวิศวกรรมศาสตร์
           </p>
         </div>
@@ -413,8 +413,8 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
             }}
           >
             <CardContent className="p-20 text-center flex flex-col items-center justify-center h-full">
-              <GraduationCap className="w-16 h-16 text-orange-500 mb-6" strokeWidth={1.2} />
-              <h3 className="text-2xl font-normal text-gray-700">ศิษย์เก่า</h3>
+              <GraduationCap className="w-20 h-20 text-orange-500 mb-8" strokeWidth={1.5} />
+              <h3 className="text-3xl md:text-4xl font-bold text-gray-900">ศิษย์เก่า</h3>
             </CardContent>
           </Card>
 
@@ -426,8 +426,8 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
             }}
           >
             <CardContent className="p-20 text-center flex flex-col items-center justify-center h-full">
-              <UserCircle className="w-16 h-16 text-orange-500 mb-6" strokeWidth={1.2} />
-              <h3 className="text-2xl font-normal text-gray-700">ศิษย์ปัจจุบัน</h3>
+              <UserCircle className="w-20 h-20 text-orange-500 mb-8" strokeWidth={1.5} />
+              <h3 className="text-3xl md:text-4xl font-bold text-gray-900">ศิษย์ปัจจุบัน</h3>
             </CardContent>
           </Card>
         </div>
@@ -438,7 +438,7 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
   const StudentStep2 = () => (
     <div className="grid grid-cols-2 gap-16">
       <div className="space-y-6">
-        <h2 className="text-2xl font-medium text-gray-800 mb-8">ประวัติการศึกษา</h2>
+        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">ประวัติการศึกษา</h2>
         <div>
           <label className="block text-sm text-gray-500 mb-2">
             รหัสนักศึกษา <span className="text-red-500">*</span>
@@ -500,7 +500,7 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
   const AlumniStep2 = () => (
      <div className="grid grid-cols-2 gap-16">
       <div className="space-y-6">
-        <h2 className="text-2xl font-medium text-gray-800 mb-8">ข้อมูลส่วนตัว</h2>
+        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">ข้อมูลส่วนตัว</h2>
         <div>
           <label className="block text-sm text-gray-500 mb-2">
             รหัสนักศึกษา <span className="text-red-500">*</span>
