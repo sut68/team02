@@ -20,7 +20,7 @@ export async function GET(
     const bookings = await prisma.booking.findMany({
       where: {
         ContentID: contentId,
-        transactionStatus: "SUCCESS", // เอาเฉพาะคนที่จ่ายเงิน/จองสำเร็จแล้ว
+        transactionStatus: "SUCCESS", // เอาเฉพาะคนที่จ่ายเงิน/จองสำเร็จแล้
       },
       include: {
         user: {
