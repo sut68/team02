@@ -25,7 +25,7 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Starting seed (Final Version: Bag=Activity, Umbrella=Donation)...");
 
-  const defaultPassword = "sut12345";
+  const defaultPassword = "SUT@Seed2025!"; // Stronger password for production
   const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
   // -----------------------------
@@ -1111,7 +1111,7 @@ async function main() {
   console.log(`✅ Marked ${allShipments.length} shipments as DELIVERED (others remain PENDING for testing)`);
 
   console.log("\n🎉 All seed data inserted successfully.");
-  console.log("\n📋 Login credentials (password: sut12345):");
+  console.log("\n📋 Login credentials (password: SUT@Seed2025!):");
   console.log("   • admin@sut-eng.ac.th");
   console.log("   • b6631345@g.sut.ac.th");
 }

@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate JWT token
+    // Generate JWT token with shorter expiration
     const token = jwt.sign(
       {
         userId: user.id,
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
         role: user.role,
       },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '24h' } // Changed from 7d to 24h for better security
     );
 
     // Create response with token
@@ -136,12 +136,13 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
 
-    // Set HTTP-only cookie
+    // Set HTTP-only cookie with enhanced security
     response.cookies.set('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      secure: process.env.NODE_ENV === 'production', // Only HTTPS in production
+      sameSite: 'strict', // Changed from 'lax' to 'strict' for CSRF protection
+      maxAge: 60 * 60 * 24, // 24 hours (matches JWT expiration)
+      path: '/',
     });
 
     return response;
