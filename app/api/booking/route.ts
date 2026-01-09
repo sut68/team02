@@ -208,7 +208,6 @@ export async function GET(request: NextRequest) {
       { status: 404 }
     );
   }
-
   // ✅ คำนวณสถานะเช็คอินจาก attendee ทุกคน (ถ้ามีหลายคน) หรือคนแรก
   const isCheckedIn = booking.attendees.some(a => a.checkins.length > 0);
 
