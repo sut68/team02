@@ -1,3 +1,4 @@
+// app/api/budget-report/restore/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
 
@@ -6,10 +7,12 @@ export async function PUT(req: Request) {
     const body = await req.json();
     const { id } = body;
 
-    // ✅ Restore: เซ็ต deletedAt กลับเป็น null
     const restoredReport = await prisma.summarySubmission.update({
       where: { id: Number(id) },
-      data: { deletedAt: null } 
+      data: { 
+        deletedAt: null,
+        status: "DRAFT" // รีเซ็ตสถานะกลับเป็นแบบร่าง
+      } 
     });
 
     return NextResponse.json(restoredReport);

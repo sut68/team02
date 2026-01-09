@@ -663,7 +663,7 @@ model ProjectProposal {
   id                 Int       @id @default(autoincrement())
   projectName        String
   objective          String?
-  description        String?
+  description        String?  @db.Text
   requestedAmount    Float?
   projectStartDate   DateTime?
   projectEndDate     DateTime?

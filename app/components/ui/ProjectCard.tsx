@@ -10,7 +10,7 @@ import ConfirmModal from "@/app/components/ui/ConfirmModal";
 interface ProjectCardProps {
   project: ProjectWithManager;
   onUpdate?: () => void;
-  isTrash?: boolean; // ✅ รับค่าสถานะถังขยะ
+  isTrash?: boolean;
 }
 
 const STATUS_OPTIONS = [
@@ -33,7 +33,7 @@ export default function ProjectCard({ project, onUpdate, isTrash = false }: Proj
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [pendingOption, setPendingOption] = useState<typeof STATUS_OPTIONS[0] | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false); // ✅ Modal กู้คืน
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false); 
   const [isLoading, setIsLoading] = useState(false);
 
   const activeStatusObj = currentOption;
@@ -101,7 +101,6 @@ export default function ProjectCard({ project, onUpdate, isTrash = false }: Proj
     }
   };
 
-  // ✅ ฟังก์ชันกู้คืน
   const confirmRestore = async () => {
     if (!projectId) return;
     setIsLoading(true);
@@ -111,10 +110,14 @@ export default function ProjectCard({ project, onUpdate, isTrash = false }: Proj
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 id: projectId,
-                restore: true // ส่ง flag เพื่อกู้คืน
+                restore: true,
+                status: 'PENDING' // บังคับส่งสถานะ PENDING ไปด้วยเพื่อความชัวร์
             }),
         });
         if (res.ok) {
+            // อัปเดต State หน้าจอทันทีให้เป็น "รอดำเนินการ" (PENDING)
+            setCurrentOption(STATUS_OPTIONS[0]); // PENDING
+
             if (onUpdate) onUpdate(); 
             else router.refresh();
         } else {
@@ -146,7 +149,6 @@ export default function ProjectCard({ project, onUpdate, isTrash = false }: Proj
               )}
           </div>
 
-          {/* Status Dropdown (ซ่อนเมื่ออยู่ในถังขยะ) */}
           {!isTrash && (
             <div className="absolute bottom-2 right-2">
                 {isMenuOpen && (
@@ -185,7 +187,6 @@ export default function ProjectCard({ project, onUpdate, isTrash = false }: Proj
             {project.projectName}
           </h3>
           <p className="text-gray-500 font-light mt-auto text-sm">
-             {/* แสดงวันที่ลบถ้าอยู่ในถังขยะ ถ้าไม่ แสดงคะแนนโหวต */}
              {isTrash ? "ลบเมื่อ" : "คะแนนโหวต"} : <span className="font-normal">
                 {isTrash 
                     ? new Date(project.deletedAt || new Date()).toLocaleDateString('th-TH')
@@ -198,7 +199,6 @@ export default function ProjectCard({ project, onUpdate, isTrash = false }: Proj
         {/* Footer Buttons */}
         <CardFooter className="p-0 flex justify-center gap-2 mt-auto shrink-0">
           
-          {/* ✅ กรณีอยู่ในถังขยะ แสดงปุ่มกู้คืน */}
           {isTrash ? (
              <button
                 onClick={() => setIsRestoreModalOpen(true)}
@@ -208,7 +208,6 @@ export default function ProjectCard({ project, onUpdate, isTrash = false }: Proj
                 กู้คืน
              </button>
           ) : (
-            /* ✅ กรณีปกติ แสดงปุ่มแก้ไข/ลบ */
             <>
                 {currentOption.value === 'PENDING' && (
                     <button
@@ -219,7 +218,6 @@ export default function ProjectCard({ project, onUpdate, isTrash = false }: Proj
                     แก้ไข
                     </button>
                 )}
-                {/* แก้ไข: ใช้ class w-14 คงที่ ไม่ต้องเช็คเงื่อนไข PENDING เพื่อให้ขนาดเท่ากับ BudgetReportCard */}
                 <button
                     onClick={() => setIsDeleteModalOpen(true)}
                     className="w-14 h-10 bg-white text-gray-500 border border-gray-200 rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition flex items-center justify-center shrink-0 shadow-sm"
@@ -232,7 +230,6 @@ export default function ProjectCard({ project, onUpdate, isTrash = false }: Proj
         </CardFooter>
       </Card>
 
-      {/* Modals */}
       <ConfirmModal 
         isOpen={isConfirmOpen}
         onClose={cancelChange}
@@ -257,7 +254,6 @@ export default function ProjectCard({ project, onUpdate, isTrash = false }: Proj
         isLoading={isLoading}
       />
 
-      {/* ✅ Restore Modal */}
       <ConfirmModal 
         isOpen={isRestoreModalOpen}
         onClose={() => setIsRestoreModalOpen(false)}

@@ -4,13 +4,14 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { 
   Search, 
-  Layers,        
+  Layers,         
   CalendarDays, 
-  Users,        
-  ChevronLeft,
+  Users,         
   PenLine,
   Trash2,
-  CirclePlus
+  CirclePlus,
+  ArrowLeftToLine,
+  Send,
 } from "lucide-react";
 
 // Components UI
@@ -36,15 +37,13 @@ export default function BudgetRoundsPage() {
   const [rounds, setRounds] = useState<BudgetRound[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // State เก็บข้อมูลรอบที่จะแก้ไข (null = สร้างใหม่)
   const [editingRound, setEditingRound] = useState<BudgetRound | null>(null);
 
-  // ✅ 1. ปรับปรุง State Modal ให้รองรับ Type (Action) ว่าจะทำอะไร (PUBLISH หรือ DELETE)
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
-    action: 'PUBLISH' | 'DELETE' | null; // เพิ่ม Action type
+    action: 'PUBLISH' | 'DELETE' | 'SEND_EMAIL' | null;
     targetId: number | null;
-    targetCurrentState?: boolean; // ใช้เฉพาะตอน Publish
+    targetCurrentState?: boolean;
   }>({
     isOpen: false,
     action: null,
@@ -73,7 +72,6 @@ export default function BudgetRoundsPage() {
     fetchRounds();
   }, [fetchRounds]);
 
-  // ✅ 2. ฟังก์ชันเปิด Modal สำหรับ "ลบ"
   const initiateDelete = (id: number) => {
     setConfirmModal({
       isOpen: true,
@@ -82,7 +80,6 @@ export default function BudgetRoundsPage() {
     });
   };
 
-  // ✅ 3. ฟังก์ชันเปิด Modal สำหรับ "Publish"
   const initiatePublishToggle = (id: number, currentPublishState: boolean) => {
     setConfirmModal({
       isOpen: true,
@@ -92,7 +89,15 @@ export default function BudgetRoundsPage() {
     });
   };
 
-  // ✅ 4. ฟังก์ชันกลางสำหรับจัดการการยืนยัน (แยก Case ตาม Action)
+  // ฟังก์ชันกดปุ่มส่งอีเมล
+  const initiateSendEmail = (id: number) => {
+    setConfirmModal({
+        isOpen: true,
+        action: 'SEND_EMAIL',
+        targetId: id,
+    });
+  };
+
   const handleConfirmAction = async () => {
     const { action, targetId, targetCurrentState } = confirmModal;
     if (targetId === null) return;
@@ -101,7 +106,6 @@ export default function BudgetRoundsPage() {
     setUpdatingId(targetId);
 
     try {
-      // --- กรณีลบ (DELETE) ---
       if (action === 'DELETE') {
         const res = await fetch(`/api/budget-round?id=${targetId}`, { method: "DELETE" });
         if (res.ok) {
@@ -111,8 +115,6 @@ export default function BudgetRoundsPage() {
           alert("เกิดข้อผิดพลาดในการลบ");
         }
       } 
-      
-      // --- กรณีเปลี่ยนสถานะ (PUBLISH) ---
       else if (action === 'PUBLISH') {
         const newPublishState = !targetCurrentState;
         const res = await fetch("/api/budget-round", {
@@ -131,7 +133,23 @@ export default function BudgetRoundsPage() {
           alert("อัปเดตสถานะไม่สำเร็จ");
         }
       }
-
+      // เพิ่ม Logic การส่งอีเมล
+      else if (action === 'SEND_EMAIL') {
+          // เรียก API Cron ที่เราสร้างไว้
+          const res = await fetch(`/api/project-vote/sent-vote-invite?roundId=${targetId}`, {
+              method: 'POST'
+          });
+          const data = await res.json();
+          
+          if (res.ok) {
+              alert(`ดำเนินการสำเร็จ: ${data.message}\n(Sent Count: ${data.sentCount || 0})`);
+              setConfirmModal({ isOpen: false, action: null, targetId: null });
+          } else {
+              // กรณี Error เช่น ยังไม่ถึงเวลาโหวต
+              alert(`แจ้งเตือน: ${data.message || data.error}`);
+              setConfirmModal({ isOpen: false, action: null, targetId: null });
+          }
+      }
     } catch (error) {
       console.error("Error:", error);
       alert("เกิดข้อผิดพลาดในการเชื่อมต่อ");
@@ -141,7 +159,6 @@ export default function BudgetRoundsPage() {
     }
   };
 
-  // Handlers เดิม
   const handleCreate = () => {
     setEditingRound(null);
     setIsModalOpen(true);
@@ -152,10 +169,9 @@ export default function BudgetRoundsPage() {
     setIsModalOpen(true);
   };
 
-  // Styles Helpers
   const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'OPEN': return 'bg-green-50 text-green-700 border-green-200';
+      case 'OPEN': return 'bg-orange-50 text-orange-700 border-orange-200';
       case 'CLOSED': return 'bg-gray-100 text-gray-500 border-gray-200';
       default: return 'bg-yellow-50 text-yellow-700 border-yellow-200';
     }
@@ -172,7 +188,7 @@ export default function BudgetRoundsPage() {
   const stats = rounds.reduce(
     (acc, round) => {
       acc.all++;
-      if (round.status === 'OPEN') acc.active++;
+      if (round.isPublished && round.status !== 'CLOSED') acc.active++;
       acc.totalDonated += round.stats?.totalDonated || 0;
       return acc;
     },
@@ -185,7 +201,6 @@ export default function BudgetRoundsPage() {
       r.fiscalYear.includes(searchQuery)
   );
 
-  // ✅ Helper สำหรับข้อความใน Modal
   const getModalContent = () => {
     if (confirmModal.action === 'DELETE') {
       return {
@@ -194,9 +209,16 @@ export default function BudgetRoundsPage() {
         confirmLabel: "ลบรายการ",
         isDanger: true
       };
-    } 
-    
-    // Default is PUBLISH
+    }
+    if (confirmModal.action === 'SEND_EMAIL') {
+        return {
+            title: "ยืนยันการส่งอีเมลแจ้งเตือน",
+            message: "ระบบจะทำการส่งอีเมลหาผู้ที่มีสิทธิ์โหวต (Alumni ที่บริจาคแล้ว) ในรอบนี้ทุกคน\n\n(ระบบจะตรวจสอบวันเปิดโหวต 15 วันสุดท้ายก่อนส่งจริง)",
+            confirmLabel: "ยืนยันส่งอีเมล",
+            isDanger: false
+        };
+    }
+
     const isPublishing = !confirmModal.targetCurrentState;
     return {
       title: isPublishing ? "ยืนยันการเผยแพร่" : "ยืนยันการยกเลิกเผยแพร่",
@@ -204,7 +226,7 @@ export default function BudgetRoundsPage() {
         ? "คุณต้องการเปิดสถานะ \"เผยแพร่ (Publish)\" หรือไม่?\n\nระบบจะคำนวณสถานะ (Open/Closed) ตามวันเริ่มต้น-สิ้นสุดให้อัตโนมัติ"
         : "คุณต้องการปิดสถานะกลับเป็น \"ฉบับร่าง (Draft)\" หรือไม่?\n\nผู้ใช้งานทั่วไปจะไม่เห็นรอบงบประมาณนี้",
       confirmLabel: isPublishing ? "ยืนยันการเผยแพร่" : "เปลี่ยนเป็นฉบับร่าง",
-      isDanger: !isPublishing // ถ้าปิดเผยแพร่ ให้ปุ่มเป็นสีแดง (Danger)
+      isDanger: !isPublishing
     };
   };
 
@@ -214,148 +236,162 @@ export default function BudgetRoundsPage() {
     <div className="min-h-screen bg-white p-8 font-sans">
       <div className="max-w-7xl mx-auto space-y-8">
         
-        {/* Navigation */}
-        <div className="mt-4">
-          <Link 
-            href="/admin/budget_approval" 
-            className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-[#F26522] transition-colors group font-medium"
-          >
-            <ChevronLeft size={18} className="text-gray-400 group-hover:text-[#F26522] group-hover:-translate-x-1 transition-transform duration-200" />
-            ย้อนกลับไปหน้าโครงการส่งพิจารณา
-          </Link>
-        </div>
-        
-        {/* Header */}
+        {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <div>
-            <h1 className="text-3xl font-medium text-gray-700">จัดการรอบงบประมาณ</h1>
+          <h1 className="text-4xl font-semibold text-gray-800">จัดการรอบงบประมาณ</h1>
+          
+          <div className="flex gap-2 shrink-0">
+            <Link
+                href="/admin/budget_approval"
+                className="h-10 px-6 rounded-lg flex items-center gap-2 transition-all border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 shadow-sm"
+                title="กลับไปหน้าโครงการส่งพิจารณา"
+            >
+                <ArrowLeftToLine className="w-5 h-5" />
+                <span className="text-sm font-medium">หน้าโครงการส่งพิจารณา</span>
+            </Link>
+          
+            <PrimaryButton 
+              onClick={handleCreate} 
+              style={{ 
+                borderRadius: "8px", 
+                height: "40px", 
+                paddingLeft: "24px", 
+                paddingRight: "24px",
+                fontSize: "14px",
+                fontWeight: "500"
+              }}
+            >
+              <CirclePlus className="w-5 h-5 mr-2" />
+              เพิ่มรอบการพิจารณา
+            </PrimaryButton>
           </div>
-          <PrimaryButton 
-            onClick={handleCreate} 
-            style={{ borderRadius: "8px", height: "40px", paddingLeft: "24px", paddingRight: "24px" }}
-          >
-            <CirclePlus className="w-5 h-5 mr-2" />
-            เพิ่มรอบงบประมาณ
-          </PrimaryButton>
         </div>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-           {/* ... Cards code ... (เหมือนเดิม) */}
-           <div className="border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all border-gray-200">
-             <Layers className="w-10 h-10 mx-auto text-gray-600 mb-3" />
-             <h3 className="text-gray-600">รอบทั้งหมด</h3>
-             <p className="text-2xl font-semibold text-gray-600">{stats.all} <span className="text-sm font-normal">รอบ</span></p>
-           </div>
-           <div className="border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all border-green-200">
-             <CalendarDays className="w-10 h-10 mx-auto text-green-600 mb-3" />
-             <h3 className="text-gray-600">เปิดรับระดมทุนอยู่</h3>
-             <p className="text-2xl font-semibold text-green-600">{stats.active} <span className="text-sm font-normal">รอบ</span></p>
-           </div>
-           <div className="border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all border-orange-200">
-             <Users className="w-10 h-10 mx-auto text-orange-500 mb-3" />
-             <h3 className="text-gray-600">ยอดระดมทุนรวม</h3>
-             <p className="text-2xl font-semibold text-orange-500">{stats.totalDonated.toLocaleString()} <span className="text-sm font-normal">บาท</span></p>
-           </div>
+            <div className="border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all border-amber-200">
+              <Layers className="w-10 h-10 mx-auto text-amber-600 mb-3" />
+              <h3 className="text-gray-600 font-medium">รอบทั้งหมด</h3>
+              <p className="text-2xl font-bold text-amber-700">{stats.all} <span className="text-sm font-normal text-gray-400">รอบ</span></p>
+            </div>
+            <div className="border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all border-orange-200">
+              <CalendarDays className="w-10 h-10 mx-auto text-orange-600 mb-3" />
+              <h3 className="text-gray-600 font-medium">เปิดรับระดมทุนอยู่</h3>
+              <p className="text-2xl font-bold text-orange-600">
+                {stats.active} <span className="text-sm font-normal text-gray-400">รอบ</span>
+              </p>
+            </div>
+            <div className="border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all border-gray-200">
+              <Users className="w-10 h-10 mx-auto text-gray-500 mb-3" />
+              <h3 className="text-gray-600 font-medium">ยอดระดมทุนรวม</h3>
+              <p className="text-2xl font-bold text-gray-500">
+                {stats.totalDonated.toLocaleString()} <span className="text-sm font-normal text-gray-400">บาท</span>
+              </p>
+            </div>
+        </div>
+
+        {/* Toolbar Area */}
+        <div className="w-full">
+          <InputIcon
+            icon={Search}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="ค้นหาชื่อรอบ, ไตรมาส, หรือปีงบประมาณ..."
+            className="w-full bg-white border-gray-200 rounded-lg h-12 shadow-sm"
+          />
         </div>
 
         {/* Table Content */}
-        <div className="space-y-4">
-          <div className="w-full">
-            <InputIcon
-              icon={Search}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ค้นหาชื่อรอบ, ไตรมาส, หรือปีงบประมาณ..."
-              className="w-full bg-white border-gray-200 rounded-lg h-12"
-            />
-          </div>
-
-          <div className="border border-gray-100 rounded-lg overflow-hidden shadow-sm bg-white p-4">
-            <Table>
-              <TableHeader className="bg-gray-100">
-                <TableRow>
-                  <TableHead className="font-semibold text-gray-600 py-4 pl-6">ชื่อรอบ/ไตรมาส</TableHead>
-                  <TableHead className="font-semibold text-gray-600 text-center">ปีงบประมาณ</TableHead>
-                  <TableHead className="font-semibold text-gray-600 text-center w-[220px]">ช่วงเวลา</TableHead>
-                  <TableHead className="font-semibold text-gray-600 text-center">ยอดระดมทุน</TableHead>
-                  <TableHead className="font-semibold text-gray-600 text-center w-[160px]">สถานะ (Auto)</TableHead>
-                  <TableHead className="font-semibold text-gray-600 text-center w-[120px]">Publish</TableHead>
-                  <TableHead className="font-semibold text-gray-600 text-center">จัดการ</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading && rounds.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="h-80 text-center text-gray-400">กำลังโหลดข้อมูล...</TableCell></TableRow>
-                ) : filteredRounds.length > 0 ? (
-                  filteredRounds.map((round) => (
-                    <TableRow key={round.id} className="hover:bg-gray-50 transition-colors">
-                      <TableCell className="font-medium text-gray-700 py-4 pl-6">{round.roundName}</TableCell>
-                      <TableCell className="text-center text-gray-600">{round.fiscalYear}</TableCell>
-                      <TableCell className="text-center text-sm text-gray-600">
-                          {round.startDate ? new Date(round.startDate).toLocaleDateString("th-TH", { day: 'numeric', month: 'short', year: '2-digit'}) : '-'} 
-                          <span className="mx-2 text-gray-400">-</span>
-                          {round.endDate ? new Date(round.endDate).toLocaleDateString("th-TH", { day: 'numeric', month: 'short', year: '2-digit'}) : '-'}
-                      </TableCell>
-                      <TableCell className="text-center text-gray-600 font-medium">
-                        {round.stats?.totalDonated.toLocaleString()} <span className="text-xs text-gray-400 font-normal">บาท</span>
-                      </TableCell>
-                      
-                      <TableCell className="text-center">
-                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border ${getStatusStyle(round.status)}`}>
-                            {getStatusLabel(round.status)}
-                        </span>
-                      </TableCell>
-
-                      <TableCell className="text-center">
-                          <div className="flex flex-col items-center justify-center gap-1">
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input 
-                                    type="checkbox" 
-                                    className="sr-only peer" 
-                                    checked={round.isPublished}
-                                    disabled={updatingId === round.id}
-                                    onChange={() => initiatePublishToggle(round.id, round.isPublished)}
-                                />
-                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F26522]"></div>
-                            </label>
-                            <span className={`text-[10px] ${round.isPublished ? 'text-[#F26522]' : 'text-gray-400'}`}>
-                                {round.isPublished ? "เผยแพร่แล้ว" : "ฉบับร่าง"}
-                            </span>
-                          </div>
-                      </TableCell>
-
-                      <TableCell className="text-center">
-                        <div className="flex justify-center items-center gap-2">
-                          <button 
-                            onClick={() => handleEdit(round)}
-                            className="text-orange-500 hover:text-orange-700 hover:bg-orange-50 p-1.5 rounded-lg transition-all"
-                          >
-                            <PenLine size={18} strokeWidth={2} />
-                          </button>
-                          <span className="text-gray-300 font-light">|</span>
-                          {/* ✅ แก้ไขปุ่มลบ ให้เรียก initiateDelete แทนการ confirm() แบบเดิม */}
-                          <button 
-                            onClick={() => initiateDelete(round.id)} 
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-all"
-                          >
-                            <Trash2 size={18} strokeWidth={2} />
-                          </button>
+        <div className="border border-gray-100 rounded-lg overflow-hidden shadow-sm bg-white p-4">
+          <Table>
+            <TableHeader className="bg-gray-100">
+              <TableRow>
+                <TableHead className="font-semibold text-gray-600 py-4 pl-6">ชื่อรอบ/ไตรมาส</TableHead>
+                <TableHead className="font-semibold text-gray-600 text-center">ปีงบประมาณ</TableHead>
+                <TableHead className="font-semibold text-gray-600 text-center w-[220px]">ช่วงเวลา</TableHead>
+                <TableHead className="font-semibold text-gray-600 text-center">ยอดระดมทุน</TableHead>
+                <TableHead className="font-semibold text-gray-600 text-center w-40">สถานะ (Auto)</TableHead>
+                <TableHead className="font-semibold text-gray-600 text-center w-[120px]">Publish</TableHead>
+                <TableHead className="font-semibold text-gray-600 text-center">จัดการ</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading && rounds.length === 0 ? (
+                <TableRow><TableCell colSpan={7} className="h-80 text-center text-gray-400">กำลังโหลดข้อมูล...</TableCell></TableRow>
+              ) : filteredRounds.length > 0 ? (
+                filteredRounds.map((round) => (
+                  <TableRow key={round.id} className="hover:bg-gray-50 transition-colors">
+                    <TableCell className="font-medium text-gray-700 py-4 pl-6">{round.roundName}</TableCell>
+                    <TableCell className="text-center text-gray-600">{round.fiscalYear}</TableCell>
+                    <TableCell className="text-center text-sm text-gray-600">
+                        {round.startDate ? new Date(round.startDate).toLocaleDateString("th-TH", { day: 'numeric', month: 'short', year: '2-digit'}) : '-'} 
+                        <span className="mx-2 text-gray-400">-</span>
+                        {round.endDate ? new Date(round.endDate).toLocaleDateString("th-TH", { day: 'numeric', month: 'short', year: '2-digit'}) : '-'}
+                    </TableCell>
+                    <TableCell className="text-center text-gray-600 font-medium">
+                      {round.stats?.totalDonated.toLocaleString()} <span className="text-xs text-gray-400 font-normal">บาท</span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border ${getStatusStyle(round.status)}`}>
+                          {getStatusLabel(round.status)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          <label className="relative inline-flex items-center cursor-pointer">
+                              <input 
+                                  type="checkbox" 
+                                  className="sr-only peer" 
+                                  checked={round.isPublished}
+                                  disabled={updatingId === round.id}
+                                  onChange={() => initiatePublishToggle(round.id, round.isPublished)}
+                              />
+                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F26522]"></div>
+                          </label>
+                          <span className={`text-[10px] ${round.isPublished ? 'text-[#F26522]' : 'text-gray-400'}`}>
+                              {round.isPublished ? "เผยแพร่แล้ว" : "ฉบับร่าง"}
+                          </span>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={7} className="h-80 text-center text-gray-400">
-                      <Layers className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-                      ไม่พบข้อมูลรอบงบประมาณ
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex justify-center items-center gap-2">
+                        <button 
+                          onClick={() => initiateSendEmail(round.id)}
+                          className="text-yellow-500 hover:text-yellow-700 hover:bg-yellow-50 p-1.5 rounded-lg transition-all"
+                          title="ส่งอีเมลเชิญโหวต (Broadcast)"
+                        >
+                          <Send size={18} strokeWidth={2} />
+                        </button>
+                        <span className="text-gray-300 font-light">|</span>
+                        <button 
+                          onClick={() => handleEdit(round)}
+                          className="text-orange-500 hover:text-orange-700 hover:bg-orange-50 p-1.5 rounded-lg transition-all"
+                          title="แก้ไข"
+                        >
+                          <PenLine size={18} strokeWidth={2} />
+                        </button>
+                        <span className="text-gray-300 font-light">|</span>
+                        <button 
+                          onClick={() => initiateDelete(round.id)} 
+                          className="text-gray-500 hover:text-gray-700 hover:bg-gray-50 p-1.5 rounded-lg transition-all"
+                          title="ลบ"
+                        >
+                          <Trash2 size={18} strokeWidth={2} />
+                        </button>
+                      </div>
                     </TableCell>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-80 text-center text-gray-400">
+                    <Layers className="w-12 h-12 mx-auto text-gray-300 mb-4" />
+                    ไม่พบข้อมูลรอบงบประมาณ
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
       </div>
 
@@ -366,7 +402,6 @@ export default function BudgetRoundsPage() {
         initialData={editingRound}
       />
 
-      {/* ✅ ใช้ ConfirmModal ร่วมกัน ทั้ง Publish และ Delete */}
       <ConfirmModal 
         isOpen={confirmModal.isOpen}
         onClose={() => !isConfirming && setConfirmModal({ ...confirmModal, isOpen: false, action: null })}
