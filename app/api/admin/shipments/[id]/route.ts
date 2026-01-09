@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
 import { EntitlementSource } from "@prisma/client";
 
-const ALLOWED = ["PENDING", "IN_TRANSIT", "DELIVERED", "FAILED"] as const;
+const ALLOWED = ["PENDING", "DELIVERED"] as const;
 type ShipmentStatus = (typeof ALLOWED)[number];
 
 export async function PATCH(
@@ -34,7 +34,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Shipment not found" }, { status: 404 });
     }
 
-    // ❌ ห้ามเปลี่ยนจาก DELIVERED กลับไปเป็น PENDING หรือ IN_TRANSIT
+    // ❌ ห้ามเปลี่ยนจาก DELIVERED กลับไปเป็น PENDING
     if (currentShipment.status === "DELIVERED" && status !== "DELIVERED") {
       return NextResponse.json(
         { error: "ไม่สามารถเปลี่ยนสถานะจากจัดส่งแล้วกลับไปได้" },
@@ -59,7 +59,7 @@ export async function PATCH(
         status,
         trackingNo: status === "DELIVERED" ? trackingNo : currentShipment.trackingNo,
         deliveredAt: status === "DELIVERED" ? new Date() : currentShipment.deliveredAt,
-        shippedAt: status === "IN_TRANSIT" && !currentShipment.shippedAt ? new Date() : currentShipment.shippedAt,
+        shippedAt: status === "DELIVERED" && !currentShipment.shippedAt ? new Date() : currentShipment.shippedAt,
       },
     });
 

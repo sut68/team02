@@ -13,7 +13,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const body = await request.json();
     const { status, trackingNo } = body;
 
-    const validStatuses = ['PENDING', 'IN_TRANSIT', 'DELIVERED', 'FAILED'];
+    const validStatuses = ['PENDING', 'DELIVERED'];
     if (status && !validStatuses.includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }

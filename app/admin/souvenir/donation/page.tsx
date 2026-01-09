@@ -53,9 +53,7 @@ interface Donation {
 // Shipment status options
 const STATUS_OPTIONS = [
   { value: "PENDING", label: "รอดำเนินการ" },
-  { value: "IN_TRANSIT", label: "กำลังจัดส่ง" },
   { value: "DELIVERED", label: "จัดส่งแล้ว" },
-  { value: "FAILED", label: "มีปัญหา" },
 ] as const;
 
 
@@ -180,6 +178,11 @@ export default function SouvenirDonationPage() {
     return () => cancelAnimationFrame(rafId);
   }, [isPaused, souvenirItems.length]);
 
+  // Calculate delivered count
+  const deliveredCount = React.useMemo(() => {
+    return donations.filter(d => d.shipments[0]?.status === 'DELIVERED').length;
+  }, [donations]);
+
   // Filtered donations by status
   const filteredDonations = React.useMemo(() => {
     if (!selectedProject) return [];
@@ -295,24 +298,24 @@ export default function SouvenirDonationPage() {
                         <div className={`font-medium ${selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-600'}`}>คงเหลือ</div>
                       </div>
                     </div>
-                    {/* Card 2: ลงทะเบียน */}
+                    {/* Card 2: รอดำเนินการ */}
                     <div onClick={() => setSelectedStatus('registered')} className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${selectedStatus === 'registered' ? 'border-orange-300 shadow-xl' : 'border-orange-100 hover:shadow-lg'}`}>
                       <div className="p-10 text-center w-full">
                         <div className="flex items-center justify-center mb-4">
                           <Layers className="w-8 h-8 text-orange-500" />
                         </div>
                         <div className={`text-5xl font-bold mb-2 ${selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-800'}`}>{donations.length}</div>
-                        <div className={`font-medium ${selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-600'}`}>ลงทะเบียน</div>
+                        <div className={`font-medium ${selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-600'}`}>รอดำเนินการ</div>
                       </div>
                     </div>
-                    {/* Card 3: รับของแล้ว */}
+                    {/* Card 3: จัดส่งแล้ว */}
                     <div onClick={() => setSelectedStatus('claimed')} className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${selectedStatus === 'claimed' ? 'border-orange-300 shadow-xl' : 'border-orange-100 hover:shadow-lg'}`}>
                       <div className="p-10 text-center w-full">
                         <div className="flex items-center justify-center mb-4">
                           <CheckCircle className="w-8 h-8 text-orange-500" />
                         </div>
-                        <div className={`text-5xl font-bold mb-2 ${selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-800'}`}>{donations.filter(d => d.shipments[0]?.status === 'DELIVERED').length}</div>
-                        <div className={`font-medium ${selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-600'}`}>รับของแล้ว</div>
+                        <div className={`text-5xl font-bold mb-2 ${selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-800'}`}>{deliveredCount}</div>
+                        <div className={`font-medium ${selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-600'}`}>จัดส่งแล้ว</div>
                       </div>
                     </div>
                   </div>
@@ -427,7 +430,6 @@ export default function SouvenirDonationPage() {
                                           disabled={editState.saving || status === 'DELIVERED'}
                                         >
                                           <option value="PENDING">รอดำเนินการ</option>
-                                          <option value="IN_TRANSIT">กำลังจัดส่ง</option>
                                           <option value="DELIVERED" disabled={!editState.trackingNo.trim()}>จัดส่งแล้ว</option>
                                         </select>
                                         <svg className="w-3 h-3 flex-shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -439,12 +441,12 @@ export default function SouvenirDonationPage() {
                                         onClick={() => updateEditState({ enabled: true, status, trackingNo: trackingNo || '' })}
                                         className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium cursor-pointer transition-all hover:shadow-md"
                                         style={{
-                                          backgroundColor: status === 'DELIVERED' ? '#dcfce7' : status === 'IN_TRANSIT' ? '#fef3c7' : '#f3f4f6',
-                                          color: status === 'DELIVERED' ? '#166534' : status === 'IN_TRANSIT' ? '#92400e' : '#374151'
+                                          backgroundColor: status === 'DELIVERED' ? '#fed7aa' : '#f3f4f6',
+                                          color: status === 'DELIVERED' ? '#92400e' : '#374151'
                                         }}
                                       >
                                         <span>
-                                          {status === 'PENDING' ? 'รอดำเนินการ' : status === 'IN_TRANSIT' ? 'กำลังจัดส่ง' : 'จัดส่งแล้ว'}
+                                          {status === 'PENDING' ? 'รอดำเนินการ' : 'จัดส่งแล้ว'}
                                         </span>
                                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 10l5 5 5-5" />
