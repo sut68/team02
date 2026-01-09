@@ -21,13 +21,13 @@ import { randomUUID } from "crypto";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Starting seed...");
+  console.log("🌱 Starting seed (Final Version: Bag=Activity, Umbrella=Donation)...");
 
   const defaultPassword = "sut12345";
   const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
   // -----------------------------
-  // 1) USER
+  // 1) USER (คงเดิม)
   // -----------------------------
   const userData = [
     {
@@ -131,7 +131,7 @@ async function main() {
   if (!adminId) throw new Error("admin user not found after seeding");
 
   // -----------------------------
-  // 2) EDUCATION RECORD
+  // 2) EDUCATION RECORD (คงเดิม)
   // -----------------------------
   const eduData = [
     {
@@ -210,7 +210,7 @@ async function main() {
   console.log("✅ Seeded education records");
 
   // -----------------------------
-  // 3) VERIFICATION
+  // 3) VERIFICATION (คงเดิม)
   // -----------------------------
   const verificationData = [
     {
@@ -281,14 +281,15 @@ async function main() {
   console.log("✅ Seeded verifications");
 
   // -----------------------------
-  // 4) SOUVENIR ITEMS
+  // 4) SOUVENIR ITEMS (จัดหมวดใหม่ตามที่ขอ)
   // -----------------------------
   const souvenirData = [
+    // === หมวด ACTIVITY (กิจกรรม): หมวก, เข็มกลัด, กระเป๋าผ้า ===
     {
       sku: "CAP-ENGI-2025",
       name: "หมวกวิศวกรรมศาสตร์",
       description: "หมวกแก๊ปปักโลโก้คณะวิศวกรรมศาสตร์ มทส.",
-      category: "กิจกรรม",
+      category: "ACTIVITY",
       imageUrl: "/souvenir/EngiCap.png",
       unit: "ชิ้น",
       initialStock: 100,
@@ -298,37 +299,39 @@ async function main() {
       sku: "BROOCH-ENGI-2025",
       name: "เข็มกลัดวิศวกรรมศาสตร์",
       description: "เข็มกลัดโลหะปักโลโก้วิศวกรรมศาสตร์ มทส.",
-      category: "กิจกรรม",
+      category: "ACTIVITY",
       imageUrl: "/souvenir/EngiBrooch.png",
       unit: "อัน",
       initialStock: 200,
       active: true,
     },
     {
+      sku: "BAG-NEW-2025",
+      name: "กระเป๋าผ้า มทส.",
+      description: "กระเป๋าผ้าแคนวาส สกรีนลาย มทส.",
+      category: "ACTIVITY", // ✅ ย้ายมาอยู่ ACTIVITY ตามที่ขอ
+      imageUrl: "/souvenir/Bag_new.png",
+      unit: "ใบ",
+      initialStock: 80,
+      active: true,
+    },
+
+    // === หมวด DONATION (บริจาค): กระบอกน้ำ, สมุด, ร่ม ===
+    {
       sku: "BOTTLE-ENGI-2025",
       name: "กระบอกน้ำวิศวกรรมศาสตร์",
       description: "กระบอกน้ำสแตนเลส พร้อมโลโก้วิศวกรรมศาสตร์ มทส.",
-      category: "บริจาค",
+      category: "DONATION",
       imageUrl: "/souvenir/EngiBottle.png",
       unit: "ใบ",
       initialStock: 150,
       active: true,
     },
     {
-      sku: "BAG-NEW-2025",
-      name: "กระเป๋าผ้า มทส.",
-      description: "กระเป๋าผ้าแคนวาส สกรีนลาย มทส.",
-      category: "กิจกรรม",
-      imageUrl: "/souvenir/Bag_new.png",
-      unit: "ใบ",
-      initialStock: 80,
-      active: true,
-    },
-    {
       sku: "BOOK-NEW-2025",
       name: "สมุดบันทึก มทส.",
       description: "สมุดบันทึกปกแข็ง พร้อมโลโก้ มทส.",
-      category: "บริจาค",
+      category: "DONATION",
       imageUrl: "/souvenir/Book_new.png",
       unit: "เล่ม",
       initialStock: 300,
@@ -338,7 +341,7 @@ async function main() {
       sku: "UMBRELLA-NEW-2025",
       name: "ร่ม มทส.",
       description: "ร่มพับ 3 ตอน พร้อมโลโก้ มทส.",
-      category: "บริจาค",
+      category: "DONATION", // ✅ ร่ม อยู่ DONATION
       imageUrl: "/souvenir/Umbrella_new.png",
       unit: "คัน",
       initialStock: 120,
@@ -361,10 +364,10 @@ async function main() {
       create: item,
     });
   }
-  console.log("✅ Seeded souvenir items");
+  console.log("✅ Seeded souvenir items (Re-categorized: Bag->Activity)");
 
   // -----------------------------
-  // 4.1) BookingForm
+  // 4.1) BookingForm (คงเดิม)
   // -----------------------------
   const bookingFormsData = [
     {
@@ -437,7 +440,7 @@ async function main() {
   }
 
   // -----------------------------
-  // 4.2) Content + PictureContent
+  // 4.2) Content + PictureContent (คงเดิม + ลิงก์ SKU)
   // -----------------------------
   const contentData: Array<{
     TitleName: string;
@@ -446,6 +449,7 @@ async function main() {
     Booking: Option;
     Userid: number;
     bookingFormKey: BookingFormKey | null;
+    souvenirSku: string | null;
   }> = [
     {
       TitleName: "SUT CHEERLEADERS CLUB",
@@ -455,6 +459,7 @@ async function main() {
       Booking: Option.NOT,
       Userid: adminId,
       bookingFormKey: null,
+      souvenirSku: null,
     },
     {
       TitleName: "พิธิมอบหมวกนักศึกษาพยาบาล มทส.",
@@ -464,6 +469,7 @@ async function main() {
       Booking: Option.NOT,
       Userid: adminId,
       bookingFormKey: null,
+      souvenirSku: null,
     },
     {
       TitleName: "DSA MASCOT CONTENT",
@@ -473,6 +479,7 @@ async function main() {
       Booking: Option.NOT,
       Userid: adminId,
       bookingFormKey: null,
+      souvenirSku: null,
     },
     {
       TitleName: "การแต่งตั้งให้ดำรงตำแหน่งรักษาการแทนอธิการบดี มทส.",
@@ -482,6 +489,7 @@ async function main() {
       Booking: Option.NOT,
       Userid: adminId,
       bookingFormKey: null,
+      souvenirSku: null,
     },
     {
       TitleName: "IESUT FAMILY 2025",
@@ -491,6 +499,7 @@ async function main() {
       Booking: Option.HAVE,
       Userid: adminId,
       bookingFormKey: `${EventType.WORKSHOP}|2025-06-01T09:00:00.000Z` as BookingFormKey,
+      souvenirSku: "CAP-ENGI-2025", // ผูกกับหมวก
     },
     {
       TitleName: "ENGi Research to Marget",
@@ -500,6 +509,7 @@ async function main() {
       Booking: Option.HAVE,
       Userid: adminId,
       bookingFormKey: `${EventType.REUNION}|2025-03-15T09:00:00.000Z` as BookingFormKey,
+      souvenirSku: "BROOCH-ENGI-2025", // ผูกกับเข็มกลัด
     },
     {
       TitleName: "SUT GLOBAL ENTREPRENEURSHIP CAMP 2026",
@@ -509,6 +519,7 @@ async function main() {
       Booking: Option.NOT,
       Userid: adminId,
       bookingFormKey: null,
+      souvenirSku: null,
     },
   ];
 
@@ -517,6 +528,12 @@ async function main() {
       ? bookingFormMap.get(c.bookingFormKey as BookingFormKey) ?? null
       : null;
 
+    let souvenirId = null;
+    if (c.souvenirSku) {
+        const item = await prisma.souvenirItem.findUnique({ where: { sku: c.souvenirSku }});
+        if (item) souvenirId = item.id;
+    }
+
     await prisma.content.upsert({
       where: { TitleName_categories: { TitleName: c.TitleName, categories: c.categories } },
       update: {
@@ -524,6 +541,7 @@ async function main() {
         Booking: c.Booking,
         Userid: c.Userid,
         BookingFormID,
+        souvenirItemId: souvenirId,
       },
       create: {
         TitleName: c.TitleName,
@@ -532,6 +550,7 @@ async function main() {
         Booking: c.Booking,
         Userid: c.Userid,
         BookingFormID,
+        souvenirItemId: souvenirId,
       },
     });
   }
@@ -570,9 +589,7 @@ async function main() {
   // 5) Donation flow
   // =========================================================
 
-  // 5.0 Create Payment Methods
-  console.log("Creating Payment Methods...");
-  
+  // 5.0 Create Payment Methods (คงเดิม)
   const paymentMethodsList = [
     {
       methodName: PaymentMethodType.PROMPTPAY,
@@ -634,7 +651,7 @@ async function main() {
 
   console.log("✅ Seeded all payment methods");
 
-  // 5.2 Find/create donation projects (Batch Loop)
+  // 5.2 Find/create donation projects (แก้ Link: Bag -> Umbrella)
   const donationProjectsData = [
     {
       title: "กองทุนกลางสมาคมศิษย์เก่าวิศวกรรมศาสตร์",
@@ -670,7 +687,7 @@ async function main() {
       ownerName: "สโมสรนักศึกษา",
       contact: "089-999-9999",
       posterUrl: "/donation_poster/flood.jpg",
-      skuToLink: "BAG-NEW-2025" 
+      skuToLink: "UMBRELLA-NEW-2025" // ✅ แก้จาก BAG เป็น UMBRELLA (Donation Item)
     },
     {
       title: "ทุนวิจัย AI เพื่อการเกษตร Smart Farm",
@@ -736,7 +753,7 @@ async function main() {
   }
 
   // ---------------------------------------------------------
-  // 5.3 Prepare Test User & Project for Transaction
+  // 5.3 Prepare Test User & Project for Transaction (คงเดิม)
   // ---------------------------------------------------------
   
   const testUser = await prisma.user.findFirst({

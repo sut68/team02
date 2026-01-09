@@ -25,13 +25,16 @@ interface EventOption {
   name: string;
   startDate: Date;
   souvenirItemId: number | null;
+  linkedItemName?: string;
 }
 
 interface DonationProjectOption {
   id: number;
-  title: string;
-  goalAmount: number;
-  currentAmount: number;
+  name: string;
+  souvenirItemId: number | null;
+  linkedItemName?: string;
+  goalAmount?: number;
+  currentAmount?: number;
 }
 
 interface SouvenirDetailFormProps {
@@ -633,21 +636,24 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
                         className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:border-orange-400 focus:outline-none disabled:bg-gray-50"
                       >
                         <option value="">-- เลือกกิจกรรม --</option>
-                        {events.map((event) => (
-                          <option 
-                            key={event.id} 
-                            value={event.id}
-                            disabled={event.souvenirItemId !== null && event.souvenirItemId !== itemId}
-                          >
-                            {event.name} ({new Date(event.startDate).toLocaleDateString('th-TH')})
-                            {event.souvenirItemId !== null && event.souvenirItemId !== itemId && ' - ผูกแล้ว'}
-                          </option>
-                        ))}
+                        {events.map((event) => {
+                          const isOccupied = event.souvenirItemId !== null && event.souvenirItemId !== itemId;
+                          const label = isOccupied
+                            ? `${event.name}${event.linkedItemName ? ` (ผูกกับ: ${event.linkedItemName})` : ''}`
+                            : event.name;
+                          return (
+                            <option 
+                              key={event.id} 
+                              value={event.id}
+                              disabled={isOccupied}
+                              className={isOccupied ? 'text-gray-400' : ''}
+                            >
+                              {label}
+                            </option>
+                          );
+                        })}
                       </select>
                     )}
-                    <p className="text-xs text-gray-400 mt-1">
-                      {events.filter(e => e.souvenirItemId === null || e.souvenirItemId === itemId).length} กิจกรรมที่พร้อมใช้งาน
-                    </p>
                   </div>
                 )}
 
@@ -672,11 +678,22 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
                         className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm focus:border-orange-400 focus:outline-none disabled:bg-gray-50"
                       >
                         <option value="">-- เลือกโครงการบริจาค --</option>
-                        {donationProjects.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.title} ( {p.currentAmount.toLocaleString()} / {p.goalAmount.toLocaleString()} )
-                          </option>
-                        ))}
+                        {donationProjects.map((proj) => {
+                          const isOccupied = proj.souvenirItemId !== null && proj.souvenirItemId !== itemId;
+                          const label = isOccupied
+                            ? `${proj.name}${proj.linkedItemName ? ` (ผูกกับ: ${proj.linkedItemName})` : ''}`
+                            : proj.name;
+                          return (
+                            <option
+                              key={proj.id}
+                              value={proj.id}
+                              disabled={isOccupied}
+                              className={isOccupied ? 'text-gray-400' : ''}
+                            >
+                              {label}
+                            </option>
+                          );
+                        })}
                       </select>
                     )}
                   </div>
