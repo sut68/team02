@@ -36,7 +36,6 @@ interface Donation {
   donatedAt: string;
   user: {
     fullName: string;
-    email: string;
     phone?: string;
     address?: string;
     subdistrict?: string;
@@ -211,10 +210,9 @@ export default function SouvenirDonationPage() {
     if (!term) return filteredDonations;
     return filteredDonations.filter(d => {
       const fullName = d.user.fullName?.toLowerCase() || '';
-      const email = d.user.email?.toLowerCase() || '';
       const phone = d.user.phone?.toLowerCase() || '';
       const address = `${d.user.address || ''} ${d.user.subdistrict || ''} ${d.user.district || ''} ${d.user.province || ''}`.toLowerCase();
-      return fullName.includes(term) || email.includes(term) || phone.includes(term) || address.includes(term);
+      return fullName.includes(term) || phone.includes(term) || address.includes(term);
     });
   }, [filteredDonations, searchTerm]);
 
@@ -371,7 +369,6 @@ export default function SouvenirDonationPage() {
                             <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[40px]">ลำดับ</th>
                             <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[100px]">ชื่อ-สกุล</th>
                             <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[140px]">ที่อยู่</th>
-                            <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[120px]">อีเมล</th>
                             <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[90px]">เบอร์โทร</th>
                             <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[100px]">วันที่บริจาค</th>
                             <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[110px]">ของที่ระลึก</th>
@@ -382,7 +379,7 @@ export default function SouvenirDonationPage() {
                         <tbody>
                           {searchedDonations.length === 0 ? (
                             <tr>
-                              <td colSpan={9} className="px-6 py-10 text-center text-gray-500">
+                              <td colSpan={8} className="px-6 py-10 text-center text-gray-500">
                                 {searchTerm ? 'ไม่พบผลการค้นหา' : 'ไม่มีรายการขอรับของที่ระลึกในโครงการนี้'}
                               </td>
                             </tr>
@@ -469,7 +466,6 @@ export default function SouvenirDonationPage() {
                                   <td className="px-3 py-2 text-xs md:text-sm text-gray-800">{index + 1}</td>
                                   <td className="px-3 py-2 text-xs md:text-sm text-gray-800 font-medium truncate">{donation.user.fullName}</td>
                                   <td className="px-3 py-2 text-xs md:text-sm text-gray-600 truncate" title={fullAddress}>{fullAddress}</td>
-                                  <td className="px-3 py-2 text-xs md:text-sm text-gray-600 truncate">{donation.user.email}</td>
                                   <td className="px-3 py-2 text-xs md:text-sm text-gray-600">{donation.user.phone || '-'}</td>
                                   <td className="px-3 py-2 text-xs md:text-sm text-gray-600">{thaiDate}</td>
                                   <td className="px-3 py-2 text-xs md:text-sm text-orange-600 truncate">{souvenirName}</td>
