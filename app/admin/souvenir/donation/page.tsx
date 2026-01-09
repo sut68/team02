@@ -35,6 +35,7 @@ interface Donation {
   user: {
     fullName: string;
     email: string;
+    phone?: string;
     address?: string;
     subdistrict?: string;
     district?: string;
@@ -333,20 +334,21 @@ export default function SouvenirDonationPage() {
                       <table className="w-full">
                         <thead>
                           <tr className="bg-gray-100 border-b border-gray-200">
-                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[50px]">ลำดับ</th>
-                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[150px]">ชื่อ-สกุล</th>
-                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[200px]">ที่อยู่</th>
-                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[200px]">อีเมล</th>
-                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[120px]">วันที่บริจาค</th>
-                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[150px]">ของที่ระลึก</th>
-                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[140px]">สถานะ</th>
-                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[200px]">เลขแทรก</th>
+                            <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[40px]">ลำดับ</th>
+                            <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[100px]">ชื่อ-สกุล</th>
+                            <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[140px]">ที่อยู่</th>
+                            <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[120px]">อีเมล</th>
+                            <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[90px]">เบอร์โทร</th>
+                            <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[100px]">วันที่บริจาค</th>
+                            <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[110px]">ของที่ระลึก</th>
+                            <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[100px]">สถานะ</th>
+                            <th className="px-3 py-3 text-left text-xs md:text-sm font-medium text-gray-600 min-w-[130px]">เลขแทรก</th>
                           </tr>
                         </thead>
                         <tbody>
                           {filteredDonations.length === 0 ? (
                             <tr>
-                              <td colSpan={8} className="px-6 py-10 text-center text-gray-500">ไม่มีรายการขอรับของที่ระลึกในโครงการนี้</td>
+                              <td colSpan={9} className="px-6 py-10 text-center text-gray-500">ไม่มีรายการขอรับของที่ระลึกในโครงการนี้</td>
                             </tr>
                           ) : (
                             filteredDonations.map((donation, index) => {
@@ -428,15 +430,16 @@ export default function SouvenirDonationPage() {
 
                               return (
                                 <tr key={donation.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                                  <td className="px-6 py-4 text-sm text-gray-800">{index + 1}</td>
-                                  <td className="px-6 py-4 text-sm text-gray-800 font-medium">{donation.user.fullName}</td>
-                                  <td className="px-6 py-4 text-sm text-gray-600">{fullAddress}</td>
-                                  <td className="px-6 py-4 text-sm text-gray-600">{donation.user.email}</td>
-                                  <td className="px-6 py-4 text-sm text-gray-600">{thaiDate}</td>
-                                  <td className="px-6 py-4 text-sm text-orange-600">{souvenirName}</td>
-                                  <td className="px-6 py-4">
+                                  <td className="px-3 py-2 text-xs md:text-sm text-gray-800">{index + 1}</td>
+                                  <td className="px-3 py-2 text-xs md:text-sm text-gray-800 font-medium truncate">{donation.user.fullName}</td>
+                                  <td className="px-3 py-2 text-xs md:text-sm text-gray-600 truncate" title={fullAddress}>{fullAddress}</td>
+                                  <td className="px-3 py-2 text-xs md:text-sm text-gray-600 truncate">{donation.user.email}</td>
+                                  <td className="px-3 py-2 text-xs md:text-sm text-gray-600">{donation.user.phone || '-'}</td>
+                                  <td className="px-3 py-2 text-xs md:text-sm text-gray-600">{thaiDate}</td>
+                                  <td className="px-3 py-2 text-xs md:text-sm text-orange-600 truncate">{souvenirName}</td>
+                                  <td className="px-3 py-2">
                                     {editState.enabled ? (
-                                      <div className="inline-flex items-center gap-1 px-3 py-1 border border-orange-200 rounded-full text-xs font-medium focus-within:ring-2 focus-within:ring-orange-500 outline-none bg-white">
+                                      <div className="inline-flex items-center gap-1 px-2 py-1 border border-orange-200 rounded-full text-xs font-medium focus-within:ring-2 focus-within:ring-orange-500 outline-none bg-white">
                                         <select
                                           value={editState.status}
                                           onChange={(e) => updateEditState({ status: e.target.value })}
@@ -453,7 +456,7 @@ export default function SouvenirDonationPage() {
                                     ) : (
                                       <span 
                                         onClick={() => updateEditState({ enabled: true, status, trackingNo: trackingNo || '' })}
-                                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium cursor-pointer transition-all hover:shadow-md"
+                                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium cursor-pointer transition-all hover:shadow-md"
                                         style={{
                                           backgroundColor: status === 'DELIVERED' ? '#fed7aa' : '#f3f4f6',
                                           color: status === 'DELIVERED' ? '#92400e' : '#374151'
@@ -468,36 +471,36 @@ export default function SouvenirDonationPage() {
                                       </span>
                                     )}
                                   </td>
-                                  <td className="px-6 py-4">
+                                  <td className="px-3 py-2">
                                     {editState.enabled ? (
-                                      <div className="space-y-2">
+                                      <div className="space-y-1 min-w-[120px]">
                                         <input
                                           type="text"
                                           value={editState.trackingNo}
                                           onChange={(e) => updateEditState({ trackingNo: e.target.value })}
-                                          placeholder="กรอกเลขแทรก"
-                                          className="w-full px-2 py-1 border border-orange-200 rounded text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                                          placeholder="เลขแทรก"
+                                          className="w-full px-2 py-1 border border-orange-200 rounded text-xs focus:ring-2 focus:ring-orange-500 outline-none"
                                           disabled={editState.saving}
                                         />
-                                        <div className="flex gap-2">
+                                        <div className="flex gap-1">
                                           <button
                                             onClick={handleStatusChange}
                                             disabled={editState.saving}
-                                            className="flex-1 px-3 py-1 bg-orange-500 text-white text-xs rounded font-medium hover:bg-orange-600 disabled:bg-gray-400"
+                                            className="flex-1 px-2 py-1 bg-orange-500 text-white text-xs rounded font-medium hover:bg-orange-600 disabled:bg-gray-400"
                                           >
                                             {editState.saving ? '...' : 'บันทึก'}
                                           </button>
                                           <button
                                             onClick={() => updateEditState({ enabled: false, status, trackingNo: trackingNo || '' })}
                                             disabled={editState.saving}
-                                            className="flex-1 px-3 py-1 bg-gray-300 text-gray-700 text-xs rounded font-medium hover:bg-gray-400 disabled:bg-gray-200"
+                                            className="flex-1 px-2 py-1 bg-gray-300 text-gray-700 text-xs rounded font-medium hover:bg-gray-400 disabled:bg-gray-200"
                                           >
                                             ยกเลิก
                                           </button>
                                         </div>
                                       </div>
                                     ) : (
-                                      <span className="text-sm font-medium text-gray-700">
+                                      <span className="text-xs font-medium text-gray-700 break-all">
                                         {trackingNo || '-'}
                                       </span>
                                     )}

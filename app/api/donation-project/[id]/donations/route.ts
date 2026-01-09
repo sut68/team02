@@ -53,6 +53,7 @@ export async function GET(
             id: true,
             fullName: true,
             email: true,
+            phone: true,
             address: true,
             subdistrict: true,
             district: true,
