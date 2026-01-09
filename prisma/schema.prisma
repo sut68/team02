@@ -1,6 +1,7 @@
 generator client {
   provider = "prisma-client-js"
 }
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -193,6 +194,13 @@ model User {
   jobPostings      JobPosting[]
   approvalLogs     ApprovalLog[]
   jobEditHistories JobEditHistory[]
+
+  // Scalability Indexes
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model EducationRecord {
@@ -331,9 +339,11 @@ model Entitlement {
   qtyUsed     Int               @default(0) // ใช้สิทธิ์ไปแล้วกี่ชิ้น
   // ✅ เพิ่มอันนี้
   redeemToken String?           @unique
+  bookingId   Int?
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  booking     Booking?     @relation(fields: [bookingId], references: [id])
   user        User         @relation(fields: [userId], references: [id])
   item        SouvenirItem @relation(fields: [itemId], references: [id])
   donation    Donation?    @relation(fields: [donationId], references: [id])
@@ -403,9 +413,7 @@ enum RedeemMethod {
 
 enum ShipStatus {
   PENDING
-  IN_TRANSIT
   DELIVERED
-  FAILED
 }
 
 // ========================================
@@ -487,6 +495,8 @@ model Booking {
   BookingFieldID    Int?              @unique
   //PaymentID         Int?              @unique
   transactionStatus TransactionStatus @default(PENDING)
+  qrToken           String?           @unique // สำหรับ QR Code
+  bookingNumber     String?           @unique // รหัสการจอง (BK20250108xxxx)
 
   // createdAt DateTime @default(now())
   // updatedAt DateTime @updatedAt
@@ -499,6 +509,7 @@ model Booking {
 
   // bookingFormId Int?
   attendees     Attendee[]
+  entitlement   Entitlement[]
 
   // Relation to SouvenirItem (กิจกรรมแจกของที่ระลึก)
   souvenirItems SouvenirItem[] @relation("BookingToSouvenirItem")
@@ -876,6 +887,13 @@ model DonationProject {
   budgetDonations BudgetDonation[]
   souvenirItemId Int?              
   souvenirItem   SouvenirItem?     @relation(fields: [souvenirItemId], references: [id])
+
+  // Scalability Indexes
+  @@index([status])
+  @@index([projectType])
+  @@index([createdAt])
+  @@index([endDate])
+  @@index([currentAmount])
 }
 
 // ธุรกรรมการบริจาค (DonationTransaction)

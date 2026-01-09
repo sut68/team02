@@ -137,7 +137,7 @@ export default function ProfileEditForm() {
     <div className="min-h-[92vh] px-8 pt-20 pb-1">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-medium text-gray-800">แก้ไขข้อมูลส่วนตัว</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">แก้ไขข้อมูลส่วนตัว</h2>
           <button
             onClick={() => setIsEditing(true)}
             className={`px-6 py-2 bg-orange-500 text-white rounded-md text-sm hover:bg-orange-600 transition ${isEditing ? 'invisible' : 'visible'}`}

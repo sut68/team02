@@ -2,7 +2,9 @@
 import React, { useState, useEffect } from "react";
 import { CATEGORY_LABEL } from "@/constants/category";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, MapPin, Calendar, RefreshCw, Layers, CheckCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, Calendar, RefreshCw, Layers, CheckCircle, Search } from "lucide-react";
+import { Card, CardContent } from "@/app/components/ui/Card";
+import { Input } from "@/app/components/ui/Input";
 
 interface SouvenirItem {
   id: number;
@@ -57,6 +59,7 @@ export default function SouvenirActivityPage() {
   const [currentActivityIndex, setCurrentActivityIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'remaining' | 'registered' | 'claimed'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
   // Section 2 (Activity Carousel) ref
   const activityScrollRef = React.useRef<HTMLDivElement>(null);
   
@@ -225,7 +228,7 @@ export default function SouvenirActivityPage() {
       {/* Section 1: รายการของที่ระลึกแต่ละกิจกรรม */}
       <section className="py-8">
         <div className="max-w-7xl mx-auto px-4 mb-8">
-          <h1 className="text-3xl font-medium text-gray-700 mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
             จัดการของที่ระลึกสำหรับกิจกรรม
           </h1>
         </div>
@@ -316,7 +319,7 @@ export default function SouvenirActivityPage() {
 
         {/* Section 2: กิจกรรม (Activity Selector) */}
         <section className="mb-12">
-          <h2 className="text-3xl font-medium text-gray-700 mb-8">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
             กิจกรรม
           </h2>
           <div className="relative">
@@ -393,11 +396,35 @@ export default function SouvenirActivityPage() {
           <>
             {/* Section 3: สถิติของกิจกรรมที่เลือก */}
             <section>
-              <h2 className="text-3xl font-medium text-gray-700 mb-8">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
                 {selectedActivity.name}
               </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Card 1: คงเหลือ */}
+            {/* Card 1: ลงทะเบียน */}
+            <div 
+              onClick={() => setSelectedStatus('registered')}
+              className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
+                selectedStatus === 'registered' 
+                  ? 'border-orange-300 shadow-xl' 
+                  : 'border-orange-100 hover:shadow-lg'
+              }`}
+            >
+              <div className="p-10 text-center w-full">
+                <div className="flex items-center justify-center mb-4">
+                  <Layers className="w-8 h-8 text-orange-500" />
+                </div>
+                <div className={`text-5xl font-bold mb-2 ${
+                  selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-800'
+                }`}>
+                  {registrations.length}
+                </div>
+                <div className={`font-medium ${
+                  selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-600'
+                }`}>ลงทะเบียน</div>
+              </div>
+            </div>
+
+            {/* Card 2: คงเหลือ */}
             <div 
               onClick={() => setSelectedStatus('remaining')}
               className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
@@ -421,30 +448,6 @@ export default function SouvenirActivityPage() {
                 <div className={`font-medium ${
                   selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-600'
                 }`}>คงเหลือ</div>
-              </div>
-            </div>
-
-            {/* Card 2: ลงทะเบียน */}
-            <div 
-              onClick={() => setSelectedStatus('registered')}
-              className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
-                selectedStatus === 'registered' 
-                  ? 'border-orange-300 shadow-xl' 
-                  : 'border-orange-100 hover:shadow-lg'
-              }`}
-            >
-              <div className="p-10 text-center w-full">
-                <div className="flex items-center justify-center mb-4">
-                  <Layers className="w-8 h-8 text-orange-500" />
-                </div>
-                <div className={`text-5xl font-bold mb-2 ${
-                  selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-800'
-                }`}>
-                  {registrations.length}
-                </div>
-                <div className={`font-medium ${
-                  selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-600'
-                }`}>ลงทะเบียน</div>
               </div>
             </div>
 
@@ -477,8 +480,26 @@ export default function SouvenirActivityPage() {
           </div>
         </section>
 
-        {/* Section 4: Table without header */}
+        {/* Section 4: Search & Table */}
         <section className="mt-12">
+          {/* Search Bar */}
+          <Card className="mb-6">
+            <CardContent className="p-6">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Input
+                  type="text"
+                  placeholder="ค้นหาด้วยชื่อ หรืออีเมล"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-12"
+                  size="md"
+                  radius="md"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="bg-white rounded-xl shadow-md overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -501,6 +522,13 @@ export default function SouvenirActivityPage() {
                       if (selectedStatus === 'remaining') return !hasRedemption;
                       if (selectedStatus === 'registered') return true;
                       return true;
+                    })
+                    .filter(reg => {
+                      const term = searchTerm.toLowerCase().trim();
+                      if (!term) return true;
+                      const fullName = reg.user.fullName?.toLowerCase() || '';
+                      const email = reg.user.email?.toLowerCase() || '';
+                      return fullName.includes(term) || email.includes(term);
                     })
                     .map((reg, index) => {
                       const registeredDate = new Date(reg.registeredAt);
@@ -549,3 +577,4 @@ export default function SouvenirActivityPage() {
     </main>
   );
 }
+

@@ -123,12 +123,7 @@ export default function Navbar() {
                 <span className='material-icons ml-1 text-base'>กิจกรรม</span>
               </Link>
               <div className='absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50'>
-                <Link
-                  href='/user/booking'
-                  className='block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200'
-                >
-                  จองเข้าร่วมกิจกรรม
-                </Link>
+                
                 <Link
                   href='/user/news/submission'
                   className='block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200'
@@ -181,7 +176,7 @@ export default function Navbar() {
               <div className="absolute left-0 mt-2 w-48 bg-white shadow-lg group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 z-50">
                 <Link href="/admin/news/create" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">สร้างโพส</Link>
                 <Link href="/admin/news" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">อนุมัติโพส</Link>
-                <Link href="/admin/news" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">รายละเอียดการจอง</Link>
+                <Link href="/admin/booking/success" className="block px-4 py-2 hover:bg-gray-100 hover:text-[#F26522] transition-colors duration-200">เช็คอินเข้างาน</Link>
               </div>
             </div>
 
