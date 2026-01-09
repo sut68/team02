@@ -402,7 +402,18 @@ function UserBookingPageInner() {
     }
 
     const json = await res.json();
-    const bookingId = json?.booking?.id;
+    try {
+      const paymentId = json.paymentId;
+
+      if (paymentId) {
+        // ส่ง paymentId ไปเป็น Query Param
+        router.push(`/user/payment?paymentId=${paymentId}`);
+      } else {
+        // กรณีจองฟรี หรือ API ไม่ส่ง paymentId กลับมา
+        alert("จองสำเร็จเรียบร้อยแล้ว ✅");
+        resetForm();
+        router.push('/user/news'); 
+      }
 
     // ✅ จองเสร็จแล้วไปหน้าจ่ายเงิน (ไม่ hardcode userId)
     if (bookingId) {
@@ -413,10 +424,6 @@ function UserBookingPageInner() {
       }
       return;
     }
-
-    // fallback ถ้า API ไม่ส่ง bookingId
-    alert("จองสำเร็จ ✅ แต่ไม่พบ bookingId สำหรับไปหน้าจ่ายเงิน");
-    resetForm();
   };
 
   // ---------- Render data ----------

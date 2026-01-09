@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 // 💡 1. นำเข้า PrimaryButton
-import { PrimaryButton } from './../../../components/ui/Button';
+import { PrimaryButton } from '../../../components/ui/Button';
 // 💡 2. นำเข้า useRouter และ usePathname จาก next/navigation
 import { useRouter, usePathname } from 'next/navigation';
 // 💡 3. นำเข้า Icons จาก react-icons/fa6

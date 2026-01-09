@@ -12,10 +12,10 @@
 
 */
 -- CreateEnum
-CREATE TYPE "PaymentMethodType" AS ENUM ('PROMPTPAY', 'CREDIT_CARD', 'BANK_TRANSFER');
+CREATE TYPE "PaymentMethodType" AS ENUM ('PROMPTPAY', 'CASH', 'BANKTRANSFER');
 
 -- CreateEnum
-CREATE TYPE "PaymentStatusType" AS ENUM ('CONFIRMED', 'CANCELLED', 'REFUNDED');
+CREATE TYPE "PaymentStatusType" AS ENUM ('CONFIRMED', 'CANCELLED', 'REFUNDED', 'EXPIRING', 'PENDING', 'VERIFYING');
 
 -- AlterEnum
 BEGIN;
@@ -61,13 +61,6 @@ ALTER TABLE "EventRegistration" DROP CONSTRAINT "EventRegistration_eventId_fkey"
 -- DropForeignKey
 ALTER TABLE "EventRegistration" DROP CONSTRAINT "EventRegistration_userId_fkey";
 
--- DropIndex
-DROP INDEX "DonationTransaction_omiseChargeId_key";
-
--- AlterTable
-ALTER TABLE "DonationTransaction" DROP COLUMN "omiseChargeId",
-ADD COLUMN     "isPublic" BOOLEAN NOT NULL DEFAULT true;
-
 -- AlterTable
 ALTER TABLE "Entitlement" DROP COLUMN "eventId",
 DROP COLUMN "eventRegistrationId";
@@ -87,7 +80,7 @@ DROP TABLE "EventRegistration";
 -- CreateTable
 CREATE TABLE "PaymentMethodRecord" (
     "id" SERIAL NOT NULL,
-    "methodName" "PaymentMethodType" NOT NULL DEFAULT 'PROMPTPAY',
+    "methodName" "PaymentMethodType" NOT NULL ,
     "accountNumber" TEXT,
     "provider" TEXT,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
