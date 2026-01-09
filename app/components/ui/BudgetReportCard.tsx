@@ -12,14 +12,14 @@ interface Props {
   report: BudgetReport & { imageSrc?: string }; 
   onDelete?: (id: number) => void;
   onUpdate?: () => void;
-  isTrash?: boolean; // ✅ เพิ่ม: รับค่าว่าอยู่ในถังขยะหรือไม่
+  isTrash?: boolean;
 }
 
 // ตัวเลือกสถานะ
 const STATUS_OPTIONS = [
   { id: 1, label: "ฉบับร่าง", value: "DRAFT", color: "bg-gray-400", textColor: "text-gray-600" },
   { id: 2, label: "รอตรวจสอบ", value: "PENDING_REVIEW", color: "bg-orange-500", textColor: "text-orange-600" },
-  { id: 3, label: "อนุมัติ", value: "APPROVED", color: "bg-green-500", textColor: "text-green-600" },
+  { id: 3, label: "อนุมัติ", value: "APPROVED", color: "bg-yellow-500", textColor: "text-yellow-600" },
   { id: 4, label: "ส่งกลับไปแก้ไข", value: "NEEDS_REVISION", color: "bg-red-500", textColor: "text-red-600" },
 ];
 
@@ -35,17 +35,15 @@ export default function BudgetReportCard({ report, onDelete, onUpdate, isTrash =
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [pendingOption, setPendingOption] = useState<typeof STATUS_OPTIONS[0] | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false); // ✅ เพิ่ม Modal กู้คืน
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
 
   const activeStatusObj = STATUS_OPTIONS.find(opt => opt.value === currentStatus) || STATUS_OPTIONS[0];
   const displayImage = report.imageSrc || (report.images && report.images.length > 0 ? report.images[0].imagePath : null);
 
-  // เงื่อนไข: แสดงปุ่มแก้ไขเฉพาะเมื่อไม่ใช่สถานะ "รอตรวจสอบ" หรือ "อนุมัติ"
   const canEdit = currentStatus !== "PENDING_REVIEW" && currentStatus !== "APPROVED";
 
   // --- Handlers ---
 
-  // 1. เปลี่ยนสถานะ
   const handleStatusClick = (option: typeof STATUS_OPTIONS[0]) => {
     setPendingOption(option);
     setIsMenuOpen(false);
@@ -81,7 +79,6 @@ export default function BudgetReportCard({ report, onDelete, onUpdate, isTrash =
     }
   };
 
-  // 2. ลบรายงาน (ย้ายลงถังขยะ)
   const confirmDelete = async () => {
     setIsLoading(true);
     try {
@@ -103,7 +100,7 @@ export default function BudgetReportCard({ report, onDelete, onUpdate, isTrash =
     }
   };
 
-  // 3. ✅ กู้คืนรายงาน (Restore)
+  // ✅ 3. กู้คืนรายงาน (Restore) -> ปรับให้รีเซ็ตสถานะเป็น DRAFT
   const confirmRestore = async () => {
     setIsLoading(true);
     try {
@@ -114,7 +111,10 @@ export default function BudgetReportCard({ report, onDelete, onUpdate, isTrash =
       });
 
       if (res.ok) {
-        if (onUpdate) onUpdate(); // รีเฟรชลิสต์ (รายการจะหายจากถังขยะ)
+        // ✅ อัปเดต State หน้าจอทันทีให้เป็น "ฉบับร่าง" (DRAFT)
+        setCurrentStatus("DRAFT");
+        
+        if (onUpdate) onUpdate();
         else router.refresh();
       } else {
         alert("กู้คืนไม่สำเร็จ");
@@ -134,7 +134,6 @@ export default function BudgetReportCard({ report, onDelete, onUpdate, isTrash =
         p-4 border-none shadow-sm bg-white 
         w-full h-full flex flex-col relative transition-all hover:shadow-md
       ">
-        
         {/* --- 1. ส่วนรูปภาพ --- */}
         <div className="relative w-full h-48 mb-4 rounded-2xl overflow-hidden group z-10 bg-gray-100 shrink-0">
           <div className="w-full h-full">
@@ -152,7 +151,6 @@ export default function BudgetReportCard({ report, onDelete, onUpdate, isTrash =
             )}
           </div>
           
-          {/* Status Dropdown (ซ่อนถ้าอยู่ในถังขยะ) */}
           {!isTrash && (
             <div className="absolute bottom-2 right-2">
               {isMenuOpen && (
@@ -226,8 +224,6 @@ export default function BudgetReportCard({ report, onDelete, onUpdate, isTrash =
 
         {/* --- 3. ปุ่ม Action --- */}
         <CardFooter className="p-0 flex justify-center gap-2 mt-auto shrink-0">
-          
-          {/* ✅ กรณีอยู่ใน "ถังขยะ" -> แสดงปุ่มกู้คืน */}
           {isTrash ? (
             <button
               onClick={(e) => {
@@ -240,7 +236,6 @@ export default function BudgetReportCard({ report, onDelete, onUpdate, isTrash =
               กู้คืน
             </button>
           ) : (
-            /* ✅ กรณีปกติ -> แสดงปุ่มแก้ไข/ลบ */
             <>
               {canEdit && (
                 <button
@@ -267,7 +262,6 @@ export default function BudgetReportCard({ report, onDelete, onUpdate, isTrash =
         </CardFooter>
       </Card>
 
-      {/* --- Confirmation Modal (เปลี่ยนสถานะ) --- */}
       <ConfirmModal 
         isOpen={isConfirmOpen}
         onClose={() => setIsConfirmOpen(false)}
@@ -280,7 +274,6 @@ export default function BudgetReportCard({ report, onDelete, onUpdate, isTrash =
         isLoading={isLoading}
       />
 
-      {/* --- Delete Confirmation Modal (ลบ) --- */}
       <ConfirmModal 
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
@@ -293,7 +286,6 @@ export default function BudgetReportCard({ report, onDelete, onUpdate, isTrash =
         isLoading={isLoading}
       />
 
-      {/* --- ✅ Restore Confirmation Modal (กู้คืน) --- */}
       <ConfirmModal 
         isOpen={isRestoreModalOpen}
         onClose={() => setIsRestoreModalOpen(false)}
@@ -302,7 +294,7 @@ export default function BudgetReportCard({ report, onDelete, onUpdate, isTrash =
         message={`คุณต้องการกู้คืนรายงาน "${report.reportTitle}" กลับมาใช่หรือไม่?`} 
         confirmLabel="กู้คืน"
         cancelLabel="ยกเลิก"
-        isDanger={false} // สีปกติ (ไม่ใช่สีแดง)
+        isDanger={false}
         isLoading={isLoading}
       />
     </>

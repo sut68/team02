@@ -247,7 +247,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const { qrToken, action } = await request.json();
 
-    const booking = await prisma.booking.findUnique({
+    const booking = await prisma.booking.findFirst({
       where: { qrToken },
       include: {
         attendees: { include: { checkins: true } },

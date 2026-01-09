@@ -1,6 +1,7 @@
 generator client {
   provider = "prisma-client-js"
 }
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -57,6 +58,15 @@ enum CommentStatus {
   ACTIVE
   HIDDEN
   DELETED
+}
+
+enum CommentDeletionReason {
+  PROFANITY_INSULTS          // คำหยาบ/ดูถูก
+  HARASSMENT_THREATS         // การคุกคาม/ข่มขู่
+  SPAM_ADVERTISEMENT         // สแปม/โฆษณา
+  IMPERSONATION              // แอบอ้างตัวตน
+  ILLEGAL_ACTIVITIES         // ส่งเสริมสิ่งผิดกฎหมาย
+  OTHER_PLATFORM_VIOLATIONS  // อื่นๆ/ละเมิดกฎแพลตฟอร์ม
 }
 
 enum ContentTargetType {
@@ -193,6 +203,13 @@ model User {
   jobPostings      JobPosting[]
   approvalLogs     ApprovalLog[]
   jobEditHistories JobEditHistory[]
+
+  // Scalability Indexes
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model EducationRecord {
@@ -655,7 +672,7 @@ model ProjectProposal {
   id                 Int       @id @default(autoincrement())
   projectName        String
   objective          String?
-  description        String?
+  description        String?  @db.Text
   requestedAmount    Float?
   projectStartDate   DateTime?
   projectEndDate     DateTime?
@@ -779,7 +796,7 @@ model Category {
 model Topic {
   id               Int         @id @default(autoincrement())
   title            String
-  content          String
+  content          String  @db.Text  // ⭐ ระบุเป็น Text
   topicImage       String?
   status           TopicStatus @default(ACTIVE)
   createddate      DateTime    @default(now())
@@ -804,10 +821,11 @@ model Topic {
 // ควาศคิดเห็น
 model Comment {
   id           Int           @id @default(autoincrement())
-  content      String
+  content      String  @db.Text  // ⭐ ระบุเป็น Text สำหรับข้อความยาว
   createddate  DateTime      @default(now())
   status       CommentStatus @default(ACTIVE)
   commentcount Int           @default(0)
+  reasonForDeletion CommentDeletionReason? // ⭐ เพิ่มฟิลด์นี้
 
   topic_id Int
   user_id  Int
@@ -824,7 +842,7 @@ model Comment {
 model TopicEditHistory {
   id             Int      @id @default(autoincrement())
   editedByUserID String
-  oldcontent     String
+  oldcontent     String  @db.Text  // ⭐ ระบุเป็น Text
   editdate       DateTime @default(now())
 
   staffuser_id Int?
@@ -879,6 +897,13 @@ model DonationProject {
   budgetDonations BudgetDonation[]
   souvenirItemId Int?              
   souvenirItem   SouvenirItem?     @relation(fields: [souvenirItemId], references: [id])
+
+  // Scalability Indexes
+  @@index([status])
+  @@index([projectType])
+  @@index([createdAt])
+  @@index([endDate])
+  @@index([currentAmount])
 }
 
 // ธุรกรรมการบริจาค (DonationTransaction)

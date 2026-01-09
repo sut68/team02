@@ -264,13 +264,56 @@ if (pricing.totalPrice === 0) {
       {errorText && <p className="text-red-500 text-sm mb-4">{errorText}</p>}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-gray-50 rounded-xl p-6 w-full space-y-5 text-left">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-800">{content?.TitleName || "กำลังโหลด..."}</h1>
-          <p className="text-lg font-semibold text-gray-700">{startText} {endText ? `– ${endText}` : ""}</p>
-          {firstImage ? (
-            <Image src={firstImage} alt="event" width={1200} height={700} className="w-full h-auto rounded-lg object-cover" />
-          ) : <div className="w-full aspect-video rounded-lg bg-gray-200 flex items-center justify-center text-gray-400">ไม่มีรูปภาพ</div>}
-          <div className="text-gray-600 whitespace-pre-line">{content?.Description}</div>
+        {/* ซ้าย: รายละเอียดกิจกรรม */}
+        <div className="bg-gray-50 rounded-xl p-6 lg:col-span-1 w-full">
+          <div className="space-y-5">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
+              {content?.TitleName || (loading ? "กำลังโหลด..." : "ไม่พบชื่อกิจกรรม")}
+            </h1>
+
+            {(startText || endText) && (
+              <div className="text-gray-700">
+                <p className="text-lg font-semibold">
+                  {startText}
+                  {endText ? ` – ${endText}` : ""}
+                </p>
+              </div>
+            )}
+
+            {firstImage ? (
+              <Image
+                src={firstImage}
+                alt={content?.TitleName || "content image"}
+                width={1200}
+                height={700}
+                className="w-full h-auto rounded-lg object-cover"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+              />
+            ) : (
+              <div className="w-full aspect-video rounded-lg bg-gray-200 flex items-center justify-center text-gray-500 text-sm">
+                ไม่มีรูปภาพ
+              </div>
+            )}
+
+            <div className="text-m text-gray-600 whitespace-pre-line">
+              {content?.Description || (!loading ? "ไม่มีรายละเอียด" : "")}
+            </div>
+
+            {bookingForm && (
+              <div className="pt-2 text-sm text-gray-600 space-y-1">
+                {bookingForm.Type && <p>ประเภทกิจกรรม: {bookingForm.Type}</p>}
+                {typeof bookingForm.TotalSeats === "number" && (
+                  <p>จำนวนที่นั่งทั้งหมด: {bookingForm.TotalSeats}</p>
+                )}
+                {bookingForm.BatchNumber != null && (
+                  <p>จำนวนรุ่นทั้งหมด: {bookingForm.BatchNumber}</p>
+                )}
+                {bookingForm.PriceType && (
+                  <p>รูปแบบราคา: {bookingForm.PriceType}</p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div>

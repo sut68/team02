@@ -41,8 +41,11 @@ export default function ProjectManagementPage() {
         
         if (Array.isArray(rounds)) {
             setBudgetRounds(rounds);
-            // ดึงปีงบประมาณที่ไม่ซ้ำกันมาใส่ Dropdown
-            const years = Array.from(new Set(rounds.map((r: any) => r.fiscalYear))).sort().reverse() as string[];
+            // ✅ ดึงปีงบประมาณที่ไม่ซ้ำกันมาใส่ Dropdown (Dynamic)
+            const years = Array.from(new Set(rounds.map((r: any) => r.fiscalYear)))
+                .filter(y => y) // กรองค่า null/undefined ออก
+                .sort()
+                .reverse() as string[];
             setAvailableYears(years);
         } else {
             setBudgetRounds([]);
@@ -66,7 +69,10 @@ export default function ProjectManagementPage() {
       const params = new URLSearchParams();
       if (isTrashMode) params.append("trash", "true");
       
+      // ✅ ส่งปีงบประมาณไปให้ API (ใน route.ts มีการเช็ค where.budgetRound = { fiscalYear: ... })
       if (filterYear !== "all") params.append("fiscalYear", filterYear);
+      
+      // ✅ ส่งรอบไปให้ API
       if (filterRound !== "all") params.append("budgetRoundId", filterRound);
 
       const res = await fetch(`/api/project-proposal?${params.toString()}`);
@@ -120,14 +126,9 @@ export default function ProjectManagementPage() {
   const isYearSelected = filterYear !== "all";
 
   // กรองรอบตามปีที่เลือก
-  const filteredRounds = Array.isArray(budgetRounds) 
+  const roundsForDisplay = Array.isArray(budgetRounds) 
     ? budgetRounds.filter(r => filterYear === "all" || r.fiscalYear === filterYear)
     : [];
-
-  // เรียงลำดับตามวันที่เริ่ม (เก่า -> ใหม่) เพื่อรันเลขรอบที่ 1, 2, 3
-  const roundsForDisplay = [...filteredRounds].sort((a, b) => 
-    new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
-  );
 
   return (
     <main className="min-h-screen bg-white py-4 px-4 font-sans">
@@ -155,7 +156,7 @@ export default function ProjectManagementPage() {
                     }`}
                 >
                     <div className="mb-4 flex justify-center">
-                    <Icon className={`w-14 h-14 ${isActive ? "text-orange-500" : "text-orange-300"}`} strokeWidth={1.3} />
+                      <Icon className={`w-14 h-14 ${isActive ? "text-orange-500" : "text-orange-300"}`} strokeWidth={1.3} />
                     </div>
                     <h3 className={`text-base ${isActive ? "text-gray-900" : "text-gray-500"}`}>{filter.label}</h3>
                     <p className={`text-2xl font-medium mt-2 ${isActive ? "text-orange-600" : "text-gray-400"}`}>
@@ -184,7 +185,7 @@ export default function ProjectManagementPage() {
                     />
                 </div>
 
-                {/* Filter Year */}
+                {/* Filter Year (Fiscal Year) */}
                 <div className="relative w-full sm:w-auto">
                   <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <select
@@ -193,9 +194,9 @@ export default function ProjectManagementPage() {
                         setFilterYear(e.target.value);
                         setFilterRound("all"); // Reset รอบเมื่อเปลี่ยนปี
                     }}
-                    className="w-full sm:w-auto pl-9 pr-8 h-10 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 appearance-none cursor-pointer hover:bg-gray-50 min-w-[100px]"
+                    className="w-full sm:w-auto pl-9 pr-8 h-10 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 appearance-none cursor-pointer hover:bg-gray-50 min-w-[140px]"
                   >
-                    <option value="all">ทุกปี</option>
+                    <option value="all">ทุกปีงบประมาณ</option>
                     {availableYears.map(year => (
                       <option key={year} value={year}>{year}</option>
                     ))}
@@ -208,20 +209,32 @@ export default function ProjectManagementPage() {
                   <select
                     value={filterRound}
                     onChange={(e) => setFilterRound(e.target.value)}
-                    disabled={!isYearSelected} // ปิดการใช้งานถ้ายังไม่เลือกปี
-                    // ✅ ใช้ sm:w-auto เพื่อให้ขนาดพอดีกับข้อความ (Fit Content)
-                    className={`w-full sm:w-auto pl-9 pr-8 h-10 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 appearance-none cursor-pointer truncate min-w-[150px]
+                    disabled={!isYearSelected}
+                    className={`w-full sm:w-auto pl-9 pr-8 h-10 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 appearance-none cursor-pointer truncate min-w-44
                         ${!isYearSelected ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-50'}
                     `}
                   >
-                    <option value="all">ทุกรอบงบประมาณ</option>
+                    <option value="all">ทุกรอบการพิจารณา</option>
                     
-                    {/* แสดงตัวเลือก รอบที่ 1, 2, 3 เฉพาะเมื่อเลือกปีแล้ว */}
-                    {isYearSelected && roundsForDisplay.map((round, index) => (
-                      <option key={round.id} value={round.id}>
-                        รอบงบประมาณที่ {index + 1}
-                      </option>
-                    ))}
+                    {/* ✅ ใช้ Dynamic Logic: ดึงเลขจากชื่อจริง ไม่ Hardcode */}
+                    {isYearSelected && roundsForDisplay
+                        .sort((a, b) => a.roundName.localeCompare(b.roundName))
+                        .map((round) => {
+                            // ดึงตัวเลขหลังคำว่า "ที่" จากชื่อรอบใน Database
+                            const match = round.roundName.match(/ที่\s*(\d+)/);
+                            const roundNumber = match ? match[1] : null;
+
+                            // ถ้ามีเลข ให้แสดง "รอบการพิจารณาที่ X" ถ้าไม่มีให้แสดงชื่อเดิม
+                            const displayName = roundNumber 
+                                ? `รอบการพิจารณาที่ ${roundNumber}` 
+                                : round.roundName;
+
+                            return (
+                              <option key={round.id} value={round.id}>
+                                {displayName}
+                              </option>
+                            );
+                    })}
                   </select>
                 </div>
 

@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react'; 
+import React, { useState, useEffect, Suspense } from 'react'; 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { FileText, PlusCircle, Camera } from 'lucide-react';
 import {
   Table,
   TableHeader,
@@ -12,8 +14,11 @@ import {
 } from '../../components/tables/Table';
 import { Card, CardHeader, CardContent } from '../../components/ui/Card';
 
-import { AdminSubmissionPage } from '../../admin/news/appove/page';
-import { FileText, PlusCircle, Camera } from 'lucide-react';
+// Dynamically import AdminSubmissionPage client-side to avoid HMR issues with nested lucide-react icons
+const AdminSubmissionPageComponent = dynamic(
+  () => import('./appove/page').then(m => ({ default: m.AdminSubmissionPage })),
+  { ssr: false, loading: () => <div className="bg-gray-100 rounded-lg p-8 animate-pulse min-h-[300px]" /> }
+);
 
 // ----------------------------------------------------------------------
 // Dashboard Menu Card
@@ -115,7 +120,7 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-10 space-y-12">
-      <AdminSubmissionPage />
+      <AdminSubmissionPageComponent />
 
       <Card className="shadow-sm rounded-xl">
         <CardHeader>
@@ -130,7 +135,7 @@ export default function DashboardPage() {
             <DashboardMenuCard
               icon={FileText}
               title="โพสต์ทั้งหมด"
-              isActive={true} // บังคับ Active ไว้เสมอ
+              isActive={true}
             />
 
             <DashboardMenuCard

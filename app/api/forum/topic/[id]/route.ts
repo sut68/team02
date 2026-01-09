@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
+import jwt from 'jsonwebtoken';
 
 // GET - ดึงกระทู้และความคิดเห็นทั้งหมด
 export async function GET(
@@ -9,6 +10,26 @@ export async function GET(
   try {
     const { id } = await params;
     const topicId = parseInt(id);
+
+    // ตรวจสอบว่าเป็น Admin หรือไม่
+    let isAdmin = false;
+    const token = request.cookies.get('token')?.value;
+    
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || '') as { role: string };
+        if (decoded.role === 'ADMIN') {
+          isAdmin = true;
+        }
+      } catch (err) {
+        // Token ไม่ถูกต้อง หรือหมดอายุ
+      }
+    }
+
+    // กำหนดเงื่อนไขการดึงคอมเมนต์
+    const commentWhereClause = isAdmin 
+      ? {} 
+      : { status: 'ACTIVE' as const }; // ← เพิ่ม 'as const'
 
     const topic = await prisma.topic.findUnique({
       where: { id: topicId },
@@ -23,7 +44,7 @@ export async function GET(
         },
         category: true,
         comments: {
-          where: { status: 'ACTIVE' },
+          where: commentWhereClause,
           include: {
             user: {
               select: {
@@ -56,7 +77,6 @@ export async function GET(
 
     return NextResponse.json({ topic }, { status: 200 });
   } catch (error) {
-    console.error('Error fetching topic:', error);
     return NextResponse.json(
       { error: 'เกิดข้อผิดพลาดในการดึงข้อมูล' },
       { status: 500 }
