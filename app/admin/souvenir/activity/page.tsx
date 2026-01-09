@@ -400,7 +400,31 @@ export default function SouvenirActivityPage() {
                 {selectedActivity.name}
               </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Card 1: คงเหลือ */}
+            {/* Card 1: ลงทะเบียน */}
+            <div 
+              onClick={() => setSelectedStatus('registered')}
+              className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
+                selectedStatus === 'registered' 
+                  ? 'border-orange-300 shadow-xl' 
+                  : 'border-orange-100 hover:shadow-lg'
+              }`}
+            >
+              <div className="p-10 text-center w-full">
+                <div className="flex items-center justify-center mb-4">
+                  <Layers className="w-8 h-8 text-orange-500" />
+                </div>
+                <div className={`text-5xl font-bold mb-2 ${
+                  selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-800'
+                }`}>
+                  {registrations.length}
+                </div>
+                <div className={`font-medium ${
+                  selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-600'
+                }`}>ลงทะเบียน</div>
+              </div>
+            </div>
+
+            {/* Card 2: คงเหลือ */}
             <div 
               onClick={() => setSelectedStatus('remaining')}
               className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
@@ -424,30 +448,6 @@ export default function SouvenirActivityPage() {
                 <div className={`font-medium ${
                   selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-600'
                 }`}>คงเหลือ</div>
-              </div>
-            </div>
-
-            {/* Card 2: ลงทะเบียน */}
-            <div 
-              onClick={() => setSelectedStatus('registered')}
-              className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
-                selectedStatus === 'registered' 
-                  ? 'border-orange-300 shadow-xl' 
-                  : 'border-orange-100 hover:shadow-lg'
-              }`}
-            >
-              <div className="p-10 text-center w-full">
-                <div className="flex items-center justify-center mb-4">
-                  <Layers className="w-8 h-8 text-orange-500" />
-                </div>
-                <div className={`text-5xl font-bold mb-2 ${
-                  selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-800'
-                }`}>
-                  {registrations.length}
-                </div>
-                <div className={`font-medium ${
-                  selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-600'
-                }`}>ลงทะเบียน</div>
               </div>
             </div>
 
