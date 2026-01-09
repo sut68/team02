@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, lazy, Suspense } from 'react'; 
+import React, { useState, useEffect, Suspense } from 'react'; 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { FileText, PlusCircle, Camera } from 'lucide-react';
 import {
   Table,
   TableHeader,
@@ -12,13 +14,11 @@ import {
 } from '../../components/tables/Table';
 import { Card, CardHeader, CardContent } from '../../components/ui/Card';
 
-// Dynamically import to avoid Turbopack HMR issues
-const AdminSubmissionPage = lazy(() => import('../../admin/news/appove/page').then(m => ({ default: m.AdminSubmissionPage })));
-
-// Dynamically import icons to avoid Turbopack HMR issues
-const FileText = lazy(() => import('lucide-react').then(m => ({ default: m.FileText })));
-const PlusCircle = lazy(() => import('lucide-react').then(m => ({ default: m.PlusCircle })));
-const Camera = lazy(() => import('lucide-react').then(m => ({ default: m.Camera })));
+// Dynamically import AdminSubmissionPage client-side to avoid HMR issues with nested lucide-react icons
+const AdminSubmissionPage = dynamic(
+  () => import('./appove/page').then(m => ({ default: m.AdminSubmissionPage })),
+  { ssr: false, loading: () => <div className="bg-gray-100 rounded-lg p-8 animate-pulse min-h-[300px]" /> }
+);
 
 // ----------------------------------------------------------------------
 // Dashboard Menu Card
@@ -120,9 +120,7 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-10 space-y-12">
-      <Suspense fallback={<div className="h-20 bg-gray-200 rounded-lg animate-pulse" />}>
-        <AdminSubmissionPage />
-      </Suspense>
+      <AdminSubmissionPage />
 
       <Card className="shadow-sm rounded-xl">
         <CardHeader>
@@ -134,29 +132,23 @@ export default function DashboardPage() {
         <CardContent className="space-y-6">
           {/* เมนูด้านบน */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Suspense fallback={<div className="h-40 bg-gray-200 rounded-lg animate-pulse" />}>
-              <DashboardMenuCard
-                icon={FileText}
-                title="โพสต์ทั้งหมด"
-                isActive={true}
-              />
-            </Suspense>
+            <DashboardMenuCard
+              icon={FileText}
+              title="โพสต์ทั้งหมด"
+              isActive={true}
+            />
 
-            <Suspense fallback={<div className="h-40 bg-gray-200 rounded-lg animate-pulse" />}>
-              <DashboardMenuCard
-                icon={PlusCircle}
-                title="สร้างโพสต์ใหม่"
-                link="/admin/news/create"
-              />
-            </Suspense>
+            <DashboardMenuCard
+              icon={PlusCircle}
+              title="สร้างโพสต์ใหม่"
+              link="/admin/news/create"
+            />
 
-            <Suspense fallback={<div className="h-40 bg-gray-200 rounded-lg animate-pulse" />}>
-              <DashboardMenuCard
-                icon={Camera}
-                title="เช็คอินเข้างาน"
-                link="/admin/booking/success"
-              />
-            </Suspense>
+            <DashboardMenuCard
+              icon={Camera}
+              title="เช็คอินเข้างาน"
+              link="/admin/booking/success"
+            />
           </div>
 
           {/* ตาราง */}
