@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { 
   Search, 
@@ -11,6 +11,7 @@ import {
   Trash2,
   CirclePlus,
   ArrowLeftToLine,
+  Send,
 } from "lucide-react";
 
 // Components UI
@@ -36,13 +37,11 @@ export default function BudgetRoundsPage() {
   const [rounds, setRounds] = useState<BudgetRound[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // State เก็บข้อมูลรอบที่จะแก้ไข (null = สร้างใหม่)
   const [editingRound, setEditingRound] = useState<BudgetRound | null>(null);
 
-  // State Modal สำหรับ Action (PUBLISH หรือ DELETE)
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
-    action: 'PUBLISH' | 'DELETE' | null;
+    action: 'PUBLISH' | 'DELETE' | 'SEND_EMAIL' | null;
     targetId: number | null;
     targetCurrentState?: boolean;
   }>({
@@ -90,6 +89,15 @@ export default function BudgetRoundsPage() {
     });
   };
 
+  // ฟังก์ชันกดปุ่มส่งอีเมล
+  const initiateSendEmail = (id: number) => {
+    setConfirmModal({
+        isOpen: true,
+        action: 'SEND_EMAIL',
+        targetId: id,
+    });
+  };
+
   const handleConfirmAction = async () => {
     const { action, targetId, targetCurrentState } = confirmModal;
     if (targetId === null) return;
@@ -125,6 +133,23 @@ export default function BudgetRoundsPage() {
           alert("อัปเดตสถานะไม่สำเร็จ");
         }
       }
+      // เพิ่ม Logic การส่งอีเมล
+      else if (action === 'SEND_EMAIL') {
+          // เรียก API Cron ที่เราสร้างไว้
+          const res = await fetch(`/api/project-vote/sent-vote-invite?roundId=${targetId}`, {
+              method: 'POST'
+          });
+          const data = await res.json();
+          
+          if (res.ok) {
+              alert(`ดำเนินการสำเร็จ: ${data.message}\n(Sent Count: ${data.sentCount || 0})`);
+              setConfirmModal({ isOpen: false, action: null, targetId: null });
+          } else {
+              // กรณี Error เช่น ยังไม่ถึงเวลาโหวต
+              alert(`แจ้งเตือน: ${data.message || data.error}`);
+              setConfirmModal({ isOpen: false, action: null, targetId: null });
+          }
+      }
     } catch (error) {
       console.error("Error:", error);
       alert("เกิดข้อผิดพลาดในการเชื่อมต่อ");
@@ -146,7 +171,7 @@ export default function BudgetRoundsPage() {
 
   const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'OPEN': return 'bg-green-50 text-green-700 border-green-200';
+      case 'OPEN': return 'bg-orange-50 text-orange-700 border-orange-200';
       case 'CLOSED': return 'bg-gray-100 text-gray-500 border-gray-200';
       default: return 'bg-yellow-50 text-yellow-700 border-yellow-200';
     }
@@ -163,7 +188,7 @@ export default function BudgetRoundsPage() {
   const stats = rounds.reduce(
     (acc, round) => {
       acc.all++;
-      if (round.status === 'OPEN') acc.active++;
+      if (round.isPublished && round.status !== 'CLOSED') acc.active++;
       acc.totalDonated += round.stats?.totalDonated || 0;
       return acc;
     },
@@ -184,7 +209,16 @@ export default function BudgetRoundsPage() {
         confirmLabel: "ลบรายการ",
         isDanger: true
       };
-    } 
+    }
+    if (confirmModal.action === 'SEND_EMAIL') {
+        return {
+            title: "ยืนยันการส่งอีเมลแจ้งเตือน",
+            message: "ระบบจะทำการส่งอีเมลหาผู้ที่มีสิทธิ์โหวต (Alumni ที่บริจาคแล้ว) ในรอบนี้ทุกคน\n\n(ระบบจะตรวจสอบวันเปิดโหวต 15 วันสุดท้ายก่อนส่งจริง)",
+            confirmLabel: "ยืนยันส่งอีเมล",
+            isDanger: false
+        };
+    }
+
     const isPublishing = !confirmModal.targetCurrentState;
     return {
       title: isPublishing ? "ยืนยันการเผยแพร่" : "ยืนยันการยกเลิกเผยแพร่",
@@ -206,11 +240,10 @@ export default function BudgetRoundsPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <h1 className="text-4xl font-semibold text-gray-800">จัดการรอบงบประมาณ</h1>
           
-          {/* ปุ่มย้อนกลับสไตล์เดียวกับปุ่มกู้คืน (History) */}
           <div className="flex gap-2 shrink-0">
             <Link
                 href="/admin/budget_approval"
-                className="h-10 px-6 rounded-lg flex items-center gap-2 transition-all border border-gray-200 bg-white text-gray-600 hover:bg-gray-50shadow-sm"
+                className="h-10 px-6 rounded-lg flex items-center gap-2 transition-all border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 shadow-sm"
                 title="กลับไปหน้าโครงการส่งพิจารณา"
             >
                 <ArrowLeftToLine className="w-5 h-5" />
@@ -236,22 +269,22 @@ export default function BudgetRoundsPage() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all border-gray-200">
-              <Layers className="w-10 h-10 mx-auto text-gray-600 mb-3" />
+            <div className="border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all border-amber-200">
+              <Layers className="w-10 h-10 mx-auto text-amber-600 mb-3" />
               <h3 className="text-gray-600 font-medium">รอบทั้งหมด</h3>
-              <p className="text-2xl font-bold text-gray-700">{stats.all} <span className="text-sm font-normal text-gray-400">รอบ</span></p>
+              <p className="text-2xl font-bold text-amber-700">{stats.all} <span className="text-sm font-normal text-gray-400">รอบ</span></p>
             </div>
-            <div className="border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all border-green-200">
-              <CalendarDays className="w-10 h-10 mx-auto text-green-600 mb-3" />
+            <div className="border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all border-orange-200">
+              <CalendarDays className="w-10 h-10 mx-auto text-orange-600 mb-3" />
               <h3 className="text-gray-600 font-medium">เปิดรับระดมทุนอยู่</h3>
-              <p className="text-2xl font-bold text-green-600">
+              <p className="text-2xl font-bold text-orange-600">
                 {stats.active} <span className="text-sm font-normal text-gray-400">รอบ</span>
               </p>
             </div>
-            <div className="border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all border-orange-200">
-              <Users className="w-10 h-10 mx-auto text-orange-500 mb-3" />
+            <div className="border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all border-gray-200">
+              <Users className="w-10 h-10 mx-auto text-gray-500 mb-3" />
               <h3 className="text-gray-600 font-medium">ยอดระดมทุนรวม</h3>
-              <p className="text-2xl font-bold text-orange-500">
+              <p className="text-2xl font-bold text-gray-500">
                 {stats.totalDonated.toLocaleString()} <span className="text-sm font-normal text-gray-400">บาท</span>
               </p>
             </div>
@@ -323,15 +356,25 @@ export default function BudgetRoundsPage() {
                     <TableCell className="text-center">
                       <div className="flex justify-center items-center gap-2">
                         <button 
+                          onClick={() => initiateSendEmail(round.id)}
+                          className="text-yellow-500 hover:text-yellow-700 hover:bg-yellow-50 p-1.5 rounded-lg transition-all"
+                          title="ส่งอีเมลเชิญโหวต (Broadcast)"
+                        >
+                          <Send size={18} strokeWidth={2} />
+                        </button>
+                        <span className="text-gray-300 font-light">|</span>
+                        <button 
                           onClick={() => handleEdit(round)}
                           className="text-orange-500 hover:text-orange-700 hover:bg-orange-50 p-1.5 rounded-lg transition-all"
+                          title="แก้ไข"
                         >
                           <PenLine size={18} strokeWidth={2} />
                         </button>
                         <span className="text-gray-300 font-light">|</span>
                         <button 
                           onClick={() => initiateDelete(round.id)} 
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-all"
+                          className="text-gray-500 hover:text-gray-700 hover:bg-gray-50 p-1.5 rounded-lg transition-all"
+                          title="ลบ"
                         >
                           <Trash2 size={18} strokeWidth={2} />
                         </button>

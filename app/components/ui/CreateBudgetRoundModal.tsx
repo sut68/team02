@@ -180,7 +180,7 @@ export default function CreateBudgetRoundModal({
         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-gray-50/50">
           <div>
             <h3 className="text-xl font-semibold text-gray-800">
-                {isEditMode ? "แก้ไขรอบงบประมาณ" : "เปิดรอบงบประมาณใหม่"}
+                {isEditMode ? "แก้ไขรอบงบประมาณ" : "เปิดรอบการพิจารณาใหม่"}
             </h3>
             <p className="text-xs text-gray-500 mt-1">กำหนด 3 รอบต่อปีงบประมาณ</p>
           </div>

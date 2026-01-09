@@ -219,7 +219,7 @@ export default function BudgetReportPage() {
 
         <div className="absolute inset-0 bg-linear-to-r from-white/80 via-white/40 to-white/10" />
         <div className="absolute inset-0 flex items-end justify-end px-6 md:px-20 py-8 md:py-16">
-          <h1 className="text-2xl md:text-5xl font-semibold text-white drop-shadow-sm">
+          <h1 className="text-2xl md:text-5xl font-semibold text-orange-500 drop-shadow-sm">
             รายงานผลงบประมาณ
           </h1>
         </div>

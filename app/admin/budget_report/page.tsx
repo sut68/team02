@@ -44,6 +44,13 @@ const filters: FilterOption[] = [
 export default function BudgetReportPage() {
   const router = useRouter();
 
+  // ฟังก์ชันสำหรับดึงปีงบประมาณปัจจุบัน
+  const getCurrentFiscalYear = () => {
+    const d = new Date();
+    // ถ้าเดือน >= 9 (ตุลาคม, index 9) ให้บวกปีเพิ่ม 1, แล้วแปลงเป็น พ.ศ. (+543)
+    return String((d.getMonth() >= 9 ? d.getFullYear() + 1 : d.getFullYear()) + 543);
+  };
+
   // State
   const [reports, setReports] = useState<any[]>([]);
   const [approvedProjects, setApprovedProjects] = useState<any[]>([]);
@@ -52,7 +59,7 @@ export default function BudgetReportPage() {
   // Filter State
   const [activeFilter, setActiveFilter] = useState<FilterLabel>("ทั้งหมด");
   const [reportSearchTerm, setReportSearchTerm] = useState(""); 
-  const [filterYear, setFilterYear] = useState<string>("all");
+  const [filterYear, setFilterYear] = useState<string>(getCurrentFiscalYear());
   const [filterMonth, setFilterMonth] = useState<string>("all");
 
   // Collapse State
@@ -255,13 +262,13 @@ export default function BudgetReportPage() {
                         {filterYear === "all" ? "รวมทุกปีงบประมาณ" : `ปีงบประมาณ ${filterYear}`}
                     </p>
                 </div>
-                <div className="bg-red-50 p-6 rounded-2xl border border-red-200">
-                    <h3 className="text-red-900 text-sm font-semibold opacity-90">ใช้จ่ายจริง (Expense)</h3>
-                    <p className="text-3xl font-semibold text-red-900 mt-2">฿ {financialStats.expense.toLocaleString()}</p>
-                </div>
                 <div className="bg-orange-50 p-6 rounded-2xl border border-orange-200">
-                    <h3 className="text-orange-900 text-sm font-semibold opacity-90">คงเหลือ (Balance)</h3>
-                    <p className="text-3xl font-semibold text-orange-700 mt-2">฿ {financialStats.balance.toLocaleString()}</p>
+                    <h3 className="text-orange-900 text-sm font-semibold opacity-90">ใช้จ่ายจริง (Expense)</h3>
+                    <p className="text-3xl font-semibold text-orange-900 mt-2">฿ {financialStats.expense.toLocaleString()}</p>
+                </div>
+                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200">
+                    <h3 className="text-gray-900 text-sm font-semibold opacity-90">คงเหลือ (Balance)</h3>
+                    <p className="text-3xl font-semibold text-gray-700 mt-2">฿ {financialStats.balance.toLocaleString()}</p>
                 </div>
             </div>
         </div>

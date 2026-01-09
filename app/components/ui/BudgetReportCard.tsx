@@ -19,7 +19,7 @@ interface Props {
 const STATUS_OPTIONS = [
   { id: 1, label: "ฉบับร่าง", value: "DRAFT", color: "bg-gray-400", textColor: "text-gray-600" },
   { id: 2, label: "รอตรวจสอบ", value: "PENDING_REVIEW", color: "bg-orange-500", textColor: "text-orange-600" },
-  { id: 3, label: "อนุมัติ", value: "APPROVED", color: "bg-green-500", textColor: "text-green-600" },
+  { id: 3, label: "อนุมัติ", value: "APPROVED", color: "bg-yellow-500", textColor: "text-yellow-600" },
   { id: 4, label: "ส่งกลับไปแก้ไข", value: "NEEDS_REVISION", color: "bg-red-500", textColor: "text-red-600" },
 ];
 

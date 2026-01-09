@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { PrimaryButton } from "@/app/components/ui/Button";
-import { Card, CardContent, CardFooter } from "@/app/components/ui/Card"; // ✅ ใช้ Components ย่อยตาม Admin
+import { Card, CardContent, CardFooter } from "@/app/components/ui/Card";
 import { Loader2, Building2, Coins, User, CheckCircle2, XCircle } from "lucide-react";
 import { ProjectWithManager, ProjectVote } from "@/app/types/budget_approval";
 
@@ -116,7 +116,27 @@ export default function VotePage() {
 
   // --- Logic ---
   const votingProjects = projects.filter((p) => p.status === "OPEN");
-  const resultProjects = projects.filter((p) => p.status === "APPROVED" || p.status === "CLOSE");
+
+  // ✅ ปรับแก้ Logic: แสดงผลเฉพาะรอบล่าสุด และเคลียร์ออกเมื่อมีรอบใหม่ (votingProjects > 0)
+  let resultProjects: ProjectWithManager[] = [];
+
+  if (votingProjects.length === 0) {
+      // 1. ดึงโครงการที่จบไปแล้วทั้งหมด (APPROVED หรือ CLOSE)
+      const allPastProjects = projects.filter((p) => p.status === "APPROVED" || p.status === "CLOSE");
+      
+      if (allPastProjects.length > 0) {
+          // 2. หา ID รอบงบประมาณล่าสุด (สมมติว่า ID มากกว่าคือรอบใหม่กว่า)
+          const latestRoundId = allPastProjects.reduce((maxId, p) => {
+              const currentId = p.budgetRound?.id || 0;
+              return currentId > maxId ? currentId : maxId;
+          }, 0);
+
+          // 3. กรองเอาเฉพาะโครงการของรอบล่าสุด
+          if (latestRoundId > 0) {
+              resultProjects = allPastProjects.filter(p => p.budgetRound?.id === latestRoundId);
+          }
+      }
+  }
 
   const calculateScore = (votes?: Partial<ProjectVote>[]) => {
     if (!votes || votes.length === 0) return 0;
@@ -139,7 +159,7 @@ export default function VotePage() {
   return (
     <div className="min-h-screen bg-gray-50/50 pb-20 font-sans">
       
-      {/* --- Hero Section (เหมือนเดิม) --- */}
+      {/* --- Hero Section --- */}
       <section className="relative w-full h-[300px] md:h-[400px] overflow-hidden mb-12 bg-gray-800">
         <Image
           src="/18.jpg"
@@ -177,12 +197,11 @@ export default function VotePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {votingProjects.map((project) => (
                 
-                /* ✅ Card Style ตาม Admin ProjectCard */
                 <Card 
                     key={project.id} 
-                    className="p-4 border-none shadow-sm bg-white w-full h-full flex flex-col relative transition-all hover:shadow-lg rounded-xl"
+                    className="p-4 border-none shadow-sm bg-white w-full h-full flex flex-col relative transition-all hover:shadow-md"
                 >
-                  {/* Image Section - ความสูงคงที่ มุมมน */}
+                  {/* Image Section */}
                   <div className="relative w-full h-48 mb-4 rounded-2xl overflow-hidden group z-10 bg-gray-100 shrink-0">
                     {project.coverFilePath ? (
                       <Image
@@ -200,15 +219,15 @@ export default function VotePage() {
                   </div>
 
                   {/* Content Section */}
-                  <CardContent className="p-0 mb-4 grow flex flex-col">
+                  <CardContent className="p-0 mb-6 grow flex flex-col">
                     <h3 
-                      className="font-bold text-lg text-gray-900 mb-2 line-clamp-2 leading-tight min-h-12" 
+                      className="font-bold text-lg text-gray-900 mb-2 line-clamp-2 leading-tight" 
                       title={project.projectName}
                     >
                       {project.projectName}
                     </h3>
                     
-                    {/* ข้อมูล Metadata แบบเรียบง่าย */}
+                    {/* Metadata */}
                     <div className="space-y-1.5 text-sm text-gray-500 font-light mt-auto">
                         <div className="flex items-start gap-2">
                             <Building2 className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
@@ -229,10 +248,10 @@ export default function VotePage() {
                     </div>
                   </CardContent>
 
-                  {/* Footer Section - ปุ่มโหวต */}
-                  <CardFooter className="p-0 mt-auto pt-2 shrink-0">
+                  {/* Footer Section: ปุ่มโหวตชิดขวา */}
+                  <CardFooter className="p-0 flex justify-end gap-2 mt-auto shrink-0">
                     <PrimaryButton
-                        className={`w-full h-10 rounded-lg text-base font-medium shadow-sm transition-all flex items-center justify-center gap-2
+                        className={`h-10 px-6 rounded-lg text-base font-medium shadow-sm transition-all flex items-center justify-center gap-2
                         ${
                           userVotedId
                             ? userVotedId === project.id 
@@ -260,7 +279,7 @@ export default function VotePage() {
                         ) : isVoting ? (
                             <Loader2 className="w-5 h-5 animate-spin" />
                         ) : canVote ? (
-                            "โหวตโครงการ"
+                            "โหวต" 
                         ) : (
                             "ไม่มีสิทธิ์โหวต"
                         )}
@@ -273,7 +292,7 @@ export default function VotePage() {
           )}
         </div>
 
-        {/* --- Section 2: Result (เหมือนเดิม) --- */}
+        {/* --- Section 2: Result --- */}
         <div>
           <div className="flex items-center gap-3 mb-8 border-b border-gray-200 pb-4">
              <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
@@ -282,8 +301,11 @@ export default function VotePage() {
           </div>
 
           {resultProjects.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-2xl border-2 border-dashed border-gray-200 text-gray-400">
-              ยังไม่มีผลการพิจารณาโครงการในขณะนี้
+            <div className="text-center py-16 bg-white rounded-2xl border-1 border-gray-200 text-gray-400">
+               {votingProjects.length > 0 
+                  ? "ระบบกำลังเปิดรับคะแนนโหวตสำหรับรอบปัจจุบัน" 
+                  : "ยังไม่มีผลการพิจารณาโครงการในขณะนี้"
+               }
             </div>
           ) : (
             <div className="space-y-4 max-w-5xl">

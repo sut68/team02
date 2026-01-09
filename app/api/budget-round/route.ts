@@ -45,7 +45,10 @@ export async function GET(request: NextRequest) {
           where: { deletedAt: null },
           select: { id: true, projectName: true, status: true, requestedAmount: true },
         },
-        budgetDonations: { select: { amount: true } },
+        budgetDonations: { 
+          where: { status: 'SUCCESS' },
+          select: { amount: true } 
+        },
       },
       orderBy: [{ startDate: 'desc' }]
     });
