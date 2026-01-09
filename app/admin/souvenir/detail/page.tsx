@@ -1,14 +1,15 @@
-  // ฟังก์ชัน normalize category ไทย/อังกฤษ -> ACTIVITY/DONATION
-  const normalizeCategory = (dbCategory: string | null): "ACTIVITY" | "DONATION" => {
-    if (dbCategory === "กิจกรรม" || dbCategory === "ACTIVITY") return "ACTIVITY";
-    if (dbCategory === "บริจาค" || dbCategory === "DONATION") return "DONATION";
-    return "ACTIVITY";
-  };
 "use client";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Upload, ArrowLeft, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+
+// ฟังก์ชัน normalize category ไทย/อังกฤษ -> ACTIVITY/DONATION
+const normalizeCategory = (dbCategory: string | null): "ACTIVITY" | "DONATION" => {
+  if (dbCategory === "กิจกรรม" || dbCategory === "ACTIVITY") return "ACTIVITY";
+  if (dbCategory === "บริจาค" || dbCategory === "DONATION") return "DONATION";
+  return "ACTIVITY";
+};
 
 // Type ให้ตรงกับ Form และ API Response
 type SouvenirFormData = {

@@ -1,102 +1,85 @@
-// app/api/content/[id]/registrations/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from '@/app/lib/prisma';
+import { prisma } from "@/app/lib/prisma";
 
 export async function GET(
-  req: NextRequest,
-  ctx: { params: Promise<{ id: string }> } // รองรับ Next.js ใหม่
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const params = await ctx.params;
-  const id = params?.id;
-
-  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
-
-  const contentId = Number(id);
-  if (Number.isNaN(contentId)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
-
   try {
-    // 1. ดึง content เพื่อเอา souvenirItemId
-    const content = await prisma.content.findUnique({
-      where: { id: contentId },
-      select: { souvenirItemId: true }
-    });
+    const { id } = await params;
+    const contentId = parseInt(id);
 
-    // 2. ดึง Booking พร้อมข้อมูล User และ Field ที่กรอก
-    const bookings = await prisma.booking.findMany({
-      where: { ContentID: contentId },
-      include: {
-        user: true, 
-        bookingField: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    // 3. ดึง Entitlements (สิทธิ์รับของ) แยกต่างหาก เพื่อมาประกบ
-    let entitlementsMap: Record<number, any[]> = {};
-    
-    if (content?.souvenirItemId) {
-        const userIds = bookings
-            .map(b => b.Userid)
-            .filter((uid): uid is number => uid !== null);
-
-        if (userIds.length > 0) {
-            const entitlements = await prisma.entitlement.findMany({
-                where: {
-                    itemId: content.souvenirItemId,
-                    userId: { in: userIds },
-                    source: 'BOOKING'
-                },
-                include: {
-                    item: true,
-                    redemptions: true
-                }
-            });
-
-            // Group by userId
-            entitlements.forEach(ent => {
-                if (!entitlementsMap[ent.userId]) entitlementsMap[ent.userId] = [];
-                entitlementsMap[ent.userId].push(ent);
-            });
-        }
+    if (isNaN(contentId)) {
+      return NextResponse.json(
+        { error: "Invalid Content ID" },
+        { status: 400 }
+      );
     }
 
-    // 4. Map ข้อมูลกลับไปให้ Frontend
-    const registrations = bookings.map((b) => {
-      const userEntitlements = (b.Userid && entitlementsMap[b.Userid]) ? entitlementsMap[b.Userid] : [];
-
-      return {
-        id: b.id,
-        user: b.user
-          ? {
-              id: b.user.id,
-              fullName: b.user.fullName,
-              email: b.user.email,
-              phone: b.user.phone,
-            }
-          : null,
-        status: b.transactionStatus, // PENDING / SUCCESS
-        registeredAt: b.createdAt,
-        entitlements: userEntitlements.map((e) => ({
-            id: e.id,
-            qtyGranted: e.qtyGranted,
-            qtyUsed: e.qtyUsed,
-            redemptions: e.redemptions,
-            item: e.item
-              ? {
-                  id: e.item.id,
-                  name: e.item.name,
-                  category: e.item.category,
-                }
-              : null,
-          })),
-        bookingField: b.bookingField || null,
-      };
+    // 1. ดึงข้อมูลการจอง (Booking) ของกิจกรรมนี้
+    const bookings = await prisma.booking.findMany({
+      where: {
+        ContentID: contentId,
+        transactionStatus: "SUCCESS", // เอาเฉพาะคนที่จ่ายเงิน/จองสำเร็จแล้ว
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(registrations);
+    // 2. ดึงข้อมูล Content เพื่อดูว่าแจกของชิ้นไหน
+    const content = await prisma.content.findUnique({
+      where: { id: contentId },
+      select: { souvenirItemId: true },
+    });
 
+    // 3. ประกอบร่างข้อมูล เพื่อเช็คว่า User แต่ละคนได้รับของ (Entitlement) หรือยัง
+    const results = await Promise.all(
+      bookings.map(async (booking) => {
+        let entitlements: any[] = [];
+
+        // ถ้ากิจกรรมนี้มีของแจก และ Booking มี User
+        if (content?.souvenirItemId && booking.Userid) {
+          const ent = await prisma.entitlement.findFirst({
+            where: {
+              userId: booking.Userid,
+              itemId: content.souvenirItemId,
+              source: "BOOKING",
+            },
+            include: {
+              item: { select: { name: true } },
+              redemptions: {
+                select: { id: true, redeemedAt: true },
+              },
+            },
+          });
+          if (ent) entitlements.push(ent);
+        }
+
+        return {
+          id: booking.id,
+          userId: booking.Userid,
+          registeredAt: booking.createdAt,
+          attendanceStatus: booking.transactionStatus,
+          user: booking.user,
+          entitlements: entitlements, // ส่งกลับไปให้ Frontend เช็คว่ารับของยัง
+        };
+      })
+    );
+
+    return NextResponse.json(results);
   } catch (error) {
     console.error("Error fetching registrations:", error);
-    return NextResponse.json({ error: 'Failed to fetch registrations' }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }

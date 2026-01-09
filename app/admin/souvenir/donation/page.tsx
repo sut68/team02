@@ -42,7 +42,7 @@ interface Donation {
     imageUrl: string | null;
     sku: string;
   } | null;
-  shipments?: Array<{
+  shipments: Array<{
     id: number;
     status: string;
     trackingNo: string | null;
@@ -69,6 +69,15 @@ export default function SouvenirDonationPage() {
   const [currentProjectIndex, setCurrentProjectIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'remaining' | 'registered' | 'claimed'>('all');
+  
+  // ✅ Edit State Management per Shipment
+  const [editModes, setEditModes] = useState<Map<number, {
+    enabled: boolean;
+    trackingNo: string;
+    status: string;
+    saving: boolean;
+  }>>(new Map());
+  
   // Carousel refs
   const projectScrollRef = React.useRef<HTMLDivElement>(null);
   const souvenirScrollRef = React.useRef<HTMLDivElement>(null);
@@ -176,8 +185,7 @@ export default function SouvenirDonationPage() {
     if (!selectedProject) return [];
     return donations.filter(d => {
       if (selectedStatus === 'all') return true;
-      const hasShipment = d.shipments && d.shipments.length > 0;
-      const delivered = hasShipment && d.shipments?.[0]?.status === 'DELIVERED';
+      const delivered = d.shipments[0]?.status === 'DELIVERED';
       if (selectedStatus === 'claimed') return delivered;
       if (selectedStatus === 'remaining') return !delivered;
       if (selectedStatus === 'registered') return true;
@@ -283,7 +291,7 @@ export default function SouvenirDonationPage() {
                         <div className="flex items-center justify-center mb-4">
                           <RefreshCw className="w-8 h-8 text-orange-500" />
                         </div>
-                        <div className={`text-5xl font-bold mb-2 ${selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-800'}`}>{donations.filter(d => !(d.shipments && d.shipments[0]?.status === 'DELIVERED')).length}</div>
+                        <div className={`text-5xl font-bold mb-2 ${selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-800'}`}>{donations.filter(d => d.shipments[0]?.status !== 'DELIVERED').length}</div>
                         <div className={`font-medium ${selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-600'}`}>คงเหลือ</div>
                       </div>
                     </div>
@@ -303,7 +311,7 @@ export default function SouvenirDonationPage() {
                         <div className="flex items-center justify-center mb-4">
                           <CheckCircle className="w-8 h-8 text-orange-500" />
                         </div>
-                        <div className={`text-5xl font-bold mb-2 ${selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-800'}`}>{donations.filter(d => d.shipments && d.shipments[0]?.status === 'DELIVERED').length}</div>
+                        <div className={`text-5xl font-bold mb-2 ${selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-800'}`}>{donations.filter(d => d.shipments[0]?.status === 'DELIVERED').length}</div>
                         <div className={`font-medium ${selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-600'}`}>รับของแล้ว</div>
                       </div>
                     </div>
@@ -317,32 +325,91 @@ export default function SouvenirDonationPage() {
                       <table className="w-full">
                         <thead>
                           <tr className="bg-gray-100 border-b border-gray-200">
-                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">ลำดับ</th>
-                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">ชื่อ-สกุล</th>
-                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">อีเมล</th>
-                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">วันที่บริจาค</th>
-                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">ของที่ระลึก</th>
-                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">สถานะ</th>
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[50px]">ลำดับ</th>
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[150px]">ชื่อ-สกุล</th>
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[200px]">อีเมล</th>
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[120px]">วันที่บริจาค</th>
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[150px]">ของที่ระลึก</th>
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[140px]">สถานะ</th>
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[200px]">เลขแทรก</th>
                           </tr>
                         </thead>
                         <tbody>
                           {filteredDonations.length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="px-6 py-10 text-center text-gray-500">ไม่มีรายการขอรับของที่ระลึกในโครงการนี้</td>
+                              <td colSpan={7} className="px-6 py-10 text-center text-gray-500">ไม่มีรายการขอรับของที่ระลึกในโครงการนี้</td>
                             </tr>
                           ) : (
                             filteredDonations.map((donation, index) => {
                               const donatedDate = new Date(donation.donatedAt);
                               const thaiDate = donatedDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
-                              const hasShipment = donation.shipments && donation.shipments.length > 0;
-                              const delivered = hasShipment && donation.shipments?.[0]?.status === 'DELIVERED';
+                              const hasShipment = donation.shipments.length > 0;
+                              const shipment = hasShipment ? donation.shipments[0] : null;
+                              const shipmentId = shipment?.id || 0;
+                              const status = shipment?.status || 'PENDING';
+                              const trackingNo = shipment?.trackingNo;
                               const souvenirName = donation.souvenirItem?.name || selectedProject.souvenirItem?.name || 'ของที่ระลึกบริจาค';
-                              let statusText = 'รอรับ';
-                              let statusColor = 'bg-gray-100 text-gray-700';
-                              if (delivered) {
-                                statusText = 'รับแล้ว';
-                                statusColor = 'bg-orange-100 text-orange-700';
-                              }
+                              
+                              // ✅ ดึง edit state จาก editModes Map
+                              const editState = editModes.get(shipmentId) || {
+                                enabled: false,
+                                trackingNo: trackingNo || '',
+                                status: status,
+                                saving: false
+                              };
+
+                              const updateEditState = (newState: Partial<typeof editState>) => {
+                                setEditModes(prev => new Map(prev).set(shipmentId, { ...editState, ...newState }));
+                              };
+
+                              const handleStatusChange = async () => {
+                                // ตรวจสอบ: ถ้าเปลี่ยนเป็น DELIVERED ต้องมี tracking number
+                                if (editState.status === 'DELIVERED' && !editState.trackingNo.trim()) {
+                                  alert('ต้องใส่เลขแทรกก่อนที่จะเปลี่ยนสถานะเป็นจัดส่งแล้ว');
+                                  return;
+                                }
+
+                                // ตรวจสอบ: ห้ามเปลี่ยนจาก DELIVERED กลับไปเป็น PENDING
+                                if (status === 'DELIVERED' && editState.status !== 'DELIVERED') {
+                                  alert('ไม่สามารถเปลี่ยนสถานะจากจัดส่งแล้วกลับไปได้');
+                                  updateEditState({ status });
+                                  return;
+                                }
+
+                                updateEditState({ saving: true });
+                                try {
+                                  const res = await fetch(`/api/admin/shipments/${shipmentId}`, {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      status: editState.status,
+                                      trackingNo: editState.trackingNo || null
+                                    })
+                                  });
+
+                                  if (!res.ok) {
+                                    const err = await res.json();
+                                    alert(`เกิดข้อผิดพลาด: ${err.error}`);
+                                    updateEditState({ status, trackingNo: trackingNo || '', saving: false });
+                                    return;
+                                  }
+
+                                  updateEditState({ enabled: false, saving: false });
+                                  // Refresh data
+                                  if (selectedProject) {
+                                    const projectRes = await fetch(`/api/donation-project/${selectedProject.id}/donations`);
+                                    if (projectRes.ok) {
+                                      const data = await projectRes.json();
+                                      setDonations(data.donations || []);
+                                    }
+                                  }
+                                } catch (error) {
+                                  console.error('Error updating shipment:', error);
+                                  alert('เกิดข้อผิดพลาด');
+                                  updateEditState({ status, trackingNo: trackingNo || '', saving: false });
+                                }
+                              };
+
                               return (
                                 <tr key={donation.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                                   <td className="px-6 py-4 text-sm text-gray-800">{index + 1}</td>
@@ -351,7 +418,73 @@ export default function SouvenirDonationPage() {
                                   <td className="px-6 py-4 text-sm text-gray-600">{thaiDate}</td>
                                   <td className="px-6 py-4 text-sm text-orange-600">{souvenirName}</td>
                                   <td className="px-6 py-4">
-                                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}>{statusText}</span>
+                                    {editState.enabled ? (
+                                      <div className="inline-flex items-center gap-1 px-3 py-1 border border-orange-200 rounded-full text-xs font-medium focus-within:ring-2 focus-within:ring-orange-500 outline-none bg-white">
+                                        <select
+                                          value={editState.status}
+                                          onChange={(e) => updateEditState({ status: e.target.value })}
+                                          className="bg-transparent cursor-pointer outline-none flex-1 appearance-none"
+                                          disabled={editState.saving || status === 'DELIVERED'}
+                                        >
+                                          <option value="PENDING">รอดำเนินการ</option>
+                                          <option value="IN_TRANSIT">กำลังจัดส่ง</option>
+                                          <option value="DELIVERED" disabled={!editState.trackingNo.trim()}>จัดส่งแล้ว</option>
+                                        </select>
+                                        <svg className="w-3 h-3 flex-shrink-0 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 10l5 5 5-5" />
+                                        </svg>
+                                      </div>
+                                    ) : (
+                                      <span 
+                                        onClick={() => updateEditState({ enabled: true, status, trackingNo: trackingNo || '' })}
+                                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium cursor-pointer transition-all hover:shadow-md"
+                                        style={{
+                                          backgroundColor: status === 'DELIVERED' ? '#dcfce7' : status === 'IN_TRANSIT' ? '#fef3c7' : '#f3f4f6',
+                                          color: status === 'DELIVERED' ? '#166534' : status === 'IN_TRANSIT' ? '#92400e' : '#374151'
+                                        }}
+                                      >
+                                        <span>
+                                          {status === 'PENDING' ? 'รอดำเนินการ' : status === 'IN_TRANSIT' ? 'กำลังจัดส่ง' : 'จัดส่งแล้ว'}
+                                        </span>
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 10l5 5 5-5" />
+                                        </svg>
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    {editState.enabled ? (
+                                      <div className="space-y-2">
+                                        <input
+                                          type="text"
+                                          value={editState.trackingNo}
+                                          onChange={(e) => updateEditState({ trackingNo: e.target.value })}
+                                          placeholder="กรอกเลขแทรก"
+                                          className="w-full px-2 py-1 border border-orange-200 rounded text-sm focus:ring-2 focus:ring-orange-500 outline-none"
+                                          disabled={editState.saving}
+                                        />
+                                        <div className="flex gap-2">
+                                          <button
+                                            onClick={handleStatusChange}
+                                            disabled={editState.saving}
+                                            className="flex-1 px-3 py-1 bg-orange-500 text-white text-xs rounded font-medium hover:bg-orange-600 disabled:bg-gray-400"
+                                          >
+                                            {editState.saving ? '...' : 'บันทึก'}
+                                          </button>
+                                          <button
+                                            onClick={() => updateEditState({ enabled: false, status, trackingNo: trackingNo || '' })}
+                                            disabled={editState.saving}
+                                            className="flex-1 px-3 py-1 bg-gray-300 text-gray-700 text-xs rounded font-medium hover:bg-gray-400 disabled:bg-gray-200"
+                                          >
+                                            ยกเลิก
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <span className="text-sm font-medium text-gray-700">
+                                        {trackingNo || '-'}
+                                      </span>
+                                    )}
                                   </td>
                                 </tr>
                               );

@@ -14,8 +14,8 @@ import {
   PaymentStatusType,
   EntitlementSource,
   DonationProjectType,
-  ShipStatus,     // เพิ่ม import
-  RedeemMethod,   // เพิ่ม import
+  ShipStatus,
+  RedeemMethod,
 } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
@@ -945,12 +945,17 @@ async function main() {
 
   // 6.3 Simulate Donors (Flood Relief)
   if (floodProj && floodProj.souvenirItemId) {
-         const donorEmails = ["alumni.2018@sut.eng.ac.th", "alumni.2020@sut.eng.ac.th", "alumni.2015@sut.eng.ac.th"];
+         const donorEmails = ["alumni.2018@sut-eng.ac.th", "alumni.2020@sut-eng.ac.th", "alumni.2015@sut-eng.ac.th"];
 
          for (const [index, email] of donorEmails.entries()) {
-          const uid = userMap[email]?.id;
-          if (!uid) continue;
+          const userObj = userMap[email];
+          if (!userObj) continue;
+          const uid = userObj.id;
           const amt = 1000;
+
+          // Fetch user details from DB (for up-to-date info)
+          const user = await prisma.user.findUnique({ where: { id: uid } });
+          if (!user) continue;
 
           // Check if already donated to avoid dups in seed re-runs
           const existingDonation = await prisma.donationTransaction.findFirst({
@@ -966,10 +971,14 @@ async function main() {
                 amount: amt,
                 status: TransactionStatus.SUCCESS,
                 isPublic: true,
-                fullName: `Donor ${index+1}`,
-                email: email,
-                phone: "0899999999",
-                address: "SUT", subdistrict:"Suranari", district:"Muang", province:"Korat", postalCode:"30000"
+                fullName: user.fullName,
+                email: user.email,
+                phone: user.phone || "",
+                address: user.address || "",
+                subdistrict: user.subdistrict || "",
+                district: user.district || "",
+                province: user.province || "",
+                postalCode: user.postalCode || ""
               }
             });
 
@@ -1000,8 +1009,8 @@ async function main() {
               }
             });
 
-            // 5. Entitlement & Shipment
-            const isDelivered = index === 0; // First one delivered
+            // 5. Entitlement & Shipment (Admin fills tracking number later)
+            // ทั้งหมด pending ให้ admin กรอก tracking number และเปลี่ยนสถานะ
             await prisma.entitlement.create({
               data: {
                 userId: uid,
@@ -1009,7 +1018,7 @@ async function main() {
                 source: EntitlementSource.DONATION,
                 donationId: donation.id,
                 qtyGranted: 1,
-                qtyUsed: isDelivered ? 1 : 0,
+                qtyUsed: 0, // ยังไม่ deliver ให้ admin
                 redeemToken: randomUUID()
               }
             });
@@ -1019,11 +1028,16 @@ async function main() {
                 donationId: donation.id,
                 userId: uid,
                 itemId: floodProj.souvenirItemId,
-                receiverName: `Donor ${index+1}`,
-                addressLine: "123 Home", subdistrict:"Sub", district:"Dist", province:"Prov", postalCode:"30000", phone:"0812223333",
-                status: isDelivered ? ShipStatus.DELIVERED : ShipStatus.PENDING,
-                trackingNo: isDelivered ? "TH123456" : null,
-                deliveredAt: isDelivered ? new Date() : null
+                receiverName: user.fullName,
+                addressLine: user.address || "",
+                subdistrict: user.subdistrict || "",
+                district: user.district || "",
+                province: user.province || "",
+                postalCode: user.postalCode || "",
+                phone: user.phone || "",
+                status: ShipStatus.PENDING, // รอให้ admin กรอก tracking number
+                trackingNo: null, // admin จะกรอกเอง
+                deliveredAt: null // admin จะเซตเอง
               }
             });
           }
