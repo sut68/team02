@@ -53,6 +53,11 @@ export async function GET(
             id: true,
             fullName: true,
             email: true,
+            address: true,
+            subdistrict: true,
+            district: true,
+            province: true,
+            postalCode: true,
           },
         },
         souvenirItem: {

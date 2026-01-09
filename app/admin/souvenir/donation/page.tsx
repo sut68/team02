@@ -35,6 +35,11 @@ interface Donation {
   user: {
     fullName: string;
     email: string;
+    address?: string;
+    subdistrict?: string;
+    district?: string;
+    province?: string;
+    postalCode?: string;
   };
   souvenirItem?: {
     id: number;
@@ -330,6 +335,7 @@ export default function SouvenirDonationPage() {
                           <tr className="bg-gray-100 border-b border-gray-200">
                             <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[50px]">ลำดับ</th>
                             <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[150px]">ชื่อ-สกุล</th>
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[200px]">ที่อยู่</th>
                             <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[200px]">อีเมล</th>
                             <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[120px]">วันที่บริจาค</th>
                             <th className="px-6 py-4 text-left text-sm font-medium text-gray-600 min-w-[150px]">ของที่ระลึก</th>
@@ -340,7 +346,7 @@ export default function SouvenirDonationPage() {
                         <tbody>
                           {filteredDonations.length === 0 ? (
                             <tr>
-                              <td colSpan={7} className="px-6 py-10 text-center text-gray-500">ไม่มีรายการขอรับของที่ระลึกในโครงการนี้</td>
+                              <td colSpan={8} className="px-6 py-10 text-center text-gray-500">ไม่มีรายการขอรับของที่ระลึกในโครงการนี้</td>
                             </tr>
                           ) : (
                             filteredDonations.map((donation, index) => {
@@ -352,6 +358,13 @@ export default function SouvenirDonationPage() {
                               const status = shipment?.status || 'PENDING';
                               const trackingNo = shipment?.trackingNo;
                               const souvenirName = donation.souvenirItem?.name || selectedProject.souvenirItem?.name || 'ของที่ระลึกบริจาค';
+                              const fullAddress = [
+                                donation.user.address,
+                                donation.user.subdistrict,
+                                donation.user.district,
+                                donation.user.province,
+                                donation.user.postalCode
+                              ].filter(Boolean).join(' ') || '-';
                               
                               // ✅ ดึง edit state จาก editModes Map
                               const editState = editModes.get(shipmentId) || {
@@ -417,6 +430,7 @@ export default function SouvenirDonationPage() {
                                 <tr key={donation.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                                   <td className="px-6 py-4 text-sm text-gray-800">{index + 1}</td>
                                   <td className="px-6 py-4 text-sm text-gray-800 font-medium">{donation.user.fullName}</td>
+                                  <td className="px-6 py-4 text-sm text-gray-600">{fullAddress}</td>
                                   <td className="px-6 py-4 text-sm text-gray-600">{donation.user.email}</td>
                                   <td className="px-6 py-4 text-sm text-gray-600">{thaiDate}</td>
                                   <td className="px-6 py-4 text-sm text-orange-600">{souvenirName}</td>
