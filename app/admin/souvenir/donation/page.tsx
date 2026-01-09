@@ -2,7 +2,9 @@
 import React, { useState, useEffect } from "react";
 import { CATEGORY_LABEL } from "@/constants/category";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, Calendar, RefreshCw, Layers, CheckCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, RefreshCw, Layers, CheckCircle, Search } from "lucide-react";
+import { Card, CardContent } from "@/app/components/ui/Card";
+import { Input } from "@/app/components/ui/Input";
 
 // --- Interfaces ---
 interface SouvenirItem {
@@ -73,6 +75,7 @@ export default function SouvenirDonationPage() {
   const [currentProjectIndex, setCurrentProjectIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'remaining' | 'registered' | 'claimed'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
   
   // ✅ Edit State Management per Shipment
   const [editModes, setEditModes] = useState<Map<number, {
@@ -202,6 +205,19 @@ export default function SouvenirDonationPage() {
     });
   }, [donations, selectedProject, selectedStatus]);
 
+  // Filtered donations by search term
+  const searchedDonations = React.useMemo(() => {
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return filteredDonations;
+    return filteredDonations.filter(d => {
+      const fullName = d.user.fullName?.toLowerCase() || '';
+      const email = d.user.email?.toLowerCase() || '';
+      const phone = d.user.phone?.toLowerCase() || '';
+      const address = `${d.user.address || ''} ${d.user.subdistrict || ''} ${d.user.district || ''} ${d.user.province || ''}`.toLowerCase();
+      return fullName.includes(term) || email.includes(term) || phone.includes(term) || address.includes(term);
+    });
+  }, [filteredDonations, searchTerm]);
+
   return (
     <main className="min-h-screen bg-white pt-10">
       {loading ? (
@@ -327,8 +343,26 @@ export default function SouvenirDonationPage() {
                   </div>
                 </section>
 
-                {/* Section 4: Table */}
+                {/* Section 4: Search & Table */}
                 <section className="mt-12">
+                  {/* Search Bar */}
+                  <Card className="mb-6">
+                    <CardContent className="p-6">
+                      <div className="relative">
+                        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <Input
+                          type="text"
+                          placeholder="ค้นหาด้วยชื่อ อีเมล เบอร์โทร หรือที่อยู่"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-12"
+                          size="md"
+                          radius="md"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
                   <div className="bg-white rounded-xl shadow-md overflow-hidden">
                     <div className="overflow-x-auto">
                       <table className="w-full">
@@ -346,12 +380,14 @@ export default function SouvenirDonationPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {filteredDonations.length === 0 ? (
+                          {searchedDonations.length === 0 ? (
                             <tr>
-                              <td colSpan={9} className="px-6 py-10 text-center text-gray-500">ไม่มีรายการขอรับของที่ระลึกในโครงการนี้</td>
+                              <td colSpan={9} className="px-6 py-10 text-center text-gray-500">
+                                {searchTerm ? 'ไม่พบผลการค้นหา' : 'ไม่มีรายการขอรับของที่ระลึกในโครงการนี้'}
+                              </td>
                             </tr>
                           ) : (
-                            filteredDonations.map((donation, index) => {
+                            searchedDonations.map((donation, index) => {
                               const donatedDate = new Date(donation.donatedAt);
                               const thaiDate = donatedDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
                               const hasShipment = donation.shipments.length > 0;
