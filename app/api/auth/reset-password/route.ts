@@ -53,8 +53,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash รหัสผ่านใหม่
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    // Hash รหัสผ่านใหม่ (cost factor 12)
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
 
     // อัพเดทรหัสผ่าน (by email)
     await prisma.user.update({

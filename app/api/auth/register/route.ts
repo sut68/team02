@@ -31,6 +31,9 @@ function pickExtension(file: File): string {
 }
 
 export async function POST(request: NextRequest) {
+    // Rate limit
+    const rateLimitRes = await registerLimiter(request);
+    if (rateLimitRes) return rateLimitRes;
   // ตรวจสอบ rate limit
   const rateLimitResult = await registerLimiter(request);
   if (rateLimitResult) {
@@ -125,8 +128,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash password (cost factor 12)
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     // Determine role and study status
     const role = userType === 'alumni' ? 'ALUMNI' : 'STUDENT';
