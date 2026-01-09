@@ -41,8 +41,6 @@ CREATE UNIQUE INDEX "Content_TitleName_categories_key" ON "Content"("TitleName",
 -- CreateIndex
 CREATE UNIQUE INDEX "Entitlement_redeemToken_key" ON "Entitlement"("redeemToken");
 
--- CreateIndex
-CREATE UNIQUE INDEX "PaymentMethodRecord_methodName_key" ON "PaymentMethodRecord"("methodName");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "PictureContent_Path_ContentID_key" ON "PictureContent"("Path", "ContentID");

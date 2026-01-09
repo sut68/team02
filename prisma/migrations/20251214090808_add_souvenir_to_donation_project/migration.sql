@@ -16,8 +16,6 @@ ALTER TABLE "BudgetRound" ADD COLUMN     "status" "RoundStatus" NOT NULL DEFAULT
 -- AlterTable
 ALTER TABLE "Content" ADD COLUMN     "souvenirItemId" INTEGER;
 
--- AlterTable
-ALTER TABLE "DonationProject" ADD COLUMN     "souvenirItemId" INTEGER;
 
 -- AlterTable
 ALTER TABLE "ProjectProposal" ALTER COLUMN "scoreTotal" SET NOT NULL,
@@ -25,9 +23,6 @@ ALTER COLUMN "scoreTotal" SET DEFAULT 0;
 
 -- CreateIndex
 CREATE INDEX "Content_souvenirItemId_idx" ON "Content"("souvenirItemId");
-
--- AddForeignKey
-ALTER TABLE "DonationProject" ADD CONSTRAINT "DonationProject_souvenirItemId_fkey" FOREIGN KEY ("souvenirItemId") REFERENCES "SouvenirItem"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Content" ADD CONSTRAINT "Content_souvenirItemId_fkey" FOREIGN KEY ("souvenirItemId") REFERENCES "SouvenirItem"("id") ON DELETE SET NULL ON UPDATE CASCADE;

@@ -1,25 +1,85 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/app/lib/prisma";
 
 export async function GET(
-  req: NextRequest,
-  ctx: { params: Promise<{ id: string }> | { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const params = await ctx.params;
-  const id = params?.id;
+  try {
+    const { id } = await params;
+    const contentId = parseInt(id);
 
-  if (!id) {
-    return NextResponse.json({ error: "Missing content id" }, { status: 400 });
+    if (isNaN(contentId)) {
+      return NextResponse.json(
+        { error: "Invalid Content ID" },
+        { status: 400 }
+      );
+    }
+
+    // 1. ดึงข้อมูลการจอง (Booking) ของกิจกรรมนี้
+    const bookings = await prisma.booking.findMany({
+      where: {
+        ContentID: contentId,
+        transactionStatus: "SUCCESS", // เอาเฉพาะคนที่จ่ายเงิน/จองสำเร็จแล้
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // 2. ดึงข้อมูล Content เพื่อดูว่าแจกของชิ้นไหน
+    const content = await prisma.content.findUnique({
+      where: { id: contentId },
+      select: { souvenirItemId: true },
+    });
+
+    // 3. ประกอบร่างข้อมูล เพื่อเช็คว่า User แต่ละคนได้รับของ (Entitlement) หรือยัง
+    const results = await Promise.all(
+      bookings.map(async (booking) => {
+        const entitlements: any[] = [];
+
+        // ถ้ากิจกรรมนี้มีของแจก และ Booking มี User
+        if (content?.souvenirItemId && booking.Userid) {
+          const ent = await prisma.entitlement.findFirst({
+            where: {
+              userId: booking.Userid,
+              itemId: content.souvenirItemId,
+              source: "BOOKING",
+            },
+            include: {
+              item: { select: { name: true } },
+              redemptions: {
+                select: { id: true, redeemedAt: true },
+              },
+            },
+          });
+          if (ent) entitlements.push(ent);
+        }
+
+        return {
+          id: booking.id,
+          userId: booking.Userid,
+          registeredAt: booking.createdAt,
+          attendanceStatus: booking.transactionStatus,
+          user: booking.user,
+          entitlements: entitlements, // ส่งกลับไปให้ Frontend เช็คว่ารับของยัง
+        };
+      })
+    );
+
+    return NextResponse.json(results);
+  } catch (error) {
+    console.error("Error fetching registrations:", error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
-
-  const contentId = Number(id);
-  if (Number.isNaN(contentId)) {
-    return NextResponse.json({ error: "Invalid content id" }, { status: 400 });
-  }
-
-  // ตัวอย่างข้อมูล registration (สามารถเชื่อมต่อฐานข้อมูลจริงได้ถ้าต้องการ)
-  const registrations = [
-    { id: 1, user: { name: "สมชาย", email: "a@example.com" }, status: "registered" },
-    { id: 2, user: { name: "สมหญิง", email: "b@example.com" }, status: "claimed" },
-  ];
-  return NextResponse.json(registrations);
 }

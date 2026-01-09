@@ -32,9 +32,10 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - certs:/etc/nginx/certs:ro
-      - /etc/nginx/vhost.d:/etc/nginx/vhost.d
-      - /usr/share/nginx/html:/usr/share/nginx/html
+      # เก็บ Certs ไว้ในโฟลเดอร์ nginx-data บนเครื่อง
+      - ./nginx-data/certs:/etc/nginx/certs:ro
+      - ./nginx-data/vhost.d:/etc/nginx/vhost.d
+      - ./nginx-data/html:/usr/share/nginx/html
       - /var/run/docker.sock:/tmp/docker.sock:ro
       - ./config/client_max_body_size.conf:/etc/nginx/conf.d/client_max_body_size.conf
     restart: always
@@ -49,13 +50,13 @@ services:
     depends_on:
       - nginx-proxy
     volumes:
-      - certs:/etc/nginx/certs:rw
-      - /etc/nginx/vhost.d:/etc/nginx/vhost.d
-      - /usr/share/nginx/html:/usr/share/nginx/html
+      # ต้องชี้ไปที่ Path เดียวกับ nginx-proxy
+      - ./nginx-data/certs:/etc/nginx/certs:rw
+      - ./nginx-data/vhost.d:/etc/nginx/vhost.d
+      - ./nginx-data/html:/usr/share/nginx/html
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       DEFAULT_EMAIL: sutalumniconnect@gmail.com
-      # 👇 เพิ่มบรรทัดนี้แล้ว (สำคัญมาก)
       NGINX_PROXY_CONTAINER: nginx-proxy
     restart: always
     networks:
@@ -115,7 +116,6 @@ services:
 
 volumes:
   db_data:
-  certs:
 
 networks:
   app-network:

@@ -1,8 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FileText, X, Upload, Plus, AlertCircle, Trash2, Save, Image as ImageIcon } from "lucide-react";
+import Image from "next/image";
+import { 
+  FileText, X, AlertCircle, Save, Image as ImageIcon,
+  CloudUpload, CheckCircle2 
+} from "lucide-react";
 import { PrimaryButton, CancelButton } from "@/app/components/ui/Button";
 import { Input } from "@/app/components/ui/Input";
 import { Textarea } from "@/app/components/ui/InputTextArea";
@@ -13,6 +17,11 @@ function CreateBudgetReportForm() {
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get("projectId");
 
+  // Refs สำหรับ File Input
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
   // ถ้าไม่มี projectIdParam = Manual Mode (สร้างโครงการใหม่พร้อมรายงาน)
   const isManualMode = !projectIdParam;
 
@@ -21,7 +30,6 @@ function CreateBudgetReportForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   
-  // ✅ เพิ่ม State เก็บ Staff ID
   const [currentStaffId, setCurrentStaffId] = useState<number | null>(null);
 
   // 1. ข้อมูลโครงการ
@@ -33,10 +41,10 @@ function CreateBudgetReportForm() {
     projectStartDate: "",
     projectEndDate: "",
     description: "",
-    coverFilePath: "", // เก็บ URL หลังอัปโหลด หรือใช้แสดงผล
+    coverFilePath: "",
   });
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
-  const [coverFile, setCoverFile] = useState<File | null>(null); // เก็บไฟล์จริงเพื่อรออัปโหลด
+  const [coverFile, setCoverFile] = useState<File | null>(null);
 
   // 2. ข้อมูลผู้รับผิดชอบ
   const [managerData, setManagerData] = useState({
@@ -54,6 +62,11 @@ function CreateBudgetReportForm() {
   });
   const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
   const [activityImages, setActivityImages] = useState<File[]>([]);
+  
+  // State สำหรับ Drag & Drop UI
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
+  const [isDraggingCover, setIsDraggingCover] = useState(false);
 
   // Errors
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -71,16 +84,21 @@ function CreateBudgetReportForm() {
       : "border-gray-300 focus-visible:border-orange-500 focus-visible:ring-orange-500";
   };
 
-  const formatFileSize = (size: number) => (size / 1024 / 1024).toFixed(2) + " MB";
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
 
-  // ✅ Fetch Current User (Staff)
+  // --- Fetch Data ---
   useEffect(() => {
     const fetchUser = async () => {
         try {
             const res = await fetch("/api/auth/me");
             if (res.ok) {
                 const data = await res.json();
-                // ปรับ key ตาม response จริงของ API auth/me ของคุณ
                 const userId = data.user?.id || data.id;
                 if (userId) setCurrentStaffId(userId);
             }
@@ -91,7 +109,6 @@ function CreateBudgetReportForm() {
     fetchUser();
   }, []);
 
-  // --- Fetch Project Data (Linked Mode) ---
   useEffect(() => {
     const fetchProject = async () => {
       if (!projectIdParam) return;
@@ -103,7 +120,6 @@ function CreateBudgetReportForm() {
           const data = await res.json();
           if (data.proposal) {
             const p = data.proposal;
-            // Fill Project Data
             setProjectData({
               projectName: p.projectName || "",
               responsibilityUnit: p.responsibilityUnit || "",
@@ -116,7 +132,6 @@ function CreateBudgetReportForm() {
             });
             if (p.coverFilePath) setCoverPreview(p.coverFilePath);
 
-            // Fill Manager Data
             if (p.manager) {
               setManagerData({
                 firstName: p.manager.firstName || "",
@@ -169,26 +184,59 @@ function CreateBudgetReportForm() {
   };
 
   // --- File Upload Handlers ---
+  
+  // 1. Cover Image
   const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const objectUrl = URL.createObjectURL(file);
       setCoverPreview(objectUrl);
-      setCoverFile(file); // เก็บไฟล์ไว้รออัปโหลด
+      setCoverFile(file);
       clearError("coverFilePath");
     }
   };
 
+  const handleCoverDrop = (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDraggingCover(false);
+      if (!isManualMode) return;
+      
+      const file = e.dataTransfer.files?.[0];
+      if (file && file.type.startsWith('image/')) {
+          const objectUrl = URL.createObjectURL(file);
+          setCoverPreview(objectUrl);
+          setCoverFile(file);
+          clearError("coverFilePath");
+      }
+  };
+
+  // 2. Validate Helper
+  const validateFile = (file: File) => {
+    if (file.size > 20 * 1024 * 1024) { 
+        alert("ขนาดไฟล์เกิน 20MB"); 
+        return false; 
+    }
+    const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!validTypes.includes(file.type) && !/\.(pdf|doc|docx)$/i.test(file.name)) {
+      alert("รับเฉพาะไฟล์ PDF หรือ Word เท่านั้น"); 
+      return false;
+    }
+    return true;
+  };
+
+  // 3. Evidence & Activity
   const handleEvidenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
-      setEvidenceFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
+      const files = Array.from(e.target.files).filter(validateFile);
+      setEvidenceFiles(prev => [...prev, ...files]);
       clearError("evidenceFiles");
     }
   };
 
   const handleImagesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
-      setActivityImages(prev => [...prev, ...Array.from(e.target.files || [])]);
+      const files = Array.from(e.target.files);
+      setActivityImages(prev => [...prev, ...files]);
       clearError("activityImages");
     }
   };
@@ -200,7 +248,6 @@ function CreateBudgetReportForm() {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    // 1. Validate Project Data
     if (isManualMode) {
       if (!projectData.projectName.trim()) newErrors.projectName = "กรุณาระบุชื่อโครงการ";
       if (!projectData.responsibilityUnit.trim()) newErrors.responsibilityUnit = "กรุณาระบุหน่วยงาน";
@@ -208,19 +255,15 @@ function CreateBudgetReportForm() {
       if (!projectData.requestedAmount || Number(projectData.requestedAmount) <= 0) newErrors.requestedAmount = "งบประมาณต้องมากกว่า 0";
       if (!projectData.projectStartDate) newErrors.projectStartDate = "ระบุวันเริ่ม";
       if (!projectData.projectEndDate) newErrors.projectEndDate = "ระบุวันสิ้นสุด";
+      
+      if (!managerData.firstName.trim()) newErrors.firstName = "ระบุชื่อ";
+      if (!managerData.lastName.trim()) newErrors.lastName = "ระบุนามสกุล";
+      if (!managerData.department.trim()) newErrors.department = "ระบุสังกัด";
+      if (!managerData.position.trim()) newErrors.position = "ระบุตำแหน่ง";
+      if (!managerData.phoneNumber.trim()) newErrors.phoneNumber = "ระบุเบอร์โทร";
+      if (!managerData.email.trim()) newErrors.email = "ระบุอีเมล";
     }
 
-    // 2. Validate Manager Data
-    if (isManualMode) {
-        if (!managerData.firstName.trim()) newErrors.firstName = "ระบุชื่อ";
-        if (!managerData.lastName.trim()) newErrors.lastName = "ระบุนามสกุล";
-        if (!managerData.department.trim()) newErrors.department = "ระบุสังกัด";
-        if (!managerData.position.trim()) newErrors.position = "ระบุตำแหน่ง";
-        if (!managerData.phoneNumber.trim()) newErrors.phoneNumber = "ระบุเบอร์โทร";
-        if (!managerData.email.trim()) newErrors.email = "ระบุอีเมล";
-    }
-
-    // 3. Validate Report Data
     if (!reportData.actualExpense) newErrors.actualExpense = "กรุณาระบุจำนวนเงินที่ใช้จ่ายจริง";
     if (evidenceFiles.length === 0) newErrors.evidenceFiles = "กรุณาแนบไฟล์หลักฐาน";
     if (activityImages.length < 2) newErrors.activityImages = "กรุณาแนบภาพกิจกรรมอย่างน้อย 2 ภาพ";
@@ -229,7 +272,7 @@ function CreateBudgetReportForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // --- Submit Logic (Connected to API) ---
+  // --- Submit Logic ---
   const handleSubmit = async () => {
     if (!validateForm()) {
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -240,11 +283,7 @@ function CreateBudgetReportForm() {
     try {
       let targetProjectId = projectIdParam ? parseInt(projectIdParam) : null;
 
-      // =========================================================
-      // 1. กรณี Manual Mode: ต้องสร้างโครงการ (Project) ก่อน
-      // =========================================================
       if (isManualMode) {
-          // 1.1 อัปโหลดรูปปกก่อน (ถ้ามี)
           let uploadedCoverPath = "";
           if (coverFile) {
             const coverFormData = new FormData();
@@ -262,7 +301,6 @@ function CreateBudgetReportForm() {
             }
           }
 
-          // 1.2 สร้างโครงการ
           const projectPayload = {
             project: {
               projectName: projectData.projectName,
@@ -273,8 +311,8 @@ function CreateBudgetReportForm() {
               projectStartDate: projectData.projectStartDate,
               projectEndDate: projectData.projectEndDate,
               coverFilePath: uploadedCoverPath,
-              status: "CLOSE", // ✅ 1. กำหนดสถานะเป็น CLOSE ทันที
-              staffId: currentStaffId // ✅ 2. ส่ง staffId ไปด้วย
+              status: "CLOSE",
+              staffId: currentStaffId
             },
             manager: managerData
           };
@@ -291,12 +329,9 @@ function CreateBudgetReportForm() {
           }
 
           const projectJson = await projectRes.json();
-          targetProjectId = projectJson.proposal.id; // ได้ ID โครงการมาแล้ว
+          targetProjectId = projectJson.proposal.id;
       }
 
-      // =========================================================
-      // 2. สร้างรายงาน (Budget Report)
-      // =========================================================
       if (!targetProjectId) {
           throw new Error("ไม่พบรหัสโครงการ");
       }
@@ -305,19 +340,17 @@ function CreateBudgetReportForm() {
       formData.append("projectId", targetProjectId.toString());
       formData.append("actualExpense", reportData.actualExpense);
       
-      // ใส่ไฟล์เอกสาร
       evidenceFiles.forEach(file => {
         formData.append("evidenceFiles", file);
       });
       
-      // ใส่รูปภาพกิจกรรม
       activityImages.forEach(file => {
         formData.append("activityImages", file);
       });
 
       const reportRes = await fetch("/api/budget-report", {
           method: "POST",
-          body: formData // ไม่ต้องใส่ Content-Type (Browser จัดการ boundary เอง)
+          body: formData
       });
 
       if (!reportRes.ok) {
@@ -471,12 +504,21 @@ function CreateBudgetReportForm() {
             </div>
           </div>
 
-          {/* ================= ส่วนอัปโหลดภาพปก ================= */}
+          {/* ================= ส่วนอัปโหลดภาพปก (เพิ่มปุ่มเลือกไฟล์) ================= */}
           {(isManualMode || coverPreview) && (
               <div>
                 <label className={labelStyle}>ภาพปกโครงการ {isManualMode && <span className="text-gray-400 font-normal">(ถ้ามี)</span>}</label>
                 
-                <div className={`mt-2 border-2 border-dashed rounded-xl p-6 transition-colors h-64 flex flex-col items-center justify-center relative overflow-hidden bg-white ${isManualMode ? 'cursor-pointer hover:border-orange-300' : 'border-gray-200'}`}>
+                <div 
+                    onDragOver={(e) => { e.preventDefault(); if(isManualMode) setIsDraggingCover(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); if(isManualMode) setIsDraggingCover(false); }}
+                    onDrop={handleCoverDrop}
+                    onClick={() => isManualMode && !coverPreview && coverInputRef.current?.click()}
+                    className={`mt-2 border-2 border-dashed rounded-xl p-6 transition-colors h-64 flex flex-col items-center justify-center relative overflow-hidden bg-white 
+                    ${isManualMode && !coverPreview ? 'cursor-pointer hover:border-orange-300' : ''} 
+                    ${isDraggingCover ? 'border-orange-500 bg-orange-50/50' : 'border-gray-200'}
+                    `}
+                >
                     
                     {coverPreview ? (
                         <>
@@ -484,31 +526,38 @@ function CreateBudgetReportForm() {
                             {isManualMode && (
                                 <button
                                     type="button"
-                                    onClick={(e) => { e.stopPropagation(); setCoverPreview(null); setCoverFile(null); }}
-                                    className="absolute top-4 right-4 bg-white/80 p-2 rounded-lg text-red-500 shadow-sm hover:bg-red-50 z-20"
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        setCoverPreview(null); 
+                                        setCoverFile(null); 
+                                        if (coverInputRef.current) coverInputRef.current.value = "";
+                                    }}
+                                    className="absolute top-2 right-2 p-2 bg-white/90 rounded-full text-gray-500 hover:text-red-500 shadow-md transition-all"
                                 >
-                                    <Trash2 className="w-4 h-4" />
+                                    <X className="w-4 h-4" />
                                 </button>
                             )}
                         </>
                     ) : (
-                        <label className="flex flex-col items-center justify-center cursor-pointer group w-full h-full">
-                            <div className="p-4 rounded-full mb-3 transition-transform group-hover:scale-110 bg-orange-50 text-orange-500">
-                                <ImageIcon className="w-6 h-6" />
-                            </div>
-                            <span className="text-sm font-medium text-gray-600 group-hover:text-orange-600 transition-colors">
-                                คลิกเพื่ออัปโหลดภาพปก
-                            </span>
-                            <span className="text-xs text-gray-400 mt-1">รองรับ JPG, PNG</span>
-                            <input 
-                                type="file" 
-                                className="hidden" 
-                                accept="image/*" 
-                                onChange={handleCoverUpload} 
-                                disabled={!isManualMode}
-                            />
-                        </label>
+                        <div className="flex flex-col items-center justify-center w-full h-full text-center">
+                            <CloudUpload className="w-10 h-10 text-gray-300 mb-3" />
+                            <p className="text-sm font-medium text-gray-600 mb-1">
+                                คลิกเพื่ออัปโหลดภาพปก หรือลากไฟล์มาวาง
+                            </p>
+                            <p className="text-xs text-gray-400 mb-4">รองรับ JPG, PNG</p>
+                            <button type="button" className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 shadow-sm pointer-events-none">
+                                เลือกรูปภาพ
+                            </button>
+                        </div>
                     )}
+                    <input 
+                        ref={coverInputRef}
+                        type="file" 
+                        className="hidden" 
+                        accept="image/*" 
+                        onChange={handleCoverUpload} 
+                        disabled={!isManualMode}
+                    />
                 </div>
               </div>
           )}
@@ -636,54 +685,70 @@ function CreateBudgetReportForm() {
             )}
           </div>
 
-          {/* Upload เอกสาร */}
+          {/* Upload เอกสาร (เพิ่มปุ่มเลือกไฟล์) */}
           <div>
             <label className={labelStyle}>
-              แนบหลักฐานการใช้จ่าย <span className="text-gray-400 font-normal">(เช่น ใบเสร็จ, เอกสารสรุป)</span> <span className="text-red-500">*</span>
+              เอกสารแนบหลักฐาน <span className="text-gray-400 font-normal">(ไฟล์สรุปผล/ใบเสร็จ)</span> <span className="text-red-500">*</span>
             </label>
 
-            <div className={`mt-2 border-2 border-dashed rounded-xl p-6 transition-colors ${errors.evidenceFiles ? 'border-red-300 bg-red-50/10' : 'border-gray-200 hover:border-orange-300'}`}>
-              
-              {/* File List */}
-              {evidenceFiles.length > 0 && (
-                <div className="space-y-3 mb-6">
+            {/* Dropzone */}
+            <div 
+                onDragOver={(e) => { e.preventDefault(); setIsDraggingFile(true); }}
+                onDragLeave={(e) => { e.preventDefault(); setIsDraggingFile(false); }}
+                onDrop={(e) => { 
+                    e.preventDefault(); 
+                    setIsDraggingFile(false); 
+                    if(e.dataTransfer.files?.length) {
+                        const files = Array.from(e.dataTransfer.files).filter(validateFile);
+                        setEvidenceFiles(prev => [...prev, ...files]);
+                        clearError("evidenceFiles");
+                    }
+                }}
+                className={`mt-2 border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isDraggingFile ? 'border-orange-500 bg-orange-50/50' : 'border-gray-200 bg-white hover:border-gray-300'} ${errors.evidenceFiles ? 'border-red-300 bg-red-50/10' : ''}`}
+                onClick={() => fileInputRef.current?.click()}
+            >
+                <CloudUpload className={`w-10 h-10 mb-3 ${errors.evidenceFiles ? 'text-red-300' : 'text-gray-300'}`} />
+                <p className="text-gray-700 font-medium mb-1">คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</p>
+                <p className="text-gray-400 text-xs mb-4">รองรับ PDF, DOCX ขนาดไม่เกิน 20 MB</p>
+                <button type="button" className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 shadow-sm pointer-events-none">
+                  เลือกไฟล์
+                </button>
+                <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx" multiple onChange={handleEvidenceUpload} />
+            </div>
+
+            {/* File List */}
+            {evidenceFiles.length > 0 && (
+                <div className="mt-4 space-y-3">
                   {evidenceFiles.map((file, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg shadow-sm">
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="p-2 bg-orange-50 rounded-lg text-orange-500">
-                          <FileText className="w-5 h-5" />
+                    <div key={idx} className="flex items-center justify-between p-3 border border-orange-200 rounded-xl bg-orange-50 shadow-sm animate-in fade-in slide-in-from-top-2">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                            <div className="w-10 h-10 flex items-center justify-center bg-white rounded-lg border border-orange-100 shrink-0">
+                                <FileText className="w-5 h-5 text-orange-600" />
+                            </div>
+                            <div className="min-w-0">
+                                <a href={URL.createObjectURL(file)} target="_blank" className="text-sm font-semibold text-gray-800 truncate hover:text-orange-600 hover:underline" title="คลิกเพื่อดูตัวอย่าง">
+                                    {file.name}
+                                </a>
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <span>{formatFileSize(file.size)}</span>
+                                    <span className="w-1 h-1 bg-gray-300 rounded-full" />
+                                    <span className="text-orange-600 font-medium flex items-center gap-1">
+                                        <CheckCircle2 className="w-4 h-4" /> พร้อมอัปโหลด
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-gray-700 truncate">{file.name}</p>
-                          <p className="text-xs text-gray-400">{formatFileSize(file.size)}</p>
-                        </div>
-                      </div>
-                      <button onClick={() => removeEvidence(idx)} className="text-gray-400 hover:text-red-500 p-2 transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); removeEvidence(idx); }} 
+                            className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
                     </div>
                   ))}
                 </div>
-              )}
-
-              {/* Upload Button */}
-              <label className="flex flex-col items-center justify-center cursor-pointer group">
-                <div className={`p-4 rounded-full mb-3 transition-transform group-hover:scale-110 ${errors.evidenceFiles ? 'bg-red-50 text-red-400' : 'bg-orange-50 text-orange-500'}`}>
-                  <Upload className="w-6 h-6" />
-                </div>
-                <span className="text-sm font-medium text-gray-600 group-hover:text-orange-600 transition-colors">
-                  คลิกเพื่อเพิ่มไฟล์เอกสาร
-                </span>
-                <span className="text-xs text-gray-400 mt-1">รองรับ PDF, DOCX</span>
-                <input
-                  type="file"
-                  className="hidden"
-                  accept=".pdf,.doc,.docx"
-                  multiple
-                  onChange={handleEvidenceUpload}
-                />
-              </label>
-            </div>
+            )}
+            
             {errors.evidenceFiles && evidenceFiles.length === 0 && (
               <p className={errorTextStyle}>
                 <AlertCircle className="w-3 h-3 mr-1" /> {errors.evidenceFiles}
@@ -691,46 +756,65 @@ function CreateBudgetReportForm() {
             )}
           </div>
 
-          {/* Upload รูปภาพ */}
+          {/* Upload รูปภาพ (เพิ่มปุ่มเลือกภาพ) */}
           <div className="pb-4">
             <label className={labelStyle}>
-              แนบภาพกิจกรรม <span className="text-gray-400 font-normal">(อย่างน้อย 2 ภาพ)</span> <span className="text-red-500">*</span>
+              ภาพกิจกรรม <span className="text-gray-400 font-normal">(อย่างน้อย 2 ภาพ)</span> <span className="text-red-500">*</span>
             </label>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-2">
-              {activityImages.map((file, idx) => (
-                <div key={idx} className="relative aspect-4/3 rounded-xl overflow-hidden border border-gray-200 shadow-sm group bg-gray-50">
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt="preview"
-                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-                  <button
-                    onClick={() => removeImage(idx)}
-                    className="absolute top-2 right-2 bg-white/90 p-1.5 rounded-full text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all shadow-sm transform scale-90 group-hover:scale-100"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-
-              <label className={`flex flex-col items-center justify-center aspect-4/3 border-2 border-dashed rounded-xl cursor-pointer hover:border-orange-400 hover:bg-orange-50/30 transition-all group bg-white ${errors.activityImages ? 'border-red-300' : 'border-gray-300'}`}>
-                <div className="bg-gray-50 p-3 rounded-full mb-2 group-hover:bg-white transition-colors shadow-sm">
-                  <Plus className={`w-5 h-5 ${errors.activityImages ? 'text-red-400' : 'text-gray-400 group-hover:text-orange-500'}`} />
-                </div>
-                <span className={`text-xs font-medium ${errors.activityImages ? 'text-red-400' : 'text-gray-500 group-hover:text-orange-600'}`}>
-                  เพิ่มรูปภาพ
-                </span>
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImagesUpload}
-                />
-              </label>
+            {/* Upload Dropzone */}
+            <div 
+                onDragOver={(e) => { e.preventDefault(); setIsDraggingImage(true); }}
+                onDragLeave={(e) => { e.preventDefault(); setIsDraggingImage(false); }}
+                onDrop={(e) => { 
+                    e.preventDefault(); 
+                    setIsDraggingImage(false); 
+                    if(e.dataTransfer.files?.length) {
+                        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+                        setActivityImages(prev => [...prev, ...files]);
+                        clearError("activityImages");
+                    }
+                }}
+                className={`mt-2 border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all cursor-pointer mb-6 ${isDraggingImage ? 'border-orange-500 bg-orange-50/50' : 'border-gray-200 bg-white hover:border-gray-300'} ${errors.activityImages ? 'border-red-300 bg-red-50/10' : ''}`}
+                onClick={() => imageInputRef.current?.click()}
+            >
+                <CloudUpload className={`w-10 h-10 mb-3 ${errors.activityImages ? 'text-red-300' : 'text-gray-300'}`} />
+                <p className="text-gray-700 font-medium mb-1">คลิกเพื่อเลือกรูปภาพ หรือลากไฟล์มาวางที่นี่</p>
+                <p className="text-gray-400 text-xs mb-4">รองรับไฟล์ภาพ JPEG, PNG (เลือกได้หลายไฟล์)</p>
+                <button type="button" className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 shadow-sm pointer-events-none">
+                  เลือกภาพ
+                </button>
+                <input ref={imageInputRef} type="file" className="hidden" accept="image/*" multiple onChange={handleImagesUpload} />
             </div>
+
+            {/* Image Grid */}
+            <div className="grid grid-cols-2 gap-6 [&>div:last-child:nth-child(odd)]:col-span-2 [&>div:last-child:nth-child(odd)]:w-[calc(50%-0.75rem)] [&>div:last-child:nth-child(odd)]:justify-self-center">
+                {activityImages.map((file, idx) => (
+                    <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border-2 border-orange-200 group shadow-sm animate-in fade-in zoom-in-95">
+                        <a href={URL.createObjectURL(file)} target="_blank" className="block w-full h-full cursor-zoom-in">
+                            <div className="relative w-full h-full">
+                                <Image
+                                    src={URL.createObjectURL(file)}
+                                    alt={`activity-${idx}`}
+                                    fill
+                                    unoptimized // จำเป็นสำหรับ local blob url
+                                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                />
+                            </div>
+                        </a>
+                        <div className="absolute bottom-2 left-2 px-3 py-1 bg-orange-500 text-white text-xs rounded-lg shadow-md pointer-events-none">
+                            ภาพใหม่
+                        </div>
+                        <button 
+                            onClick={() => removeImage(idx)} 
+                            className="absolute top-2 right-2 p-2 bg-white/90 rounded-full text-gray-500 hover:text-red-500 shadow-md transition-all"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                ))}
+            </div>
+
             {errors.activityImages && (
               <p className={errorTextStyle}>
                 <AlertCircle className="w-3 h-3 mr-1" /> {errors.activityImages}

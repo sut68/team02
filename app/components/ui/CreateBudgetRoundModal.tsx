@@ -15,9 +15,10 @@ interface CreateBudgetRoundModalProps {
 
 // Configuration รอบงบประมาณมาตรฐาน
 const ROUND_OPTIONS = [
-  { id: 1, label: "รอบที่ 1 (ต.ค. - ม.ค.)", startMonth: 10, endMonth: 1, startDay: 1, endDay: 31, yearOffset: -1 },
-  { id: 2, label: "รอบที่ 2 (ก.พ. - พ.ค.)", startMonth: 2, endMonth: 5, startDay: 1, endDay: 31, yearOffset: 0 },
-  { id: 3, label: "รอบที่ 3 (มิ.ย. - ก.ย.)", startMonth: 6, endMonth: 9, startDay: 1, endDay: 30, yearOffset: 0 },
+  { id: 1, label: "รอบที่ 1 (ต.ค. - ธ.ค.)", startMonth: 10, endMonth: 12, startDay: 1, endDay: 31, yearOffset: -1 },
+  { id: 2, label: "รอบที่ 2 (ม.ค. - มี.ค.)", startMonth: 1, endMonth: 3, startDay: 1, endDay: 31, yearOffset: 0 },
+  { id: 3, label: "รอบที่ 3 (เม.ย. - มิ.ย.)", startMonth: 4, endMonth: 6, startDay: 1, endDay: 30, yearOffset: 0 },
+  { id: 4, label: "รอบที่ 4 (ก.ค. - ก.ย.)", startMonth: 7, endMonth: 9, startDay: 1, endDay: 30, yearOffset: 0 },
 ];
 
 export default function CreateBudgetRoundModal({
@@ -53,8 +54,8 @@ export default function CreateBudgetRoundModal({
         
         if (match && match[1]) {
            const roundNum = parseInt(match[1]);
-           if ([1, 2, 3].includes(roundNum)) {
-              matchedRoundId = roundNum;
+           if ([1, 2, 3, 4].includes(roundNum)) {
+             matchedRoundId = roundNum;
            }
         }
 
@@ -179,7 +180,7 @@ export default function CreateBudgetRoundModal({
         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-gray-50/50">
           <div>
             <h3 className="text-xl font-semibold text-gray-800">
-                {isEditMode ? "แก้ไขรอบงบประมาณ" : "เปิดรอบงบประมาณใหม่"}
+                {isEditMode ? "แก้ไขรอบงบประมาณ" : "เปิดรอบการพิจารณาใหม่"}
             </h3>
             <p className="text-xs text-gray-500 mt-1">กำหนด 3 รอบต่อปีงบประมาณ</p>
           </div>

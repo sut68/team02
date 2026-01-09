@@ -338,5 +338,3 @@ export function AdminSubmissionPage() {
     </div>
   );
 }
-
-export default AdminSubmissionPage;

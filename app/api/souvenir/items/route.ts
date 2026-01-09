@@ -9,32 +9,63 @@ export async function GET(request: NextRequest) {
 
     const items = await prisma.souvenirItem.findMany({
       where: {
-        active: true, // เฉพาะของที่กำลังใช้งาน
-        ...(category && { category }), // กรองตาม category ถ้ามี
+        active: true,
+        ...(category && { category }),
       },
       orderBy: { createdAt: 'desc' },
       include: {
+        contents: {
+          select: {
+            id: true,
+            TitleName: true,
+            categories: true,
+          },
+        },
+        donationProjects: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+        donations: {
+          select: {
+            id: true,
+            userId: true,
+            status: true,
+            donatedAt: true,
+            shipments: {
+              select: {
+                id: true,
+                status: true,
+                trackingNo: true,
+                shippedAt: true,
+                deliveredAt: true,
+              },
+            },
+          },
+        },
         _count: {
           select: {
             movements: true,
             entitlements: true,
             redemptions: true,
             shipments: true,
+            donations: true,
           },
         },
       },
     });
 
-    // คำนวณสต็อกคงเหลือจริง
+    // คำนวณสต็อกคงเหลือจริง และแนบ relations ที่ต้องใช้
     const itemsWithStock = await Promise.all(
       items.map(async (item) => {
         const movements = await prisma.stockMovement.findMany({
           where: { itemId: item.id },
         });
-        
         const totalDelta = movements.reduce((sum: number, m) => sum + m.delta, 0);
         const currentStock = item.initialStock + totalDelta;
-
+        // filter เฉพาะ donations ที่ status เป็น completed/success
+        const validDonations = item.donations?.filter(d => d.status === 'completed' || d.status === 'success') || [];
         return {
           id: item.id,
           sku: item.sku,
@@ -45,6 +76,10 @@ export async function GET(request: NextRequest) {
           unit: item.unit,
           currentStock,
           active: item.active,
+          contents: item.contents,
+          donationProjects: item.donationProjects,
+          donationCount: validDonations.length,
+          donations: validDonations,
         };
       })
     );

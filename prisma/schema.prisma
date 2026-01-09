@@ -1,6 +1,7 @@
 generator client {
   provider = "prisma-client-js"
 }
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -85,6 +86,15 @@ enum ProjectStatus {
   COMPLETED
 }
 
+enum DonationProjectType {
+  CENTRAL       
+  SCHOLARSHIP   
+  ACTIVITY    
+  RESEARCH    
+  BUILDING     
+  EMERGENCY     
+}
+
 enum TransactionStatus {
   PENDING
   SUCCESS
@@ -93,13 +103,16 @@ enum TransactionStatus {
 
 enum PaymentMethodType {
   PROMPTPAY
-  CREDIT_CARD
-  BANK_TRANSFER
+  CASH
+  BANKTRANSFER
 }
 
 enum PaymentStatusType {
+  PENDING
   CONFIRMED
   CANCELLED
+  VERIFYING
+  EXPIRED
   REFUNDED
 }
 
@@ -183,13 +196,20 @@ model User {
   contentManagementLogs ContentManagementLog[]
 
 
-  // Donation Project Relations
+  // DonationTransaction Relations
   donationTransactions DonationTransaction[]
 
   // Job Relations
   jobPostings      JobPosting[]
   approvalLogs     ApprovalLog[]
   jobEditHistories JobEditHistory[]
+
+  // Scalability Indexes
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model EducationRecord {
@@ -328,9 +348,11 @@ model Entitlement {
   qtyUsed     Int               @default(0) // ใช้สิทธิ์ไปแล้วกี่ชิ้น
   // ✅ เพิ่มอันนี้
   redeemToken String?           @unique
+  bookingId   Int?
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  booking     Booking?     @relation(fields: [bookingId], references: [id])
   user        User         @relation(fields: [userId], references: [id])
   item        SouvenirItem @relation(fields: [itemId], references: [id])
   donation    Donation?    @relation(fields: [donationId], references: [id])
@@ -400,9 +422,7 @@ enum RedeemMethod {
 
 enum ShipStatus {
   PENDING
-  IN_TRANSIT
   DELIVERED
-  FAILED
 }
 
 // ========================================
@@ -482,8 +502,10 @@ model Booking {
   ContentID         Int?
   // bookingFormId Int?
   BookingFieldID    Int?              @unique
-  PaymentID         Int?              @unique
+  //PaymentID         Int?              @unique
   transactionStatus TransactionStatus @default(PENDING)
+  qrToken           String?           @unique // สำหรับ QR Code
+  bookingNumber     String?           @unique // รหัสการจอง (BK20250108xxxx)
 
   // createdAt DateTime @default(now())
   // updatedAt DateTime @updatedAt
@@ -491,11 +513,12 @@ model Booking {
   user         User?          @relation(fields: [Userid], references: [id])
   content      Content?       @relation(fields: [ContentID], references: [id])
   bookingField BookingField?  @relation(fields: [BookingFieldID], references: [id])
-  payment      PaymentRecord? @relation(fields: [PaymentID], references: [id])
+  payment      PaymentRecord? 
   // bookingForm  BookingForm?   @relation(fields: [bookingFormId], references: [id])
 
   // bookingFormId Int?
   attendees     Attendee[]
+  entitlement   Entitlement[]
 
   // Relation to SouvenirItem (กิจกรรมแจกของที่ระลึก)
   souvenirItems SouvenirItem[] @relation("BookingToSouvenirItem")
@@ -649,7 +672,7 @@ model ProjectProposal {
   id                 Int       @id @default(autoincrement())
   projectName        String
   objective          String?
-  description        String?
+  description        String?  @db.Text
   requestedAmount    Float?
   projectStartDate   DateTime?
   projectEndDate     DateTime?
@@ -709,24 +732,33 @@ model SubmissionImage {
 
 // การบริจาคเข้ารอบงบประมาณ
 model BudgetDonation {
-  id            Int               @id @default(autoincrement())
-  message       String?
-  status        TransactionStatus @default(PENDING)
-  amount        Float
-  donorName     String? // ชื่อที่ผู้ใช้ระบุในฟอร์ม (ถ้าไม่ Login)
-  donorEmail    String?
-  donorPhone    String?
-  isPublic      Boolean           @default(true) // แสดงชื่อผู้บริจาคสาธารณะหรือไม่  
-  paymentRecords    PaymentRecord[]
+  id      Int   @id @default(autoincrement())
 
+  email       String
+  fullName    String
+  phone       String
+  address     String
+  subdistrict String
+  district    String
+  province    String
+  postalCode  String
+
+  isPublic   Boolean @default(true) // แสดงชื่อผู้บริจาคสาธารณะหรือไม่
+  amount Float
+  message String?
+  paymentRecord PaymentRecord?
+
+  status  TransactionStatus @default(PENDING)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now()) @updatedAt
   deletedAt DateTime?
 
+  projectId     Int
+  project       DonationProject @relation(fields: [projectId], references: [id], onDelete: Cascade) 
   budgetRoundId Int
-  budgetRound   BudgetRound @relation(fields: [budgetRoundId], references: [id])
+  budgetRound BudgetRound @relation(fields: [budgetRoundId], references: [id])
   userId        Int
-  user          User        @relation(fields: [userId], references: [id])
+  user        User        @relation(fields: [userId], references: [id])
 }
 
 // การโหวตโครงการ
@@ -841,107 +873,104 @@ model ContentManagementLog {
 // Donation Project & Payment System
 // ========================================
 
-// 💡 NEW MODEL: โครงการระดมทุน (DonationProject)
+// โครงการรับบริจาค 14:49 5/1/69
 model DonationProject {
-  id            Int           @id @default(autoincrement())
+  id            Int      @id @default(autoincrement())
+
   title         String
   description   String
   goalAmount    Float
-  currentAmount Float         @default(0)
+  currentAmount Float    @default(0)
   startDate     DateTime
   endDate       DateTime
-  ownerName     String
-  contact       String
-  isCentralFund Boolean       @default(false)
-  // status (ใช้ Enum ใหม่)
-  status        ProjectStatus @default(OPEN)
-  posterUrl     String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  ownerName     String?
+  contact       String?
+  projectType   DonationProjectType @default(SCHOLARSHIP) 
+  posterUrl String?
 
-  // Relations
-  transactions   DonationTransaction[] // ความสัมพันธ์ 1-to-Many กับ Transaction
-  souvenirItem   SouvenirItem?         @relation(fields: [souvenirItemId], references: [id])
-  souvenirItemId Int?
+  status    ProjectStatus @default(OPEN)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  deletedAt DateTime?
+
+  transactions DonationTransaction[] 
+  budgetDonations BudgetDonation[]
+  souvenirItemId Int?              
+  souvenirItem   SouvenirItem?     @relation(fields: [souvenirItemId], references: [id])
+
+  // Scalability Indexes
+  @@index([status])
+  @@index([projectType])
+  @@index([createdAt])
+  @@index([endDate])
+  @@index([currentAmount])
 }
 
-// 💡 NEW MODEL: ธุรกรรมการบริจาค (DonationTransaction)
+// ธุรกรรมการบริจาค (DonationTransaction)
 model DonationTransaction {
   id Int @id @default(autoincrement())
 
-  amount  Float
+  fullName    String
+  email       String
+  phone       String
+  address     String
+  subdistrict String
+  district    String
+  province    String
+  postalCode  String
+
+  isPublic   Boolean @default(true) 
+  amount Float
   message String?
-
-  // สถานะการทำธุรกรรม (Pending, Success, Failed)
   status TransactionStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
 
-  // Omise/Payment Gateway Reference IDs
-  //omiseChargeId String @unique // Omise Charge ID (ใช้ในการตรวจสอบ Webhook)
-
-  // ข้อมูลผู้บริจาค (ถ้าผู้ใช้ไม่ได้ Login, อาจ null ได้)
-  donorName  String? // ชื่อที่ผู้ใช้ระบุในฟอร์ม (ถ้าไม่ Login)
-  donorEmail String?
-  donorPhone String?
-  isPublic   Boolean @default(true) // แสดงชื่อผู้บริจาคสาธารณะหรือไม่
-
-  // ความสัมพันธ์กับ User (ถ้าบริจาคโดย Login)
   userId Int?
   user   User? @relation(fields: [userId], references: [id])
-
-  // ความสัมพันธ์กับ Project
   projectId Int
   project   DonationProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  paymentId     Int?
-  paymentRecord PaymentRecord[]
+  paymentRecord PaymentRecord?
   souvenirItems SouvenirItem[]
 }
 
 // วิธีการชำระเงิน
 model PaymentMethodRecord {
   id            Int               @id @default(autoincrement())
-  methodName    PaymentMethodType @default(PROMPTPAY)
-  accountNumber String?
-  provider      String?
+  methodName    PaymentMethodType 
+  accountNumber String?          
+  provider      String?        
   isActive      Boolean           @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  
   payments PaymentRecord[]
 
-  // ✅ เพิ่ม unique เพื่อ upsert โดย methodName ได้
-  @@unique([methodName])
 }
 
 // บันทึกการชำระเงิน
 model PaymentRecord {
   id Int @id @default(autoincrement())
-
-  // Omise/Payment Gateway ID
-  paymentRefId String? @unique
-
-  amount          Float
+  amount          Decimal @db.Decimal(10, 2)
   transactionCode String?
-  paymentSlipUrl  String? // url ของสลิป
-
-  paymentStatus PaymentStatusType @default(CONFIRMED)
+  paymentSlipUrl  String? 
+  paymentStatus PaymentStatusType 
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
   paymentMethodId Int?
   paymentMethod   PaymentMethodRecord? @relation(fields: [paymentMethodId], references: [id])
 
-  transaction           DonationTransaction? @relation(fields: [donationTransactionId], references: [id])
-  donationTransactionId Int?
-  bookings              Booking[]
-
-  budgetDonationId      Int?
-  budgetDonation        BudgetDonation? @relation(fields: [budgetDonationId], references: [id])
+  donationTransactionId Int? @unique 
+  transaction     DonationTransaction? @relation(fields: [donationTransactionId], references: [id])
+  
+  bookingId Int? @unique 
+  bookings   Booking? @relation(fields: [bookingId], references: [id])
+  
+  budgetDonationId Int? @unique 
+  budgetDonation   BudgetDonation? @relation(fields: [budgetDonationId], references: [id])
 
   @@index([paymentStatus])
   @@index([createdAt])
