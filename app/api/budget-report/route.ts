@@ -6,6 +6,7 @@ import { uploadToAzureBlob } from '@/lib/azureBlob';
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-this-in-production";
 
+// ฟังก์ชันแกะ User จาก Token
 function getUserFromToken(req: NextRequest) {
   const token = req.cookies.get("token")?.value;
   if (!token) return null;
@@ -16,11 +17,14 @@ function getUserFromToken(req: NextRequest) {
   }
 }
 
+// 2. ฟังก์ชันช่วยอัปโหลดไป Cloud (ใช้ Azure Blob Storage)
 async function saveFileToCloud(file: File, subFolder: string): Promise<string> {
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
+  // ตั้งชื่อไฟล์ (Key) ที่จะเก็บใน Cloud
   const safeName = file.name.replace(/\s+/g, "_");
+  // ตัวอย่าง Path: uploads/budget/evidence/1709999_filename.pdf
   const cloudPath = `uploads/budget/${subFolder}/${Date.now()}_${Math.random().toString(36).slice(2, 7)}_${safeName}`;
 
   // ส่งไป Azure (Return เป็น URL เต็มๆ กลับมา)
@@ -38,6 +42,7 @@ export async function GET(req: NextRequest) {
     const roundId = searchParams.get("roundId");
     const showTrash = searchParams.get("trash") === "true"; 
 
+    // 1. กรณีดึงรายการเดียว (Detail)
     if (id) {
       const report = await prisma.summarySubmission.findUnique({
         where: { id: Number(id) },
@@ -54,6 +59,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ report }, { status: 200 });
     }
 
+    // 2. กรณีดึงเป็น List
     const where: Prisma.SummarySubmissionWhereInput = {};
 
     if (showTrash) where.deletedAt = { not: null };
@@ -101,7 +107,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST: สร้างรายงานใหม่
+// ============================================================================
+// POST: สร้างรายงานใหม่ (แก้ไขให้ใช้ saveFileToCloud)
+// ============================================================================
 export async function POST(req: NextRequest) {
   try {
     const user = getUserFromToken(req);
@@ -120,11 +128,13 @@ export async function POST(req: NextRequest) {
     }
 
     let summaryFilePath = "";
+    // 3. เรียกใช้ฟังก์ชัน Cloud สำหรับไฟล์หลัก
     if (evidenceFiles.length > 0 && evidenceFiles[0].size > 0) {
         summaryFilePath = await saveFileToCloud(evidenceFiles[0], "evidence");
     }
 
     const imagePaths: string[] = [];
+    // 4. เรียกใช้ฟังก์ชัน Cloud สำหรับรูปภาพกิจกรรม
     for (const file of activityImages) {
         if (file.size > 0) {
             const path = await saveFileToCloud(file, "images");
@@ -160,7 +170,9 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PUT: แก้ไขข้อมูล
+// ============================================================================
+// PUT: แก้ไขข้อมูล (แก้ไขให้ใช้ saveFileToCloud)
+// ============================================================================
 export async function PUT(req: NextRequest) {
   try {
     const user = getUserFromToken(req);
@@ -168,6 +180,7 @@ export async function PUT(req: NextRequest) {
 
     const contentType = req.headers.get("content-type") || "";
 
+    // กรณีส่ง JSON (เช่น อัปเดตสถานะอย่างเดียว)
     if (contentType.includes("application/json")) {
         const body = await req.json();
         const { id, status, ...updateData } = body;
@@ -181,6 +194,7 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({ message: "อัปเดตสถานะสำเร็จ", report: updated });
     }
 
+    // กรณีส่ง FormData (มีการอัปโหลดไฟล์)
     const formData = await req.formData();
     const id = formData.get("id"); 
     
@@ -194,22 +208,24 @@ export async function PUT(req: NextRequest) {
     const updatePayload: any = {};
     if (actualExpense) updatePayload.totalActualExpense = Number(actualExpense);
 
+    // 5. อัปโหลดไฟล์หลักใหม่ (ถ้ามี)
     if (newEvidenceFiles.length > 0 && newEvidenceFiles[0].size > 0) {
         const path = await saveFileToCloud(newEvidenceFiles[0], "evidence");
         updatePayload.summaryFilePath = path;
     }
 
     await prisma.$transaction(async (tx) => {
+        // ลบรูปภาพเดิม (ลบเฉพาะใน DB)
         if (deletedFileIds) {
             const idsToDelete = String(deletedFileIds).split(',').map(Number).filter(n => !isNaN(n));
             if (idsToDelete.length > 0) {
-                // (Optional: ลบไฟล์จริงออกจาก Cloud ด้วย)
                 await tx.submissionImage.deleteMany({
                     where: { id: { in: idsToDelete }, submissionId: Number(id) }
                 });
             }
         }
 
+        // 6. เพิ่มรูปภาพใหม่ (ถ้ามี)
         if (newActivityImages.length > 0) {
             for (const file of newActivityImages) {
                 if (file.size > 0) {
@@ -235,9 +251,7 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-// ============================================================================
-// DELETE: ย้ายลงถังขยะ (เหมือนเดิม)
-// ============================================================================
+// DELETE: ย้ายลงถังขยะ (Soft Delete)
 export async function DELETE(req: NextRequest) {
   try {
     const user = getUserFromToken(req);
