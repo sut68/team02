@@ -183,19 +183,26 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/* ------------------ GET: Scan QR (แก้ไขใหม่) ------------------ */
+/* ------------------ GET: Scan QR (fix) ------------------ */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token = searchParams.get("token");
 
-  const booking = await prisma.booking.findFirst({
-    where: { qrToken: token ?? undefined },
+  if (!token) {
+    return NextResponse.json(
+      { success: false, error: "ไม่มี token ส่งมา" },
+      { status: 400 }
+    );
+  }
+
+  const booking = await prisma.booking.findUnique({
+    where: { qrToken: token },
     include: {
       bookingField: true,
       content: {
         include: {
-          bookingForm: true // ✅ ต้องดึงอันนี้มาเพื่อเอา TotalSeats
-        }
+          bookingForm: true,
+        },
       },
       entitlement: { include: { item: true } },
       attendees: { include: { checkins: true } },
@@ -203,13 +210,16 @@ export async function GET(request: NextRequest) {
   });
 
   if (!booking) {
+    console.log("❌ Search failed for qrToken:", token);
     return NextResponse.json(
-      { success: false, error: "ไม่พบข้อมูล" },
+      { success: false, error: "ไม่พบข้อมูลการจอง" },
       { status: 404 }
     );
   }
-  // ✅ คำนวณสถานะเช็คอินจาก attendee ทุกคน (ถ้ามีหลายคน) หรือคนแรก
-  const isCheckedIn = booking.attendees.some(a => a.checkins.length > 0);
+
+  const isCheckedIn = booking.attendees.some(
+    (a) => a.checkins.length > 0
+  );
 
   return NextResponse.json({
     success: true,
@@ -219,9 +229,8 @@ export async function GET(request: NextRequest) {
       userName: booking.bookingField?.Name,
       eventName: booking.content?.TitleName,
       qrToken: booking.qrToken,
-      // ✅ ส่งข้อมูลที่นั่งกลับไปด้วยเพื่อให้หน้าบ้านแสดงผลได้เหมือนหน้าลงทะเบียน
       totalSeats: booking.content?.bookingForm?.TotalSeats ?? 0,
-      isCheckedIn: isCheckedIn, 
+      isCheckedIn,
       souvenirs: booking.entitlement.map((e) => ({
         itemName: e.item.name,
         claimed: e.qtyUsed >= e.qtyGranted,

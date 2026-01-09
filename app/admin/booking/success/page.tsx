@@ -15,25 +15,31 @@ export default function AdminScanPage() {
   /* =========================
      Fetch booking by QR token
   ========================== */
-  const fetchBookingDetails = useCallback(async (token: string) => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch(`/api/booking?token=${token}`);
-      const data = await res.json();
+function fetchBookingDetails(text: string) {
+  let token = text;
+  if (text.includes("?")) {
+    const url = new URL(text);
+    token = url.searchParams.get("token") || url.searchParams.get("qrToken") || "";
+  }
 
+  if (!token) {
+    alert("ไม่พบ token ใน QR");
+    return;
+  }
+
+  setLoading(true); // เพิ่มการโหลด
+  fetch(`/api/booking?token=${token}`)
+    .then((res) => res.json())
+    .then((data) => {
       if (data.success) {
-        setScanResult(data.booking);
+        setScanResult(data.booking); // <--- ต้องใส่บรรทัดนี้เพื่อให้ข้อมูลขึ้นจอ
       } else {
         setError(data.error || "ไม่พบข้อมูล");
-        setScanResult(null);
       }
-    } catch {
-      setError("ดึงข้อมูลไม่สำเร็จ");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    })
+    .catch(() => setError("เกิดข้อผิดพลาดในการเชื่อมต่อ"))
+    .finally(() => setLoading(false));
+}
 
   /* =========================
      Confirm actions
@@ -71,12 +77,14 @@ export default function AdminScanPage() {
   };
 
   /* =========================
-     QR Scanner
+      QR Scanner (ฉบับปรับปรุง)
   ========================== */
   useEffect(() => {
+    // 1. ตรวจสอบว่ามี element "reader" หรือยัง
     const node = document.getElementById("reader");
-    if (!node) return;
+    if (!node || scannerRef.current) return;
 
+    // 2. สร้าง instance ใหม่
     const scanner = new Html5QrcodeScanner(
       "reader",
       {
@@ -88,22 +96,32 @@ export default function AdminScanPage() {
       false
     );
 
+    // 3. สั่ง Render
+    scanner.render(
+      (text) => {
+        if (text) {
+          // หยุดการทำงานของกล้องก่อนไป fetch ข้อมูล
+          scanner.clear().then(() => {
+            scannerRef.current = null; // ล้างค่า ref
+            fetchBookingDetails(text);
+          }).catch(err => console.error("Scanner clear error", err));
+        }
+      },
+      (error) => {
+        // ไม่ต้องจัดการ error ทุกเฟรมเพื่อป้องกัน log รก
+      }
+    );
+
     scannerRef.current = scanner;
 
-    const timer = setTimeout(() => {
-      scanner.render(
-        (text) => {
-          scanner.clear().then(() => fetchBookingDetails(text));
-        },
-        () => {}
-      );
-    }, 300);
-
+    // 4. Cleanup function: สำคัญมากเพื่อป้องกันกล้องค้าง
     return () => {
-      clearTimeout(timer);
-      scannerRef.current?.clear().catch(() => {});
+      if (scannerRef.current) {
+        scannerRef.current.clear().catch((err) => console.error("Cleanup error", err));
+        scannerRef.current = null;
+      }
     };
-  }, [fetchBookingDetails]);
+  }, [fetchBookingDetails, scanResult]); // เพิ่ม scanResult ใน dependency เพื่อให้เริ่มใหม่เมื่อกด "แสกนคนถัดไป"
 
   /* =========================
      Derived states
