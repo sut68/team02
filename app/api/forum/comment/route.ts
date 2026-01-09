@@ -36,7 +36,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ comments }, { status: 200 });
   } catch (error) {
-    console.error('Error fetching comments:', error);
     return NextResponse.json(
       { error: 'เกิดข้อผิดพลาดในการดึงข้อมูล' },
       { status: 500 }
@@ -99,7 +98,6 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error creating comment:', error);
     return NextResponse.json(
       { error: 'เกิดข้อผิดพลาดในการเพิ่มความคิดเห็น' },
       { status: 500 }
@@ -145,7 +143,6 @@ export async function PUT(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error updating comment:', error);
     return NextResponse.json(
       { error: 'เกิดข้อผิดพลาดในการอัพเดทความคิดเห็น' },
       { status: 500 }
@@ -214,7 +211,6 @@ export async function DELETE(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error deleting comment:', error);
     return NextResponse.json(
       { error: 'เกิดข้อผิดพลาดในการลบความคิดเห็น' },
       { status: 500 }

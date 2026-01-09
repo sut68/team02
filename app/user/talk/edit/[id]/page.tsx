@@ -1,21 +1,25 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, Upload } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 
-export default function CreateTopicForm() {
+export default function EditTopicForm() {
+  const router = useRouter();
+  const params = useParams();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('');
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
+  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingTopic, setLoadingTopic] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<
     Array<{ id: number; categoryname: string }>
   >([]);
-  const router = useRouter();
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -33,6 +37,68 @@ export default function CreateTopicForm() {
     fetchCategories();
   }, []);
 
+  // Fetch current user
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await fetch('/api/auth/me');
+        if (response.ok) {
+          const userData = await response.json();
+          setCurrentUserId(userData.id);
+        }
+      } catch (err) {
+        console.error('Error fetching current user:', err);
+      }
+    };
+    fetchCurrentUser();
+  }, []);
+
+  // Load existing topic data
+  const loadTopic = useCallback(async () => {
+    if (!params.id) return;
+
+    try {
+      setLoadingTopic(true);
+      setError(null);
+      const response = await fetch(`/api/forum/topic/${params.id}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'ไม่พบข้อมูลกระทู้');
+      }
+
+      const topic = data.topic;
+
+      // Check if current user is the owner
+      if (currentUserId !== null && topic.user.id !== currentUserId) {
+        setError('คุณไม่มีสิทธิ์แก้ไขกระทู้นี้');
+        return;
+      }
+
+      // Pre-fill form with existing data
+      setTitle(topic.title);
+      setContent(topic.content);
+      setCategory(topic.category.id.toString());
+      if (topic.topicImage) {
+        setExistingImageUrl(topic.topicImage);
+        setImagePreview(topic.topicImage);
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการดึงข้อมูล';
+      setError(errorMessage);
+      console.error('Error loading topic:', err);
+    } finally {
+      setLoadingTopic(false);
+    }
+  }, [params.id, currentUserId]);
+
+  useEffect(() => {
+    if (currentUserId !== null) {
+      loadTopic();
+    }
+  }, [loadTopic, currentUserId]);
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -48,8 +114,6 @@ export default function CreateTopicForm() {
   };
 
   const handleSubmit = async () => {
-    console.log('submit');
-
     setError(null);
     setLoading(true);
 
@@ -92,8 +156,8 @@ export default function CreateTopicForm() {
         return;
       }
 
-      // Upload image if provided
-      let imageUrl: string | null = null;
+      // Upload new image if provided, otherwise keep existing
+      let imageUrl: string | null = existingImageUrl;
       if (image) {
         const formData = new FormData();
         formData.append('file', image);
@@ -115,49 +179,58 @@ export default function CreateTopicForm() {
         imageUrl = uploadData.url;
       }
 
-      // Create topic
+      // Update topic
       const topicResponse = await fetch('/api/forum/topic', {
-        method: 'POST',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          id: parseInt(params.id as string),
           title: title.trim(),
           content: content.trim(),
           topicImage: imageUrl,
-          user_id: userId,
-          category_id: categoryId,
+          editedByUserId: userId,
         }),
       });
 
       if (!topicResponse.ok) {
         const topicError = await topicResponse.json();
-        setError(topicError.error || 'เกิดข้อผิดพลาดในการสร้างกระทู้');
+        setError(topicError.error || 'เกิดข้อผิดพลาดในการแก้ไขกระทู้');
         setLoading(false);
         return;
       }
 
-      // Success - navigate to talk page
-      router.push('/user/talk');
+      // Success - navigate to topic detail page
+      router.push(`/user/talk/detail/${params.id}`);
     } catch (err) {
-      console.error('Error submitting topic:', err);
-      setError('เกิดข้อผิดพลาดในการสร้างกระทู้ กรุณาลองใหม่อีกครั้ง');
+      console.error('Error updating topic:', err);
+      setError('เกิดข้อผิดพลาดในการแก้ไขกระทู้ กรุณาลองใหม่อีกครั้ง');
       setLoading(false);
     }
   };
 
   const handleCancel = () => {
-    router.push('/user/talk');
+    router.push(`/user/talk/detail/${params.id}`);
   };
+
+  if (loadingTopic) {
+    return (
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='text-center'>
+          <div className='inline-block animate-spin rounded-full h-8 w-8 border-4 border-orange-500 border-t-transparent'></div>
+          <p className='text-gray-500 mt-2'>กำลังโหลดข้อมูล...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className='min-h-screen bg-gray-50 py-8 px-4'>
       <div className='max-w-4xl mx-auto'>
         <div className='bg-white rounded-2xl shadow-lg p-8'>
           {/* Header */}
-          <h1 className='text-3xl font-bold text-center mb-8'>
-            ตั้งกระทู้ใหม่
-          </h1>
+          <h1 className='text-3xl font-bold text-center mb-8'>แก้ไขกระทู้</h1>
 
           {/* Error Message */}
           {error && (
@@ -249,7 +322,7 @@ export default function CreateTopicForm() {
                     <button
                       onClick={() => {
                         setImage(null);
-                        setImagePreview('');
+                        setImagePreview(existingImageUrl || '');
                       }}
                       className='absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors'
                     >
@@ -281,13 +354,12 @@ export default function CreateTopicForm() {
                 type='button'
                 onClick={(e) => {
                   e.preventDefault();
-                  console.log('Button clicked, calling handleSubmit');
                   handleSubmit();
                 }}
                 disabled={loading}
                 className='flex-1 bg-orange-500 text-white py-4 rounded-full font-semibold text-lg hover:bg-orange-600 transition-colors shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed'
               >
-                {loading ? 'กำลังสร้างกระทู้...' : 'ตั้งกระทู้เลย'}
+                {loading ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
               </button>
               <button
                 type='button'
@@ -304,3 +376,4 @@ export default function CreateTopicForm() {
     </div>
   );
 }
+
