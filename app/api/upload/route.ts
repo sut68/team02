@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { uploadToAzureBlob } from '@/lib/azureBlob';
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,20 +36,10 @@ export async function POST(request: NextRequest) {
     // Generate unique filename
     const timestamp = Date.now();
     const fileExt = file.name.split('.').pop();
-    const filename = `${timestamp}.${fileExt}`;
+    const filename = `${folder}/${timestamp}.${fileExt}`;
 
-    // Create directory if it doesn't exist
-    const uploadDir = join(process.cwd(), 'public', folder);
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
-
-    // Write file
-    const filepath = join(uploadDir, filename);
-    await writeFile(filepath, buffer);
-
-    // Return public URL
-    const url = `/${folder}/${filename}`;
+    // Upload to Azure Blob Storage
+    const url = await uploadToAzureBlob(buffer, filename, file.type);
 
     return NextResponse.json({ url, filename });
   } catch (error) {

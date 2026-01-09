@@ -12,95 +12,94 @@ interface SouvenirItem {
   category?: string;
   unit?: string;
   actionLabel?: string;
-  actionHref?: string;
+  actionHref: string; // บังคับว่าต้องมีค่านี้
   requireAuth?: boolean;
 }
 
 export function SouvenirSection() {
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   
-  // ตรวจสอบ authentication จาก cookies หรือ session
   React.useEffect(() => {
-    // ตรวจสอบว่ามี session หรือไม่
     fetch('/api/auth/me')
-      .then(res => {
-        if (res.ok) return res.json();
-        return null;
-      })
-      .then(data => {
-        setIsAuthenticated(!!data?.user);
-      })
-      .catch(() => {
-        setIsAuthenticated(false);
-      });
+      .then(res => res.ok ? res.json() : null)
+      .then(data => setIsAuthenticated(!!data?.user))
+      .catch(() => setIsAuthenticated(false));
   }, []);
   
   const [souvenirItems, setSouvenirItems] = React.useState<SouvenirItem[]>([]);
   const [loading, setLoading] = React.useState(true);
 
-  // ดึงข้อมูลของที่ระลึกจาก API แบบ dynamic ไม่ hardcode หมวดหมู่
+  // --- Fetch Data ---
   React.useEffect(() => {
     async function fetchData() {
       try {
         const res = await fetch('/api/souvenir/items');
         const items = await res.json();
+        
         if (!Array.isArray(items)) {
-          console.error('Souvenir items is not an array:', items);
-          setSouvenirItems([]); // Fallback to empty array
+          setSouvenirItems([]);
           setLoading(false);
           return;
         }
-        // Normalize category to code
+
         const normalizeCategory = (c?: string) => {
           if (c === "กิจกรรม") return "ACTIVITY";
           if (c === "บริจาค") return "DONATION";
           return c;
         };
 
-        const categoryMeta: Record<string, { label: string; href: string | ((item: any) => string); requireAuth?: boolean; getDescription?: (name: string) => string }> = {
+        // ✅ กำหนด Logic ลิงก์ตรงนี้ที่เดียว
+        const categoryMeta: Record<string, { label: string; href: (item: any) => string; getDescription?: (name: string) => string }> = {
           ACTIVITY: {
             label: 'ลงทะเบียนเข้าร่วมกิจกรรม',
-            href: '/user/booking',
-            getDescription: (name) => `รับ '${name}' เป็นของที่ระลึกสุดพิเศษ`,
+            href: (item: any) => {
+              // 1. ถ้าผูกกับ Content (ข่าวกิจกรรม)
+              if (Array.isArray(item.contents) && item.contents.length > 0) {
+                return `/user/news/${item.contents[0].id}`; // ลิงก์ไปหน้าข่าวกิจกรรม
+              }
+              // 2. ถ้าไม่มี ให้ไปหน้าข่าวรวม
+              return '/user/news';
+            },
+            getDescription: (name) => `รับ '${name}' เมื่อลงทะเบียนกิจกรรม`,
           },
           DONATION: {
             label: 'บริจาคเพื่อสนับสนุน ENGi',
-            href: (item: any) => item.linkedDonationProjectId ? `/user/donation/projects/${item.linkedDonationProjectId}` : '/user/donation/projects',
+            href: (item: any) => {
+              // 1. ถ้าผูกกับ Project บริจาค
+              if (Array.isArray(item.donationProjects) && item.donationProjects.length > 0) {
+                return `/user/donation/${item.donationProjects[0].id}`; // ✅ ลิงก์ไปหน้ารายละเอียดโครงการ
+              }
+              // 2. ถ้าไม่มี ให้ไปหน้าบริจาครวม
+              return '/user/donation'; 
+            },
             getDescription: (name) => `รับ ${name} แทนคำขอบคุณ`,
           },
         };
-        // Dynamic category order (no hardcoding in filter)
-        const categoryOrder = Object.keys(categoryMeta);
+
         const sortedItems = items
           .map((it: any) => ({ ...it, category: normalizeCategory(it.category) }))
-          .sort((a: any, b: any) => {
-            const orderA = categoryOrder.indexOf(a.category) === -1 ? 999 : categoryOrder.indexOf(a.category);
-            const orderB = categoryOrder.indexOf(b.category) === -1 ? 999 : categoryOrder.indexOf(b.category);
-            if (orderA !== orderB) return orderA - orderB;
-            return a.name.localeCompare(b.name);
-          })
           .map((item: any) => {
-            const meta = categoryMeta[item.category] || { label: item.category || 'อื่นๆ', href: '#', getDescription: (name: string) => item.description || name };
-            const actionHref = typeof meta.href === 'function' ? meta.href(item) : meta.href;
-            if (actionHref === '#') {
-              console.warn('No actionHref for item:', {
-                id: item.id,
-                name: item.name,
-                category: item.category,
-              });
-            }
+            const meta = categoryMeta[item.category] || { 
+              label: 'ดูรายละเอียด', 
+              href: () => '#', 
+              getDescription: (n: string) => item.description || n 
+            };
+            
+            // ✅ คำนวณ Link ทันทีและเก็บใส่ actionHref
+            const generatedHref = meta.href(item);
+
             return {
               ...item,
               actionLabel: meta.label,
-              actionHref,
-              description: item.description || (meta.getDescription ? meta.getDescription(item.name) : item.name),
-              requireAuth: meta.requireAuth || false,
+              actionHref: generatedHref,
+              description: meta.getDescription ? meta.getDescription(item.name) : item.description,
             };
           });
+
         setSouvenirItems(sortedItems);
       } catch (error) {
         console.error('Failed to fetch souvenir items:', error);
-        setSouvenirItems([]); // Fallback to empty array
+        setSouvenirItems([]);
       } finally {
         setLoading(false);
       }
@@ -108,6 +107,7 @@ export function SouvenirSection() {
     fetchData();
   }, []);
 
+  // --- Carousel Logic ---
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const [isPaused, setIsPaused] = React.useState(false);
   const trackRef = React.useRef<HTMLDivElement>(null);
@@ -128,11 +128,8 @@ export function SouvenirSection() {
   };
 
   const nextSlide = () => stepBy(cardWidthRef.current || 0);
-
   const prevSlide = () => stepBy(-(cardWidthRef.current || 0));
 
-
-  // Add wheel event listener with passive: false to prevent page scroll
   React.useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el) return;
@@ -150,24 +147,17 @@ export function SouvenirSection() {
     return [...souvenirItems, ...souvenirItems, ...souvenirItems, ...souvenirItems];
   }, [souvenirItems]);
 
-  // Measure widths for seamless loop and step sizing
   React.useEffect(() => {
     if (souvenirItems.length === 0) return;
-    
     const measure = () => {
       const track = trackRef.current;
       const container = scrollContainerRef.current;
       if (!track || !container) return;
-      
-      // Force a reflow to ensure scrollWidth is calculated
       track.offsetHeight;
-      
-      const fullWidth = track.scrollWidth;
-      loopWidthRef.current = fullWidth / 4;
+      loopWidthRef.current = track.scrollWidth / 4;
       const cols = window.innerWidth >= 768 ? 3 : 1;
       cardWidthRef.current = container.clientWidth / cols;
     };
-    
     const timer = setTimeout(measure, 100);
     window.addEventListener('resize', measure);
     return () => {
@@ -176,18 +166,14 @@ export function SouvenirSection() {
     };
   }, [souvenirItems]);
 
-  // Continuous auto-scroll using requestAnimationFrame
   React.useEffect(() => {
     if (souvenirItems.length === 0) return;
-    
     let rafId = 0;
     let last = performance.now();
     const tick = (now: number) => {
       const dt = (now - last) / 1000;
       last = now;
-      if (!isPaused) {
-        stepBy(speedRef.current * dt);
-      }
+      if (!isPaused) stepBy(speedRef.current * dt);
       rafId = requestAnimationFrame(tick);
     };
     rafId = requestAnimationFrame(tick);
@@ -208,9 +194,7 @@ export function SouvenirSection() {
   if (souvenirItems.length === 0) {
     return (
       <section className="w-full bg-white px-4 py-16 min-h-[calc(100vh-80px)] flex items-center justify-center">
-        <div className="text-center text-gray-500">
-          ยังไม่มีของที่ระลึกในขณะนี้
-        </div>
+        <div className="text-center text-gray-500">ยังไม่มีของที่ระลึกในขณะนี้</div>
       </section>
     );
   }
@@ -218,73 +202,52 @@ export function SouvenirSection() {
   return (
     <section className="w-full bg-white px-4 py-16 min-h-[calc(100vh-80px)] md:min-h-[calc(100vh-88px)] flex items-center">
       <div className="container mx-auto relative">
-        {/* หัวข้อ */}
         <div className="flex items-center justify-between mb-10">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900">ของที่ระลึก</h2>
         </div>
 
-        {/* Navigation Buttons */}
-        <button
-          onClick={prevSlide}
-          className="absolute -left-16 top-1/2 -translate-y-1/2 z-10 bg-gray-50/90 backdrop-blur rounded-full p-3 shadow-md hover:bg-gray-100 transition-colors hidden md:block"
-          aria-label="Previous slide"
-        >
+        <button onClick={prevSlide} className="absolute -left-16 top-1/2 -translate-y-1/2 z-10 bg-gray-50/90 backdrop-blur rounded-full p-3 shadow-md hover:bg-gray-100 transition-colors hidden md:block">
           <ChevronLeft className="w-6 h-6 text-gray-600" />
         </button>
-
-        <button
-          onClick={nextSlide}
-          className="absolute -right-16 top-1/2 -translate-y-1/2 z-10 bg-gray-50/90 backdrop-blur rounded-full p-3 shadow-md hover:bg-gray-100 transition-colors hidden md:block"
-          aria-label="Next slide"
-        >
+        <button onClick={nextSlide} className="absolute -right-16 top-1/2 -translate-y-1/2 z-10 bg-gray-50/90 backdrop-blur rounded-full p-3 shadow-md hover:bg-gray-100 transition-colors hidden md:block">
           <ChevronRight className="w-6 h-6 text-gray-600" />
         </button>
 
-        {/* แถบโปรโมต 3 บล็อกแบบเลื่อนต่อเนื่อง */}
-        <div
-          ref={scrollContainerRef}
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
-          className="relative overflow-hidden max-w-7xl mx-auto"
-        >
+        <div ref={scrollContainerRef} onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)} className="relative overflow-hidden max-w-7xl mx-auto">
           <div ref={trackRef} className="flex gap-12 will-change-transform">
-            {loopItems.map((item, idx) => {
-              const finalHref = item.actionHref || '#';
-              return (
-                <Link
-                  key={`${item.id}-${idx}`}
-                  href={finalHref}
-                  className="group block basis-full md:basis-1/3 shrink-0"
-                >
-                  <div className="flex flex-col items-center text-center">
-                    {/* รูปหลัก */}
-                    <div className="relative w-full h-96 md:h-[420px] bg-white rounded-3xl overflow-hidden transition-all duration-300 shadow-sm group-hover:shadow-2xl group-hover:-translate-y-0.5 group-hover:ring-1 group-hover:ring-gray-200">
-                      {item.imageUrl ? (
-                        <Image
-                          src={item.imageUrl}
-                          alt={item.name}
-                          fill
-                          priority={idx % souvenirItems.length === 0}
-                          className="object-contain"
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                          <p className="text-gray-400">ไม่มีรูปภาพ</p>
-                        </div>
-                      )}
-                    </div>
-                    {/* ข้อความโปรโมต */}
-                    <h3 className="mt-6 text-xl md:text-2xl font-medium text-orange-600">
-                      {item.actionLabel}
-                    </h3>
-                    <p className="mt-2 text-sm md:text-base text-gray-500 max-w-md">
-                      {item.description}
-                    </p>
+            {loopItems.map((item, idx) => (
+              // ✅ ใช้ item.actionHref ที่คำนวณไว้แล้วโดยตรง ไม่ต้องมี function getDestinationUrl มาขวาง
+              <Link 
+                key={`${item.id}-${idx}`} 
+                href={item.actionHref} 
+                className="group block basis-full md:basis-1/3 shrink-0"
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div className="relative w-full h-96 md:h-[420px] bg-white rounded-3xl overflow-hidden transition-all duration-300 shadow-sm group-hover:shadow-2xl group-hover:-translate-y-0.5 group-hover:ring-1 group-hover:ring-gray-200">
+                    {item.imageUrl ? (
+                      <Image
+                        src={item.imageUrl}
+                        alt={item.name}
+                        fill
+                        priority={idx % souvenirItems.length === 0}
+                        className="object-contain"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                        <p className="text-gray-400">ไม่มีรูปภาพ</p>
+                      </div>
+                    )}
                   </div>
-                </Link>
-              );
-            })}
+                  <h3 className="mt-6 text-xl md:text-2xl font-medium text-orange-600">
+                    {item.actionLabel}
+                  </h3>
+                  <p className="mt-2 text-sm md:text-base text-gray-500 max-w-md">
+                    {item.description}
+                  </p>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </div>

@@ -402,7 +402,8 @@ function UserBookingPageInner() {
     }
 
     const json = await res.json();
-    const bookingId = json?.booking?.id;
+    try {
+      const paymentId = json.paymentId;
 
     // ✅ จองเสร็จแล้วไปหน้าจ่ายเงิน (ไม่ hardcode userId)
     if (bookingId) {

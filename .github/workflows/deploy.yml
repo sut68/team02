@@ -18,10 +18,10 @@ env:
 jobs:
   quality-check:
     uses: ./.github/workflows/tests.yml
-    secrets: inherit # ส่งความลับไปให้ test ใช้ด้วย (ถ้าจำเป็น)
+    secrets: inherit
 
   build:
-    needs: quality-check # สั่งให้รอ Test ผ่านก่อนถึงจะเริ่ม Build
+    needs: quality-check
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -65,7 +65,7 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
 
   deploy:
-    needs: build # รอ Build เสร็จค่อย Deploy
+    needs: build
     runs-on: ubuntu-latest
     # Deploy เฉพาะตอน Push เข้า Main เท่านั้น
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -77,26 +77,35 @@ jobs:
           host: ${{ secrets.AZURE_VM_IP }}
           username: ${{ secrets.AZURE_VM_USER }}
           key: ${{ secrets.AZURE_VM_SSH_KEY }}
-          command_timeout: 20m  # <--- ต้องมีบรรทัดนี้เพื่อไม่ให้ตายที่ 9 นาที
+          command_timeout: 20m
           script: |
-            cd /opt/alumni-connect
+            # 1. เข้าไปที่โฟลเดอร์โปรเจกต์
+            cd ~/team02 || exit 1
             
-            # 1. ปลดล็อก Git
-            git config --global --add safe.directory /opt/alumni-connect
+            # 2. แก้ปัญหา Git Permission (ใช้ Token ดึงโค้ด)
+            git remote set-url origin https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+            git fetch origin main
+            git reset --hard origin/main
             
-            # 2. คืนพื้นที่ (สำคัญมากเพื่อป้องกันดิสก์เต็ม)
+            # 3. Login Container Registry
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            # 4. Pull Image (ใช้ docker compose แบบไม่มีขีด)
+            docker compose -f docker-compose.prod.yml pull
+            
+            # 5. สั่งหยุดของเก่า (ใช้ docker compose แบบไม่มีขีด)
+            docker compose -f docker-compose.prod.yml down || true
+            
+            # 6. คืนพื้นที่ Disk
             docker system prune -af
             
-            # 3. Login และ Pull Image ตรงๆ (แก้ปัญหา Denied)
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker pull ghcr.io/sut68/team02-api:latest || true
-            docker pull ghcr.io/sut68/team02-web:latest || true
+            # 7. รันระบบใหม่ (ใช้ docker compose แบบไม่มีขีด)
+            docker compose -f docker-compose.prod.yml up -d --force-recreate
             
-            # 4. รันระบบใหม่
-            docker compose up -d --force-recreate
-            
-            # 5. ซ่อม Migration (หัวใจหลักของงานนี้)
-            docker compose exec -T api npx prisma migrate deploy
+            # 8. รอและสั่ง Migration
+            echo "Waiting for database..."
+            sleep 60
+            docker compose -f docker-compose.prod.yml exec -T api npx prisma migrate deploy
 
       - name: Run health check
         uses: appleboy/ssh-action@master
@@ -105,5 +114,6 @@ jobs:
           username: ${{ secrets.AZURE_VM_USER }}
           key: ${{ secrets.AZURE_VM_SSH_KEY }}
           script: |
-            cd /opt/alumni-connect
-            ./scripts/health-check.sh
+            sleep 30
+            chmod +x ~/team02/scripts/health-check.sh
+            ~/team02/scripts/health-check.sh

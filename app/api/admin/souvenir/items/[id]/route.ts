@@ -17,6 +17,8 @@ export async function GET(
           orderBy: { createdAt: 'desc' },
           take: 50,
         },
+        contents: { select: { id: true, TitleName: true }, take: 1 },
+        donationProjects: { select: { id: true, title: true }, take: 1 },
         _count: {
           select: {
             entitlements: true,
@@ -41,6 +43,8 @@ export async function GET(
     return NextResponse.json({
       ...item,
       currentStock,
+      linkedEventId: item.contents[0]?.id || null,
+      linkedDonationProjectId: item.donationProjects[0]?.id || null,
     });
   } catch (error) {
     console.error('Error fetching souvenir item:', error);
@@ -72,52 +76,35 @@ export async function PUT(
       linkedDonationProjectId,
     } = body;
 
-    const item = await prisma.souvenirItem.update({
-      where: { id },
-      data: {
-        name,
-        description,
-        category,
-        imageUrl,
-        unit,
-        active,
-      },
-    });
-
-    // เชื่อมโยงกับ Content (กิจกรรม)
-    if (linkedType === "event") {
-      // ล้างการผูกเก่าทั้งหมดของ item นี้ก่อน
-      await prisma.content.updateMany({
-        where: { souvenirItemId: id },
-        data: { souvenirItemId: null },
+    // ใช้ transaction เพื่อความถูกต้อง
+    const updated = await prisma.$transaction(async (tx) => {
+      // 1. อัปเดตข้อมูลพื้นฐาน
+      const item = await tx.souvenirItem.update({
+        where: { id },
+        data: { name, description, category, imageUrl, unit, active },
       });
 
-      // ถ้าเลือกกิจกรรมใหม่
-      if (linkedEventId) {
-        // กันผูกซ้อน: ถ้ากิจกรรมนี้มีของอยู่แล้วและไม่ใช่ item นี้ ให้ throw
-        const c = await prisma.content.findUnique({
-          where: { id: linkedEventId },
-          select: { souvenirItemId: true },
-        });
-        if (c?.souvenirItemId && c.souvenirItemId !== id) {
-          return NextResponse.json({ error: "Activity already linked to another souvenir." }, { status: 400 });
+      // 2. Reset การเชื่อมโยงเก่าทั้งหมด
+      await tx.content.updateMany({ where: { souvenirItemId: id }, data: { souvenirItemId: null } });
+      await tx.donationProject.updateMany({ where: { souvenirItemId: id }, data: { souvenirItemId: null } });
+
+      // 3. สร้างการเชื่อมโยงใหม่ (ถ้ามี)
+      if (linkedType === 'event' && linkedEventId) {
+        const targetEvent = await tx.content.findUnique({ where: { id: linkedEventId } });
+        if (targetEvent?.souvenirItemId && targetEvent.souvenirItemId !== id) {
+          throw new Error('กิจกรรมนี้มีของที่ระลึกผูกอยู่แล้ว กรุณาปลดออกก่อน');
         }
-
-        await prisma.content.update({
-          where: { id: linkedEventId },
-          data: { souvenirItemId: id },
-        });
+        await tx.content.update({ where: { id: linkedEventId }, data: { souvenirItemId: id } });
+      } else if (linkedType === 'donation' && linkedDonationProjectId) {
+        const targetProject = await tx.donationProject.findUnique({ where: { id: linkedDonationProjectId } });
+        if (targetProject?.souvenirItemId && targetProject.souvenirItemId !== id) {
+          throw new Error('โครงการนี้มีของที่ระลึกผูกอยู่แล้ว กรุณาปลดออกก่อน');
+        }
+        await tx.donationProject.update({ where: { id: linkedDonationProjectId }, data: { souvenirItemId: id } });
       }
-    }
-
-    if (linkedType === "none") {
-      await prisma.content.updateMany({
-        where: { souvenirItemId: id },
-        data: { souvenirItemId: null },
-      });
-    }
-
-    return NextResponse.json(item);
+      return item;
+    });
+    return NextResponse.json(updated);
   } catch (error) {
     console.error('Error updating souvenir item:', error);
     return NextResponse.json(
