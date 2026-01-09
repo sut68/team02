@@ -22,7 +22,6 @@ export async function GET(req: NextRequest) {
     const category = searchParams.get("category");
     const idParam = searchParams.get("id");
 
-    // ถ้ามี id param แต่แปลงเป็นเลขไม่ได้ -> 400 (เพิ่ม validation)
     if (idParam !== null) {
       const id = Number(idParam);
       if (!Number.isFinite(id) || id <= 0) {
@@ -35,6 +34,14 @@ export async function GET(req: NextRequest) {
           user: true,
           bookingForm: true,
           pictures: true,
+          // ✅ เพิ่มส่วนนี้เพื่อนับจำนวนคนที่จองสำเร็จแล้ว
+          _count: {
+            select: { 
+              bookings: {
+                where: { transactionStatus: "SUCCESS" }
+              } 
+            }
+          },
         },
       });
 
@@ -50,6 +57,14 @@ export async function GET(req: NextRequest) {
         user: true,
         bookingForm: true,
         pictures: true,
+        // ✅ เพิ่มตรงนี้ด้วยเพื่อให้หน้า List แสดงที่นั่งคงเหลือได้ถูกต้อง
+        _count: {
+          select: { 
+            bookings: {
+              where: { transactionStatus: "SUCCESS" }
+            } 
+          }
+        },
       },
       orderBy: { createdAt: "desc" },
     });

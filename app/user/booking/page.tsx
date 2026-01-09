@@ -116,12 +116,7 @@ function formatThaiDate(dateStr?: string | null) {
   });
 }
 
-/**
- * ✅ หา price ของรุ่นที่เลือก จาก bookingForm.batchPrices (JSON)
- * รองรับ 2 รูปแบบ:
- * 1) Array: [{ startBatch: 1, endBatch: 7, price: 100 }, ...]
- * 2) Object map: { "1": 100, "2": 120 } หรือ { "Generation 1-7": 100 }
- */
+
 function getBatchUnitPrice(
   batchPrices: any,
   batchNumberStr: string
@@ -411,7 +406,11 @@ function UserBookingPageInner() {
 
     // ✅ จองเสร็จแล้วไปหน้าจ่ายเงิน (ไม่ hardcode userId)
     if (bookingId) {
-      router.push(`/user/payment?bookingId=${bookingId}`);
+      if (pricing.totalPrice === 0) {
+        router.push(`/user/booking/success?bookingId=${bookingId}`);
+      } else {
+        router.push(`/user/payment?bookingId=${bookingId}`);
+      }
       return;
     }
 
