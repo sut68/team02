@@ -55,4 +55,5 @@ jobs:
         run: npm test --if-present
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/mydb
+          JWT_SECRET: ${{ secrets.JWT_SECRET }} # ดึงจาก GitHub Settings
           NODE_ENV: test

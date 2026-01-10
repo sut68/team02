@@ -255,10 +255,10 @@ export default function BudgetReportPage() {
         {/* Collapsible Section (เฉพาะ Financial Cards) */}
         <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isSummaryVisible ? 'max-h-[500px] opacity-100 mb-8' : 'max-h-0 opacity-0 mb-0'}`}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-amber-50 p-6 rounded-2xl border border-amber-200">
-                    <h3 className="text-amber-900 text-sm font-semibold opacity-90">งบประมาณที่ได้รับ (Income)</h3>
-                    <p className="text-3xl font-semibold text-amber-800 mt-2">฿ {financialStats.income.toLocaleString()}</p>
-                    <p className="text-xs text-amber-900 mt-2 font-medium opacity-70">
+                <div className="bg-orange-50 p-6 rounded-2xl border border-orange-200">
+                    <h3 className="text-orange-900 text-sm font-semibold opacity-90">งบประมาณที่ได้รับ (Income)</h3>
+                    <p className="text-3xl font-semibold text-orange-800 mt-2">฿ {financialStats.income.toLocaleString()}</p>
+                    <p className="text-xs text-orange-900 mt-2 font-medium opacity-70">
                         {filterYear === "all" ? "รวมทุกปีงบประมาณ" : `ปีงบประมาณ ${filterYear}`}
                     </p>
                 </div>
@@ -266,9 +266,9 @@ export default function BudgetReportPage() {
                     <h3 className="text-orange-900 text-sm font-semibold opacity-90">ใช้จ่ายจริง (Expense)</h3>
                     <p className="text-3xl font-semibold text-orange-900 mt-2">฿ {financialStats.expense.toLocaleString()}</p>
                 </div>
-                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200">
-                    <h3 className="text-gray-900 text-sm font-semibold opacity-90">คงเหลือ (Balance)</h3>
-                    <p className="text-3xl font-semibold text-gray-700 mt-2">฿ {financialStats.balance.toLocaleString()}</p>
+                <div className="bg-orange-50 p-6 rounded-2xl border border-orange-200">
+                    <h3 className="text-orange-900 text-sm font-semibold opacity-90">คงเหลือ (Balance)</h3>
+                    <p className="text-3xl font-semibold text-orange-700 mt-2">฿ {financialStats.balance.toLocaleString()}</p>
                 </div>
             </div>
         </div>

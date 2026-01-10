@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { GraduationCap, Book, Upload, UserCheck, UserCircle } from 'lucide-react';
+import { GraduationCap, Book, Upload, UserCheck, UserCircle, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { Input } from '@/app/components/ui/Input';
@@ -392,48 +392,129 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
     </div>
   );
 
-  const RegisterSelect = () => (
-    <div className="py-30 px-20 pb-40">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-20">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-            กรุณาเลือกประเภทของคุณ
-          </h2>
-          <p className="text-gray-500 text-base font-normal">
-            เพื่อเริ่มต้นการลงทะเบียนในระบบศิษย์เก่าวิศวกรรมศาสตร์
-          </p>
+const RegisterSelect = () => {
+  const handleScrollDown = () => {
+    const element = document.getElementById('member-benefits');
+    element?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  return (
+  <>
+    <div className="bg-white">
+      <div className="min-h-screen w-full flex items-center justify-center py-2 px-4">
+        <div className="max-w-5xl w-full">
+          <div className="text-center mb-20">
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              สร้างบัญชีของคุณ
+            </h1>
+            <p className="text-gray-600 text-base md:text-lg font-normal max-w-3xl mx-auto">
+              เลือกประเภทสมาชิกของคุณเพื่อเริ่มต้นการลงทะเบียนในระบบศิษย์เก่าสัมพันธ์วิศวกรรมศาสตร์
+            </p>
+          </div>
+
+          <div className="flex flex-col md:flex-row justify-center gap-12 mb-20">
+            {/* Alumni Card */}
+            <div className="flex-1 max-w-sm">
+              <Card
+                className="cursor-pointer border-2 border-orange-200 hover:border-orange-400 hover:shadow-lg transition-all duration-300 h-full p-20"
+                onClick={() => {
+                  setUserType('alumni');
+                  setStep(1);
+                }}
+              >
+                <CardContent className="p-16 text-center flex flex-col items-center justify-center h-full gap-6">
+                  <GraduationCap className="w-20 h-20 text-orange-500 hover:text-orange-600 transition-colors" strokeWidth={1.2} />
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">ศิษย์เก่า</h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">
+                      สำหรับผู้ที่จบการศึกษาแล้ว
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Student Card */}
+            <div className="flex-1 max-w-sm">
+              <Card
+                className="cursor-pointer border-2 border-orange-200 hover:border-orange-400 hover:shadow-lg transition-all duration-300 h-full"
+                onClick={() => {
+                  setUserType('student');
+                  setStep(1);
+                }}
+              >
+                <CardContent className="p-16 text-center flex flex-col items-center justify-center h-full gap-6">
+                  <UserCircle className="w-20 h-20 text-orange-500 hover:text-orange-600 transition-colors" strokeWidth={1.2} />
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-2">ศิษย์ปัจจุบัน</h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">
+                      สำหรับนักศึกษาปัจจุบันของสำนักวิศวกรรมศาสตร์
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          <div className="mt-16 text-center">
+            <button
+              onClick={handleScrollDown}
+              className="inline-flex items-center gap-2 text-gray-400 hover:text-gray-500 transition-colors duration-300 font-medium text-sm group cursor-pointer bg-none border-none p-0"
+            >
+              <span>ค้นหาประโยชน์ของการสมัครสมาชิก</span>
+              <ChevronDown className="w-4 h-4 group-hover:translate-y-1 transition-transform duration-300" />
+            </button>
+          </div>
         </div>
+      </div>
 
-        <div className="grid grid-cols-2 gap-16 max-w-5xl mx-auto">
-          <Card
-            className="cursor-pointer border-2 border-orange-100 hover:border-orange-300 transition-all"
-            onClick={() => {
-              setUserType('alumni');
-              setStep(1);
-            }}
-          >
-            <CardContent className="p-20 text-center flex flex-col items-center justify-center h-full">
-              <GraduationCap className="w-20 h-20 text-orange-500 mb-8" strokeWidth={1.5} />
-              <h3 className="text-3xl md:text-4xl font-bold text-gray-900">ศิษย์เก่า</h3>
-            </CardContent>
-          </Card>
+      <div id="member-benefits" className="min-h-screen w-full bg-white flex items-center justify-center py-12 px-4 border-t border-gray-100">
+        <div className="max-w-4xl w-full">
+          <div className="text-center mb-20">
+            <p className="text-gray-600 text-base font-semibold uppercase tracking-widest">ทำไมต้องเลือกเรา</p>
+            <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mt-4">ประสบการณ์ที่ยอดเยี่ยมสำหรับสมาชิก</h3>
+          </div>
 
-          <Card
-            className="cursor-pointer border-2 border-orange-100 hover:border-orange-300 transition-all"
-            onClick={() => {
-              setUserType('student');
-              setStep(1);
-            }}
-          >
-            <CardContent className="p-20 text-center flex flex-col items-center justify-center h-full">
-              <UserCircle className="w-20 h-20 text-orange-500 mb-8" strokeWidth={1.5} />
-              <h3 className="text-3xl md:text-4xl font-bold text-gray-900">ศิษย์ปัจจุบัน</h3>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-50 to-white p-8 border border-orange-100 hover:border-orange-300 hover:shadow-lg transition-all duration-300">
+              <div className="absolute top-0 right-0 w-28 h-28 bg-orange-100 rounded-full opacity-30 group-hover:scale-150 transition-transform duration-300 -mr-12 -mt-12"></div>
+              <div className="relative z-10">
+                <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center text-orange-500 mb-6 shadow-md">
+                  <Book className="w-8 h-8" />
+                </div>
+                <h4 className="text-xl font-semibold text-gray-900 mb-3">ข่าวสารและบทความ</h4>
+                <p className="text-gray-600 text-base leading-relaxed">ได้รับข้อมูลข่าวสารคณะและบทความการศึกษาล่าสุดจากสาขาวิชาของคุณ</p>
+              </div>
+            </div>
+
+            <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-50 to-white p-10 border border-orange-100 hover:border-orange-300 hover:shadow-lg transition-all duration-300">
+              <div className="absolute top-0 right-0 w-28 h-28 bg-orange-100 rounded-full opacity-30 group-hover:scale-150 transition-transform duration-300 -mr-14 -mt-14"></div>
+              <div className="relative z-10">
+                <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center text-orange-500 mb-6 shadow-md">
+                  <UserCheck className="w-8 h-8" />
+                </div>
+                <h4 className="text-xl font-semibold text-gray-900 mb-3">เครือข่ายศิษย์</h4>
+                <p className="text-gray-600 text-base leading-relaxed">ค้นหาและเชื่อมต่อกับเพื่อนร่วมรุ่น สร้างเครือข่ายมืออาชีพ</p>
+              </div>
+            </div>
+
+            <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-50 to-white p-10 border border-orange-100 hover:border-orange-300 hover:shadow-lg transition-all duration-300">
+              <div className="absolute top-0 right-0 w-28 h-28 bg-orange-100 rounded-full opacity-30 group-hover:scale-150 transition-transform duration-300 -mr-14 -mt-14"></div>
+              <div className="relative z-10">
+                <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center text-orange-500 mb-6 shadow-md">
+                  <GraduationCap className="w-8 h-8" />
+                </div>
+                <h4 className="text-xl font-semibold text-gray-900 mb-3">กิจกรรมและอีเวนต์</h4>
+                <p className="text-gray-600 text-base leading-relaxed">ร่วมมิติในกิจกรรมศิษย์เก่า สัมมนา และอีเวนต์พิเศษ</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+  </>
   );
+};
 
   const StudentStep2 = () => (
     <div className="grid grid-cols-2 gap-16">
