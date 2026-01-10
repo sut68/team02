@@ -114,7 +114,7 @@ export async function PUT(
   }
 }
 
-// DELETE - ลบของที่ระลึก (soft delete โดยตั้ง active = false)
+// DELETE - ลบของที่ระลึก (Hard delete - ลบจริง ๆ)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -123,13 +123,52 @@ export async function DELETE(
     const { id: paramId } = await params;
     const id = parseInt(paramId);
 
-    // Soft delete
-    const item = await prisma.souvenirItem.update({
-      where: { id },
-      data: { active: false },
+    // Hard delete - ลบข้อมูลจริง ๆ พร้อมกับการเชื่อมโยงทั้งหมด
+    await prisma.$transaction(async (tx) => {
+      // 1. ลบการเชื่อมโยงจาก Content
+      await tx.content.updateMany({
+        where: { souvenirItemId: id },
+        data: { souvenirItemId: null },
+      });
+
+      // 2. ลบการเชื่อมโยงจาก DonationProject
+      await tx.donationProject.updateMany({
+        where: { souvenirItemId: id },
+        data: { souvenirItemId: null },
+      });
+
+      // 3. ลบ StockMovement ทั้งหมด
+      await tx.stockMovement.deleteMany({
+        where: { itemId: id },
+      });
+
+      // 4. ลบ Entitlement ทั้งหมด
+      await tx.entitlement.deleteMany({
+        where: { itemId: id },
+      });
+
+      // 5. ลบ Redemption ทั้งหมด
+      await tx.redemption.deleteMany({
+        where: { itemId: id },
+      });
+
+      // 6. ลบ Shipment ทั้งหมด
+      await tx.shipment.deleteMany({
+        where: { itemId: id },
+      });
+
+      // 7. ลบ Donation ที่เชื่อมโยง
+      await tx.donation.deleteMany({
+        where: { souvenirItemId: id },
+      });
+
+      // 8. ลบ SouvenirItem เอง
+      await tx.souvenirItem.delete({
+        where: { id },
+      });
     });
 
-    return NextResponse.json({ message: 'Item deleted successfully', item });
+    return NextResponse.json({ message: 'Item deleted successfully' });
   } catch (error) {
     console.error('Error deleting souvenir item:', error);
     return NextResponse.json(

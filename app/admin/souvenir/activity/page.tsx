@@ -131,6 +131,11 @@ export default function SouvenirActivityPage() {
     };
 
     fetchRegistrations();
+
+    // Set up polling to refresh registrations every 3 seconds
+    const pollInterval = setInterval(fetchRegistrations, 3000);
+
+    return () => clearInterval(pollInterval);
   }, [selectedActivity]);
 
   const stepBy = (px: number) => {
