@@ -1,6 +1,5 @@
 import { prisma } from "@/app/lib/prisma";
 import { promises as fs } from "fs";
-// ✅ Import Config และ Error มาใช้เทส
 import { CONTENT_CONFIG, ERROR_MESSAGES } from "@/lib/models/validation";
 
 // 1) Mock fs
