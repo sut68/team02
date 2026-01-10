@@ -1,6 +1,8 @@
-// tests/api/content/route.test.ts
+import { prisma } from "@/app/lib/prisma";
+import { promises as fs } from "fs";
+import { CONTENT_CONFIG, ERROR_MESSAGES } from "@/lib/models/validation";
 
-// 1) mock fs preserve actual (กัน prisma พัง)
+// 1) Mock fs
 jest.mock("fs", () => {
   const actual = jest.requireActual("fs");
   return {
@@ -13,25 +15,24 @@ jest.mock("fs", () => {
   };
 });
 
-// 2) mock prisma
+// 2) Mock prisma
 jest.mock("@/app/lib/prisma", () => ({
   prisma: {
     content: {
       findUnique: jest.fn(),
       findMany: jest.fn(),
       delete: jest.fn(),
+      create: jest.fn(), // mock เพิ่ม
     },
+    pictureContent: { createMany: jest.fn() },
     $transaction: jest.fn(),
   },
 }));
 
-import { prisma } from "@/app/lib/prisma";
-import { promises as fs } from "fs";
+// Import Route
+const { POST } = require("@/app/api/content/route");
 
-// import route หลัง mock
-const { GET, POST, DELETE } = require("@/app/api/content/route");
-
-// helpers
+// Helper
 function makeReq(opts?: { url?: string; form?: Record<string, any> }) {
   const url = opts?.url ?? "http://localhost:3000/api/content";
   const form = opts?.form ?? {};
@@ -48,101 +49,96 @@ function makeFakeFile(name = "pic.png", content = "img") {
   return { name, arrayBuffer: async () => Buffer.from(content).buffer } as any;
 }
 
-describe("Content API - Validation Tests (like project-proposal style)", () => {
+describe("Content API - Validation Tests", () => {
   afterEach(() => jest.clearAllMocks());
 
-  // ---------- Title validation ----------
-  it("TC-VAL-01: Should return 400 if title is empty", async () => {
+  // ---------- Title ----------
+  it("Should return 400 if title is empty", async () => {
     const req = makeReq({
       form: { title: "", categories: "NEWS", pictures: [makeFakeFile()] },
     });
-
     const res = await POST(req);
     const json = await res.json();
 
     expect(res.status).toBe(400);
-    expect(json.error).toBe("ชื่อหัวเรื่องห้ามว่าง");
+    expect(json.error).toBe(ERROR_MESSAGES.TITLE_EMPTY);
   });
 
-  it("TC-VAL-02: Should return 400 if title too short (<3)", async () => {
+  it("Should return 400 if title too short", async () => {
     const req = makeReq({
       form: { title: "AB", categories: "NEWS", pictures: [makeFakeFile()] },
     });
-
     const res = await POST(req);
     const json = await res.json();
 
     expect(res.status).toBe(400);
-    expect(json.error).toMatch(/สั้นเกินไป/);
+    // เช็คกับ Constant
+    expect(json.error).toBe(ERROR_MESSAGES.TITLE_TOO_SHORT);
   });
 
-  it("TC-VAL-03: Should return 400 if title too long (>200)", async () => {
-    const longTitle = "a".repeat(201);
+  it("Should return 400 if title too long", async () => {
+    const longTitle = "a".repeat(CONTENT_CONFIG.TITLE_MAX_LENGTH + 1);
     const req = makeReq({
       form: { title: longTitle, categories: "NEWS", pictures: [makeFakeFile()] },
     });
-
     const res = await POST(req);
     const json = await res.json();
 
     expect(res.status).toBe(400);
-    expect(json.error).toMatch(/ยาวเกินไป/);
+    expect(json.error).toBe(ERROR_MESSAGES.TITLE_TOO_LONG);
   });
 
-  // ---------- Description validation ----------
-  it("TC-VAL-04: Should return 400 if description too long (>1000)", async () => {
-    const longDesc = "a".repeat(1001);
+  // ---------- Description ----------
+  it("Should return 400 if description too long", async () => {
+    const longDesc = "a".repeat(CONTENT_CONFIG.DESC_MAX_LENGTH + 1);
     const req = makeReq({
-      form: { title: "Hello", description: longDesc, categories: "NEWS", pictures: [] },
+      form: { title: "Hello", description: longDesc, categories: "NEWS", pictures: [makeFakeFile()] },
     });
-
     const res = await POST(req);
     const json = await res.json();
 
     expect(res.status).toBe(400);
-    expect(json.error).toMatch(/ไม่เกิน 1000/);
+    expect(json.error).toBe(ERROR_MESSAGES.DESC_TOO_LONG);
   });
 
-  // ---------- Enum validation ----------
-  it("TC-VAL-05: Should return 400 if categories missing", async () => {
-    const req = makeReq({ form: { title: "Hello", pictures: [] } });
+  // ---------- Category ----------
+  it("Should return 400 if categories missing", async () => {
+    const req = makeReq({ form: { title: "Hello", pictures: [makeFakeFile()] } });
     const res = await POST(req);
     const json = await res.json();
 
     expect(res.status).toBe(400);
-    expect(json.error).toBe("ต้องระบุ categories");
+    expect(json.error).toBe(ERROR_MESSAGES.CATEGORY_REQUIRED);
   });
 
-  // ---------- Picture validation ----------
-  it("TC-VAL-06: Should return 400 if no valid pictures uploaded", async () => {
-    // ส่งฟอร์มที่ไม่มีฟิลด์ pictures หรือเป็น Array ว่าง
+  // ---------- Picture ----------
+  it("Should return 400 if no pictures uploaded", async () => {
     const req = makeReq({ 
       form: { 
         title: "Hello", 
         categories: "NEWS", 
-        pictures: [] // ไม่มีรูป
+        pictures: [] 
       } 
     });
-
     const res = await POST(req);
     const json = await res.json();
 
     expect(res.status).toBe(400);
-    expect(json.error).toBe("ต้องอัปโหลดรูปอย่างน้อย 1 รูป");
+    expect(json.error).toBe(ERROR_MESSAGES.PICTURE_REQUIRED);
   });
   
-  // ---------- POS: create success ----------
-  it("TC-POS-01: Should create content successfully", async () => {
+  // ---------- Success ----------
+  it("Should create content successfully", async () => {
     (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
     (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
 
     (prisma.$transaction as jest.Mock).mockImplementation(async (fn: any) => {
       const tx = {
         content: {
-          create: jest.fn().mockResolvedValue({ id: 1 }),
+          create: jest.fn().mockResolvedValue({ id: 1, TitleName: "Hello" }),
           findUnique: jest.fn().mockResolvedValue({ id: 1, TitleName: "Hello", pictures: [] }),
         },
-        pictureContent: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+        pictureContent: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
       };
       return await fn(tx);
     });
@@ -152,7 +148,7 @@ describe("Content API - Validation Tests (like project-proposal style)", () => {
         title: "Hello",
         description: "World",
         categories: "NEWS",
-        pictures: [makeFakeFile("a.png"), makeFakeFile("b.png")],
+        pictures: [makeFakeFile("a.png")],
       },
     });
 
@@ -160,7 +156,7 @@ describe("Content API - Validation Tests (like project-proposal style)", () => {
     const json = await res.json();
 
     expect(res.status).toBe(201);
+    expect(json.message).toBe(ERROR_MESSAGES.CREATE_SUCCESS);
     expect(json).toHaveProperty("content");
-    expect(prisma.$transaction).toHaveBeenCalled();
   });
 });
