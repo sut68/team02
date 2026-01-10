@@ -268,7 +268,7 @@ export async function PATCH(request: NextRequest) {
           }
         });
 
-        // 2.4 ✅ เพิ่ม: ตัดสต็อกจริง (StockMovement)
+        // 2.4  เพิ่ม: ตัดสต็อกจริง (StockMovement)
         await tx.stockMovement.create({
           data: {
             itemId: entitlementToUse.itemId,
