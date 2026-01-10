@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CATEGORY_LABEL } from '@/constants/category';
 import Image from 'next/image';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react';
 
 type SouvenirItem = {
   id: number;
@@ -224,13 +224,22 @@ export function AdminSouvenirCarousel({ onCardClick, category }: AdminSouvenirCa
                 {/* ✅ กรอบรูป (แยกจากเนื้อหาเหมือน activity) */}
                 <div className="w-full bg-white rounded-3xl overflow-hidden shadow-sm group-hover:shadow-2xl transition">
                   <div className="relative w-full aspect-4/3">
-                    <Image
-                      src={item.imageUrl || ''}
-                      alt={item.name}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                      className="object-contain p-[clamp(20px,4vw,48px)]"
-                    />
+                    {item.imageUrl ? (
+                      <Image
+                        src={item.imageUrl}
+                        alt={item.name}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                        className="object-contain p-[clamp(20px,4vw,48px)]"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                        <div className="text-center text-gray-400">
+                          <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                          <span className="text-xs">ไม่มีรูปภาพ</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 

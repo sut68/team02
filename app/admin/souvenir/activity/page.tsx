@@ -272,13 +272,22 @@ export default function SouvenirActivityPage() {
                     {/* ✅ Card เฉพาะรูป */}
                     <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
                       <div className="relative h-72 md:h-80 bg-white">
-                        <Image
-                          src={item.imageUrl || ""}
-                          alt={item.name}
-                          fill
-                          className="object-contain p-6"
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        />
+                        {item.imageUrl ? (
+                          <Image
+                            src={item.imageUrl}
+                            alt={item.name}
+                            fill
+                            className="object-contain p-6"
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                            <div className="text-center text-gray-400">
+                              <Layers className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                              <span className="text-xs">ไม่มีรูปภาพ</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
