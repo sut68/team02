@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
 import { randomUUID } from "crypto";
+import { BOOKING_API_CONFIG, ERROR_MESSAGES } from "@/lib/models/validation";
 
 /* ------------------ Utils ------------------ */
 function generateBookingNumber(): string {
@@ -8,22 +9,15 @@ function generateBookingNumber(): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
-  const r = Math.floor(Math.random() * 10000)
-    .toString()
-    .padStart(4, "0");
+  const r = Math.floor(Math.random() * 10000).toString().padStart(4, "0");
   return `BK${y}${m}${day}${r}`;
 }
 
 function computeAmountFromBookingForm(
-  bookingForm: {
-    PriceType: string | null;
-    singlePrice: number | null;
-    batchPrices: any;
-  } | null,
+  bookingForm: { PriceType: string | null; singlePrice: number | null; batchPrices: any } | null,
   batchNumber: string | null
 ): number {
-  if (!bookingForm?.PriceType) return 0;
-  if (bookingForm.PriceType === "FREE") return 0;
+  if (!bookingForm?.PriceType || bookingForm.PriceType === "FREE") return 0;
 
   if (bookingForm.PriceType === "SINGLE") {
     return Number(bookingForm.singlePrice ?? 0);
@@ -35,14 +29,8 @@ function computeAmountFromBookingForm(
 
     const bp = bookingForm.batchPrices;
     if (Array.isArray(bp)) {
-      const found = bp.find(
-        (r) => b >= Number(r.startBatch) && b <= Number(r.endBatch)
-      );
+      const found = bp.find((r) => b >= Number(r.startBatch) && b <= Number(r.endBatch));
       return Number(found?.price ?? 0);
-    }
-
-    if (typeof bp === "object") {
-      return Number(bp[String(b)] ?? 0);
     }
   }
 
@@ -59,7 +47,6 @@ export async function POST(request: NextRequest) {
       where: { id: Number(contentId) },
       select: {
         TitleName: true,
-        Booking: true,
         bookingForm: {
           select: {
             TotalSeats: true,
@@ -69,49 +56,39 @@ export async function POST(request: NextRequest) {
             batchPrices: true,
           },
         },
-        souvenirItem: {
-          select: { id: true, name: true },
-        },
+        souvenirItem: { select: { id: true } },
       },
     });
 
     if (!content) {
-      return NextResponse.json({ error: "ไม่พบกิจกรรม" }, { status: 404 });
+      return NextResponse.json({ error: ERROR_MESSAGES.CONTENT_NOT_FOUND }, { status: 404 });
     }
 
-    /* --------- ✅ เช็คที่นั่งคงเหลือ --------- */
+    /* Check Seats */
     const totalSeats = content.bookingForm?.TotalSeats ?? 0;
-
     const usedSeats = await prisma.attendee.count({
       where: {
         booking: {
           ContentID: Number(contentId),
-          transactionStatus: "SUCCESS",
+          transactionStatus: BOOKING_API_CONFIG.TRANSACTION_STATUS.SUCCESS,
         },
       },
     });
 
     if (usedSeats >= totalSeats) {
-      return NextResponse.json(
-        { error: "ที่นั่งเต็มแล้ว" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: ERROR_MESSAGES.SEATS_FULL }, { status: 400 });
     }
 
     const qrToken = randomUUID();
     const bookingNumber = generateBookingNumber();
-    const price = computeAmountFromBookingForm(
-      content.bookingForm,
-      bookingField?.batchNumber
-    );
+    const price = computeAmountFromBookingForm(content.bookingForm, bookingField?.batchNumber);
 
-    const booking = await prisma.$transaction(async (tx) => {
-      const bookingFieldRecord = await tx.bookingField.create({
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Booking Field
+      const field = await tx.bookingField.create({
         data: {
-          BatchNumber: bookingField?.batchNumber
-            ? String(bookingField.batchNumber)
-            : null,
-          BookingSeats: 1,
+          BatchNumber: bookingField?.batchNumber ? String(bookingField.batchNumber) : null,
+          BookingSeats: BOOKING_API_CONFIG.DEFAULT_BOOKING_SEATS,
           Name: bookingField?.name ?? "",
           TotalPrice: price,
           Souvenir: bookingField?.souvenir ?? null,
@@ -119,26 +96,28 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      // 2. Payment Record
       const payment = await tx.paymentRecord.create({
         data: {
           amount: price,
-          paymentStatus: "CONFIRMED",
+          paymentStatus: BOOKING_API_CONFIG.PAYMENT_STATUS.CONFIRMED,
         },
       });
 
+      // 3. Booking
       const newBooking = await tx.booking.create({
         data: {
           Userid: Number(userId),
           ContentID: Number(contentId),
-          BookingFieldID: bookingFieldRecord.id,
-          payment: { connect: { id: payment.id }},
+          BookingFieldID: field.id,
+          payment: { connect: { id: payment.id } },
           qrToken,
           bookingNumber,
-          transactionStatus: "SUCCESS", // ✅ สำคัญมาก
+          transactionStatus: BOOKING_API_CONFIG.TRANSACTION_STATUS.SUCCESS,
         },
-        
       });
 
+      // 4. Attendee
       await tx.attendee.create({
         data: {
           Name: bookingField?.name ?? "",
@@ -146,10 +125,8 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      if (
-        content.bookingForm?.Souvenir === "HAVE" &&
-        content.souvenirItem
-      ) {
+      // 5. Entitlement (Souvenir)
+      if (content.bookingForm?.Souvenir === "HAVE" && content.souvenirItem) {
         await tx.entitlement.create({
           data: {
             userId: Number(userId),
@@ -169,60 +146,45 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       booking: {
-        id: booking.booking.id,
-        bookingNumber: booking.booking.bookingNumber,
-        qrToken: booking.booking.qrToken,
+        id: result.booking.id,
+        bookingNumber: result.booking.bookingNumber,
+        qrToken: result.booking.qrToken,
         eventName: content.TitleName,
       },
-      paymentId: booking.paymentId,
+      paymentId: result.paymentId,
     });
+
   } catch (err) {
     console.error(err);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: ERROR_MESSAGES.INTERNAL_ERROR }, { status: 500 });
   }
 }
 
-/* ------------------ GET: Scan QR (fix) ------------------ */
+/* ------------------ GET: Scan QR ------------------ */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token = searchParams.get("token");
-const id = searchParams.get("id");
+  const id = searchParams.get("id");
 
-if (!token && !id) {
-  return NextResponse.json(
-    { success: false, error: "ไม่มี token หรือ id ส่งมา" },
-    { status: 400 }
-  );
-}
-
-
-  const booking = await prisma.booking.findFirst({
-  where: token
-    ? { qrToken: token }
-    : { id: Number(id) },
-  include: {
-    bookingField: true,
-    content: { include: { bookingForm: true } },
-    entitlement: { include: { item: true } },
-    attendees: { include: { checkins: true } },
-  },
-});
-
-
-  if (!booking) {
-    console.log("❌ Search failed for qrToken:", token);
-    return NextResponse.json(
-      { success: false, error: "ไม่พบข้อมูลการจอง" },
-      { status: 404 }
-    );
+  if (!token && !id) {
+    return NextResponse.json({ success: false, error: ERROR_MESSAGES.TOKEN_REQUIRED }, { status: 400 });
   }
 
-  const isCheckedIn = booking.attendees.some(
-    (a) => a.checkins.length > 0
-  );
+  const booking = await prisma.booking.findFirst({
+    where: token ? { qrToken: token } : { id: Number(id) },
+    include: {
+      bookingField: true,
+      content: { include: { bookingForm: true } },
+      entitlement: { include: { item: true } },
+      attendees: { include: { checkins: true } },
+    },
+  });
+
+  if (!booking) {
+    return NextResponse.json({ success: false, error: ERROR_MESSAGES.BOOKING_NOT_FOUND }, { status: 404 });
+  }
+
+  const isCheckedIn = booking.attendees.some((a) => a.checkins.length > 0);
 
   return NextResponse.json({
     success: true,
@@ -258,48 +220,44 @@ export async function PATCH(request: NextRequest) {
     });
 
     if (!booking) {
-      return NextResponse.json({ error: "ไม่พบข้อมูล" }, { status: 404 });
+      return NextResponse.json({ error: ERROR_MESSAGES.BOOKING_NOT_FOUND }, { status: 404 });
     }
 
     return await prisma.$transaction(async (tx) => {
-      if (action === "CHECKIN") {
+      // CHECK-IN Logic
+      if (action === BOOKING_API_CONFIG.ACTIONS.CHECKIN) {
         const attendee = booking.attendees[0];
-        if (attendee.checkins.length > 0) {
-          return NextResponse.json({ success: true });
+        if (attendee && attendee.checkins.length === 0) {
+          await tx.checkinLog.create({
+            data: {
+              AttendeeID: attendee.id,
+              Name: attendee.Name,
+            },
+          });
         }
-
-        await tx.checkinLog.create({
-          data: {
-            AttendeeID: attendee.id,
-            Name: attendee.Name,
-          },
-        });
+        return NextResponse.json({ success: true, message: ERROR_MESSAGES.CHECKIN_SUCCESS });
       }
 
-      if (action === "SOUVENIR") {
-        const canClaim = booking.entitlement.some(
-          (e) => e.qtyUsed < e.qtyGranted
-        );
+      // SOUVENIR Logic
+      if (action === BOOKING_API_CONFIG.ACTIONS.SOUVENIR) {
+        const canClaim = booking.entitlement.some((e) => e.qtyUsed < e.qtyGranted);
+        
         if (!canClaim) {
-          return NextResponse.json(
-            { error: "รับของครบแล้ว" },
-            { status: 400 }
-          );
+          return NextResponse.json({ error: ERROR_MESSAGES.SOUVENIR_CLAIMED }, { status: 400 });
         }
 
         await tx.entitlement.updateMany({
           where: { bookingId: booking.id },
           data: { qtyUsed: { increment: 1 } },
         });
+        
+        return NextResponse.json({ success: true, message: ERROR_MESSAGES.SOUVENIR_SUCCESS });
       }
 
       return NextResponse.json({ success: true });
     });
   } catch (err: any) {
     console.error(err);
-    return NextResponse.json(
-      { error: err.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: ERROR_MESSAGES.INTERNAL_ERROR }, { status: 500 });
   }
 }

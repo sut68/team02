@@ -74,6 +74,29 @@ export const CONTENT_CONFIG = {
   // ประเภทไฟล์รูปภาพที่รองรับ
   ALLOWED_IMAGE_TYPES: ["image/jpeg", "image/png", "image/webp", "image/gif"],
 };
+export const BOOKINGFORM_CONFIG = {
+  PRICE_TYPE: {
+    SINGLE: "SINGLE",
+    BATCH: "BY_BATCH"
+  },
+  DEFAULT_SEATS: 0,
+};
+// Booking System
+export const BOOKING_API_CONFIG = {
+  DEFAULT_BOOKING_SEATS: 1,
+  PAYMENT_STATUS: {
+    CONFIRMED: "CONFIRMED",
+    PENDING: "PENDING"
+  },
+  TRANSACTION_STATUS: {
+    SUCCESS: "SUCCESS",
+    FAILED: "FAILED"
+  },
+  ACTIONS: {
+    CHECKIN: "CHECKIN",
+    SOUVENIR: "SOUVENIR"
+  }
+}as const;
 
 export const ERROR_MESSAGES = {
   UNAUTHORIZED: "Unauthorized Access",
@@ -100,5 +123,21 @@ export const ERROR_MESSAGES = {
   FORM_ID_INVALID: "bookingFormId ไม่ถูกต้อง",
   DELETE_ID_REQUIRED: "ต้องระบุ id สำหรับลบ",
   DELETE_SUCCESS: "ลบเนื้อหาสำเร็จ",
-  CREATE_SUCCESS: "สร้างเนื้อหาสำเร็จ"
+  CREATE_SUCCESS: "สร้างเนื้อหาสำเร็จ",
+  // BookingForm Specific
+  BOOKING_PRICE_TYPE_REQUIRED: "กรุณาระบุรูปแบบราคา (PriceType)",
+  BOOKING_SINGLE_PRICE_REQUIRED: "รูปแบบราคาเดียว ต้องระบุราคา (singlePrice)",
+  BOOKING_BATCH_PRICE_REQUIRED: "รูปแบบราคารอบ ต้องระบุข้อมูลรอบ (batchPrices) อย่างน้อย 1 รายการ",
+  BOOKING_ID_REQUIRED: "กรุณาระบุ id ของฟอร์ม",
+  BOOKING_UPDATE_SUCCESS: "อัปเดตฟอร์มสำเร็จ",
+  BOOKING_CREATE_SUCCESS: "สร้างฟอร์มสำเร็จ",
+  //Booking Specific
+  CONTENT_NOT_FOUND: "ไม่พบกิจกรรม",
+  SEATS_FULL: "ที่นั่งเต็มแล้ว",
+  BOOKING_NOT_FOUND: "ไม่พบข้อมูลการจอง",
+  TOKEN_REQUIRED: "ไม่มี token หรือ id ส่งมา",
+  SOUVENIR_CLAIMED: "รับของครบแล้ว",
+  INTERNAL_ERROR: "Internal Server Error",
+  CHECKIN_SUCCESS: "เช็คอินสำเร็จ",
+  SOUVENIR_SUCCESS: "รับของที่ระลึกสำเร็จ"
 };
