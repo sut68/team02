@@ -273,7 +273,7 @@ export default function SouvenirActivityPage() {
                     <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
                       <div className="relative h-72 md:h-80 bg-white">
                         <Image
-                          src={item.imageUrl || "/souvenir/placeholder.png"}
+                          src={item.imageUrl || ""}
                           alt={item.name}
                           fill
                           className="object-contain p-6"

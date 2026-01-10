@@ -225,7 +225,7 @@ export function AdminSouvenirCarousel({ onCardClick, category }: AdminSouvenirCa
                 <div className="w-full bg-white rounded-3xl overflow-hidden shadow-sm group-hover:shadow-2xl transition">
                   <div className="relative w-full aspect-4/3">
                     <Image
-                      src={item.imageUrl || '/souvenir/placeholder.png'}
+                      src={item.imageUrl || ''}
                       alt={item.name}
                       fill
                       sizes="(max-width: 768px) 100vw, 33vw"
