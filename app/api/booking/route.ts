@@ -205,8 +205,6 @@ export async function GET(request: NextRequest) {
     },
   });
 }
-
-/* ------------------ PATCH: Check-in / Souvenir ------------------ */
 export async function PATCH(request: NextRequest) {
   try {
     const { qrToken, action } = await request.json();
@@ -215,7 +213,7 @@ export async function PATCH(request: NextRequest) {
       where: { qrToken },
       include: {
         attendees: { include: { checkins: true } },
-        entitlement: true,
+        entitlement: true, // ดึงข้อมูลสิทธิ์มาด้วย (มี itemId อยู่ในนี้)
       },
     });
 
@@ -224,9 +222,12 @@ export async function PATCH(request: NextRequest) {
     }
 
     return await prisma.$transaction(async (tx) => {
-      // CHECK-IN Logic
+      // ------------------------------------
+      // 1. กรณี Check-in (เข้างาน)
+      // ------------------------------------
       if (action === BOOKING_API_CONFIG.ACTIONS.CHECKIN) {
         const attendee = booking.attendees[0];
+        // เช็คว่าเคยเช็คอินไปหรือยัง ถ้ายังให้สร้าง Log
         if (attendee && attendee.checkins.length === 0) {
           await tx.checkinLog.create({
             data: {
@@ -238,17 +239,43 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ success: true, message: ERROR_MESSAGES.CHECKIN_SUCCESS });
       }
 
-      // SOUVENIR Logic
+      // ------------------------------------
+      // 2. กรณีรับของที่ระลึก (Souvenir) 
+      // ------------------------------------
       if (action === BOOKING_API_CONFIG.ACTIONS.SOUVENIR) {
-        const canClaim = booking.entitlement.some((e) => e.qtyUsed < e.qtyGranted);
+        // 2.1 หา Entitlement ใบที่มีสิทธิ์เหลือ (qtyUsed < qtyGranted)
+        const entitlementToUse = booking.entitlement.find((e) => e.qtyUsed < e.qtyGranted);
         
-        if (!canClaim) {
+        // ถ้าไม่เจอ หรือใช้ครบแล้ว
+        if (!entitlementToUse) {
           return NextResponse.json({ error: ERROR_MESSAGES.SOUVENIR_CLAIMED }, { status: 400 });
         }
 
-        await tx.entitlement.updateMany({
-          where: { bookingId: booking.id },
+        // 2.2 อัปเดตตัดสิทธิ์ (Increment qtyUsed)
+        await tx.entitlement.update({
+          where: { id: entitlementToUse.id },
           data: { qtyUsed: { increment: 1 } },
+        });
+
+        // 2.3 ✅ เพิ่ม: สร้างประวัติการแลก (Redemption)
+        await tx.redemption.create({
+          data: {
+            entitlementId: entitlementToUse.id,
+            itemId: entitlementToUse.itemId,
+            userId: booking.Userid!, // มั่นใจว่ามี User เพราะผ่านการจองมาแล้ว
+            method: "QR_SCAN",
+            redeemedAt: new Date(),
+          }
+        });
+
+        // 2.4 ✅ เพิ่ม: ตัดสต็อกจริง (StockMovement)
+        await tx.stockMovement.create({
+          data: {
+            itemId: entitlementToUse.itemId,
+            delta: -1,               // ลบ 1 ชิ้น
+            reason: "redeem",        // สาเหตุ: แลกรับของ
+            refType: "Redemption",
+          }
         });
         
         return NextResponse.json({ success: true, message: ERROR_MESSAGES.SOUVENIR_SUCCESS });
