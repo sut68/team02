@@ -13,8 +13,6 @@ import {
   TableCell,
 } from '../../components/tables/Table';
 import { Card, CardHeader, CardContent } from '../../components/ui/Card';
-
-// ✅ Import Config เพื่อไม่ให้ Hardcode (สมมติว่าไฟล์นี้อยู่ path นี้ตามโค้ดเก่า)
 import { ERROR_MESSAGES } from '@/lib/models/validation'; 
 
 // Dynamically import AdminSubmissionPage
