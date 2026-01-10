@@ -12,20 +12,14 @@ import {
   CirclePlus,
   ArrowLeftToLine,
   Send,
+  Loader2,
+  CalendarClock,
+  Wallet
 } from "lucide-react";
 
-// Components UI
-import { PrimaryButton } from "@/app/components/ui/Button";
-import { InputIcon } from "@/app/components/ui/InputIcon";
+// Components UI (ใช้ Card แบบหน้าอื่น)
+import { Card, CardContent } from '@/app/components/ui/Card';
 import CreateBudgetRoundModal from "@/app/components/ui/CreateBudgetRoundModal";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/app/components/tables/Table";
 import ConfirmModal from "@/app/components/ui/ConfirmModal"; 
 
 // Types
@@ -89,7 +83,6 @@ export default function BudgetRoundsPage() {
     });
   };
 
-  // ฟังก์ชันกดปุ่มส่งอีเมล
   const initiateSendEmail = (id: number) => {
     setConfirmModal({
         isOpen: true,
@@ -133,9 +126,7 @@ export default function BudgetRoundsPage() {
           alert("อัปเดตสถานะไม่สำเร็จ");
         }
       }
-      // เพิ่ม Logic การส่งอีเมล
       else if (action === 'SEND_EMAIL') {
-          // เรียก API Cron ที่เราสร้างไว้
           const res = await fetch(`/api/project-vote/sent-vote-invite?roundId=${targetId}`, {
               method: 'POST'
           });
@@ -145,7 +136,6 @@ export default function BudgetRoundsPage() {
               alert(`ดำเนินการสำเร็จ: ${data.message}\n(Sent Count: ${data.sentCount || 0})`);
               setConfirmModal({ isOpen: false, action: null, targetId: null });
           } else {
-              // กรณี Error เช่น ยังไม่ถึงเวลาโหวต
               alert(`แจ้งเตือน: ${data.message || data.error}`);
               setConfirmModal({ isOpen: false, action: null, targetId: null });
           }
@@ -171,9 +161,9 @@ export default function BudgetRoundsPage() {
 
   const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'OPEN': return 'bg-orange-50 text-orange-700 border-orange-200';
-      case 'CLOSED': return 'bg-gray-100 text-gray-500 border-gray-200';
-      default: return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+      case 'OPEN': return 'bg-orange-100 text-orange-700';
+      case 'CLOSED': return 'bg-gray-100 text-gray-500';
+      default: return 'bg-yellow-100 text-yellow-700';
     }
   };
   
@@ -232,167 +222,190 @@ export default function BudgetRoundsPage() {
 
   const modalContent = getModalContent();
 
+  if (loading && rounds.length === 0) {
+    return (
+      // เอา bg-gray-50 ออกจาก Loading state
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
+          <p className="text-gray-500">กำลังโหลดข้อมูลรอบงบประมาณ...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-white p-8 font-sans">
-      <div className="max-w-7xl mx-auto space-y-8">
+    // เอา bg-gray-50 ออกจาก Main container
+    <div className="min-h-screen p-8">
+      <div className="max-w-7xl mx-auto">
         
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <h1 className="text-4xl font-semibold text-gray-800">จัดการรอบงบประมาณ</h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900">จัดการรอบงบประมาณ</h1>
           
-          <div className="flex gap-2 shrink-0">
+          <div className="flex gap-3">
             <Link
                 href="/admin/budget_approval"
-                className="h-10 px-6 rounded-lg flex items-center gap-2 transition-all border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 shadow-sm"
-                title="กลับไปหน้าโครงการส่งพิจารณา"
             >
-                <ArrowLeftToLine className="w-5 h-5" />
-                <span className="text-sm font-medium">หน้าโครงการส่งพิจารณา</span>
+                <button className="flex items-center space-x-2 bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition shadow-sm">
+                    <ArrowLeftToLine className="w-5 h-5" />
+                    <span className="font-medium hidden sm:inline">หน้าโครงการ</span>
+                </button>
             </Link>
           
-            <PrimaryButton 
-              onClick={handleCreate} 
-              style={{ 
-                borderRadius: "8px", 
-                height: "40px", 
-                paddingLeft: "24px", 
-                paddingRight: "24px",
-                fontSize: "14px",
-                fontWeight: "500"
-              }}
+            <button 
+                onClick={handleCreate}
+                className="flex items-center space-x-2 bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition shadow-sm"
             >
-              <CirclePlus className="w-5 h-5 mr-2" />
-              เพิ่มรอบการพิจารณา
-            </PrimaryButton>
+              <CirclePlus className="w-5 h-5" />
+              <span className="font-medium hidden sm:inline">เพิ่มรอบการพิจารณา</span>
+            </button>
           </div>
         </div>
 
-        {/* Summary Cards */}
+        {/* Dashboard Cards (Style: User Management) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all border-amber-200">
-              <Layers className="w-10 h-10 mx-auto text-amber-600 mb-3" />
-              <h3 className="text-gray-600 font-medium">รอบทั้งหมด</h3>
-              <p className="text-2xl font-bold text-amber-700">{stats.all} <span className="text-sm font-normal text-gray-400">รอบ</span></p>
-            </div>
-            <div className="border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all border-orange-200">
-              <CalendarDays className="w-10 h-10 mx-auto text-orange-600 mb-3" />
-              <h3 className="text-gray-600 font-medium">เปิดรับระดมทุนอยู่</h3>
-              <p className="text-2xl font-bold text-orange-600">
-                {stats.active} <span className="text-sm font-normal text-gray-400">รอบ</span>
-              </p>
-            </div>
-            <div className="border-2 rounded-xl bg-white p-6 text-center hover:shadow-md transition-all border-gray-200">
-              <Users className="w-10 h-10 mx-auto text-gray-500 mb-3" />
-              <h3 className="text-gray-600 font-medium">ยอดระดมทุนรวม</h3>
-              <p className="text-2xl font-bold text-gray-500">
-                {stats.totalDonated.toLocaleString()} <span className="text-sm font-normal text-gray-400">บาท</span>
-              </p>
-            </div>
+            <Card className="border-2 border-orange-100 bg-white">
+                <CardContent className="p-8 text-center">
+                    <div className="flex justify-center mb-4">
+                        <Layers className="w-16 h-16 text-orange-300" strokeWidth={1.5} />
+                    </div>
+                    <h3 className="text-base font-normal text-gray-700">รอบทั้งหมด</h3>
+                    <p className="text-2xl font-medium text-gray-800 mt-2">{stats.all} <span className="text-sm text-gray-400">รอบ</span></p>
+                </CardContent>
+            </Card>
+
+            <Card className="border-2 border-orange-300 bg-orange-50 shadow-sm">
+                <CardContent className="p-8 text-center">
+                    <div className="flex justify-center mb-4">
+                        <CalendarClock className="w-16 h-16 text-orange-500" strokeWidth={1.5} />
+                    </div>
+                    <h3 className="text-base font-normal text-orange-800">เปิดรับระดมทุนอยู่</h3>
+                    <p className="text-2xl font-bold text-orange-600 mt-2">{stats.active} <span className="text-sm font-normal opacity-80">รอบ</span></p>
+                </CardContent>
+            </Card>
+
+            <Card className="border-2 border-orange-100 bg-white">
+                <CardContent className="p-8 text-center">
+                    <div className="flex justify-center mb-4">
+                        <Wallet className="w-16 h-16 text-orange-300" strokeWidth={1.5} />
+                    </div>
+                    <h3 className="text-base font-normal text-gray-700">ยอดระดมทุนรวม</h3>
+                    <p className="text-2xl font-medium text-gray-800 mt-2">{stats.totalDonated.toLocaleString()} <span className="text-sm text-gray-400">บาท</span></p>
+                </CardContent>
+            </Card>
         </div>
 
-        {/* Toolbar Area */}
-        <div className="w-full">
-          <InputIcon
-            icon={Search}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="ค้นหาชื่อรอบ, ไตรมาส, หรือปีงบประมาณ..."
-            className="w-full bg-white border-gray-200 rounded-lg h-12 shadow-sm"
-          />
-        </div>
+        {/* Search Bar */}
+        <Card className="mb-6">
+            <CardContent className="p-6">
+                <div className="relative">
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="ค้นหาชื่อรอบ, ไตรมาส, หรือปีงบประมาณ..."
+                        className="w-full pl-12 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-sm transition"
+                    />
+                </div>
+            </CardContent>
+        </Card>
 
         {/* Table Content */}
-        <div className="border border-gray-100 rounded-lg overflow-hidden shadow-sm bg-white p-4">
-          <Table>
-            <TableHeader className="bg-gray-100">
-              <TableRow>
-                <TableHead className="font-semibold text-gray-600 py-4 pl-6">ชื่อรอบ/ไตรมาส</TableHead>
-                <TableHead className="font-semibold text-gray-600 text-center">ปีงบประมาณ</TableHead>
-                <TableHead className="font-semibold text-gray-600 text-center w-[220px]">ช่วงเวลา</TableHead>
-                <TableHead className="font-semibold text-gray-600 text-center">ยอดระดมทุน</TableHead>
-                <TableHead className="font-semibold text-gray-600 text-center w-40">สถานะ (Auto)</TableHead>
-                <TableHead className="font-semibold text-gray-600 text-center w-[120px]">Publish</TableHead>
-                <TableHead className="font-semibold text-gray-600 text-center">จัดการ</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading && rounds.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="h-80 text-center text-gray-400">กำลังโหลดข้อมูล...</TableCell></TableRow>
-              ) : filteredRounds.length > 0 ? (
-                filteredRounds.map((round) => (
-                  <TableRow key={round.id} className="hover:bg-gray-50 transition-colors">
-                    <TableCell className="font-medium text-gray-700 py-4 pl-6">{round.roundName}</TableCell>
-                    <TableCell className="text-center text-gray-600">{round.fiscalYear}</TableCell>
-                    <TableCell className="text-center text-sm text-gray-600">
-                        {round.startDate ? new Date(round.startDate).toLocaleDateString("th-TH", { day: 'numeric', month: 'short', year: '2-digit'}) : '-'} 
-                        <span className="mx-2 text-gray-400">-</span>
-                        {round.endDate ? new Date(round.endDate).toLocaleDateString("th-TH", { day: 'numeric', month: 'short', year: '2-digit'}) : '-'}
-                    </TableCell>
-                    <TableCell className="text-center text-gray-600 font-medium">
-                      {round.stats?.totalDonated.toLocaleString()} <span className="text-xs text-gray-400 font-normal">บาท</span>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border ${getStatusStyle(round.status)}`}>
-                          {getStatusLabel(round.status)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-center">
-                        <div className="flex flex-col items-center justify-center gap-1">
-                          <label className="relative inline-flex items-center cursor-pointer">
-                              <input 
-                                  type="checkbox" 
-                                  className="sr-only peer" 
-                                  checked={round.isPublished}
-                                  disabled={updatingId === round.id}
-                                  onChange={() => initiatePublishToggle(round.id, round.isPublished)}
-                              />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F26522]"></div>
-                          </label>
-                          <span className={`text-[10px] ${round.isPublished ? 'text-[#F26522]' : 'text-gray-400'}`}>
-                              {round.isPublished ? "เผยแพร่แล้ว" : "ฉบับร่าง"}
-                          </span>
-                        </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex justify-center items-center gap-2">
-                        <button 
-                          onClick={() => initiateSendEmail(round.id)}
-                          className="text-yellow-500 hover:text-yellow-700 hover:bg-yellow-50 p-1.5 rounded-lg transition-all"
-                          title="ส่งอีเมลเชิญโหวต (Broadcast)"
-                        >
-                          <Send size={18} strokeWidth={2} />
-                        </button>
-                        <span className="text-gray-300 font-light">|</span>
-                        <button 
-                          onClick={() => handleEdit(round)}
-                          className="text-orange-500 hover:text-orange-700 hover:bg-orange-50 p-1.5 rounded-lg transition-all"
-                          title="แก้ไข"
-                        >
-                          <PenLine size={18} strokeWidth={2} />
-                        </button>
-                        <span className="text-gray-300 font-light">|</span>
-                        <button 
-                          onClick={() => initiateDelete(round.id)} 
-                          className="text-gray-500 hover:text-gray-700 hover:bg-gray-50 p-1.5 rounded-lg transition-all"
-                          title="ลบ"
-                        >
-                          <Trash2 size={18} strokeWidth={2} />
-                        </button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-80 text-center text-gray-400">
-                    <Layers className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-                    ไม่พบข้อมูลรอบงบประมาณ
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        <Card>
+            <CardContent className="p-0">
+                <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
+                    <table className="w-full">
+                        <thead>
+                        <tr className="bg-gray-100 border-b border-gray-200 sticky top-0 z-10">
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">ชื่อรอบ/ไตรมาส</th>
+                            <th className="px-6 py-4 text-center text-sm font-medium text-gray-600">ปีงบประมาณ</th>
+                            <th className="px-6 py-4 text-center text-sm font-medium text-gray-600">ช่วงเวลา</th>
+                            <th className="px-6 py-4 text-center text-sm font-medium text-gray-600">ยอดระดมทุน</th>
+                            <th className="px-6 py-4 text-center text-sm font-medium text-gray-600">สถานะ (Auto)</th>
+                            <th className="px-6 py-4 text-center text-sm font-medium text-gray-600">Publish</th>
+                            <th className="px-6 py-4 text-center text-sm font-medium text-gray-600">จัดการ</th>
+                        </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-100">
+                        {filteredRounds.length > 0 ? (
+                            filteredRounds.map((round) => (
+                            <tr key={round.id} className="hover:bg-gray-50 transition">
+                                <td className="px-6 py-4 text-sm font-medium text-gray-800">{round.roundName}</td>
+                                <td className="px-6 py-4 text-center text-sm text-gray-600">{round.fiscalYear}</td>
+                                <td className="px-6 py-4 text-center text-sm text-gray-500">
+                                    <div className="flex flex-col items-center">
+                                        <span>{round.startDate ? new Date(round.startDate).toLocaleDateString("th-TH", { day: 'numeric', month: 'short', year: '2-digit'}) : '-'}</span>
+                                        <span className="text-xs text-gray-400">ถึง</span>
+                                        <span>{round.endDate ? new Date(round.endDate).toLocaleDateString("th-TH", { day: 'numeric', month: 'short', year: '2-digit'}) : '-'}</span>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4 text-center text-sm font-medium text-gray-800">
+                                {round.stats?.totalDonated.toLocaleString()} <span className="text-xs font-normal text-gray-400">บาท</span>
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusStyle(round.status)}`}>
+                                        {getStatusLabel(round.status)}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                    <div className="flex flex-col items-center justify-center gap-1">
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                className="sr-only peer" 
+                                                checked={round.isPublished}
+                                                disabled={updatingId === round.id}
+                                                onChange={() => initiatePublishToggle(round.id, round.isPublished)}
+                                            />
+                                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
+                                        </label>
+                                        <span className={`text-[10px] font-medium ${round.isPublished ? 'text-orange-600' : 'text-gray-400'}`}>
+                                            {round.isPublished ? "เผยแพร่แล้ว" : "ฉบับร่าง"}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4 text-center">
+                                <div className="flex justify-center items-center gap-2">
+                                    <button 
+                                    onClick={() => initiateSendEmail(round.id)}
+                                    className="p-2 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-full transition"
+                                    title="ส่งอีเมลเชิญโหวต"
+                                    >
+                                    <Send size={16} />
+                                    </button>
+                                    <button 
+                                    onClick={() => handleEdit(round)}
+                                    className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-full transition"
+                                    title="แก้ไข"
+                                    >
+                                    <PenLine size={16} />
+                                    </button>
+                                    <button 
+                                    onClick={() => initiateDelete(round.id)} 
+                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition"
+                                    title="ลบ"
+                                    >
+                                    <Trash2 size={16} />
+                                    </button>
+                                </div>
+                                </td>
+                            </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                                    <Layers className="w-12 h-12 mx-auto text-gray-300 mb-4" />
+                                    ไม่พบข้อมูลรอบงบประมาณ
+                                </td>
+                            </tr>
+                        )}
+                        </tbody>
+                    </table>
+                </div>
+            </CardContent>
+        </Card>
       </div>
 
       <CreateBudgetRoundModal

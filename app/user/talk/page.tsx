@@ -39,7 +39,8 @@ export default function SUTNewsUI() {
   }, []);
 
   return (
-    <div className='min-h-screen bg-linear-to-br from-orange-50 via-white to-orange-50'>
+    // แก้ไข 1: bg-linear -> bg-gradient
+    <div className='min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50'>
       {/* Hero Image */}
       <div className='relative w-screen h-[700px]'>
         <img
@@ -47,7 +48,8 @@ export default function SUTNewsUI() {
           alt='Students studying'
           className='w-full h-full object-cover'
         />
-        <div className='absolute inset-0 bg-linear-to-b from-transparent via-black/20 to-black/60'></div>
+        {/* แก้ไข 2: bg-linear -> bg-gradient */}
+        <div className='absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black/60'></div>
       </div>
 
       {/* Content */}
@@ -57,12 +59,12 @@ export default function SUTNewsUI() {
           <div className='flex justify-between items-center mb-8 pb-6 border-b-2 border-orange-100'>
             <div className='flex items-center gap-3'>
               <div className='w-1 h-8 bg-orange-500 rounded-full'></div>
-              <h1 className='text-3xl font-bold bg-linear-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent'>
+              {/* แก้ไข 3: bg-linear -> bg-gradient */}
+              <h1 className='text-3xl font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent'>
                 Topic คอมเม้นยอะสุด
               </h1>
             </div>
             <div className='flex gap-3'>
-              {/* ปุ่มดูทั้งหมด */}
               <button
                 onClick={() => router.push('/user/talk/all')}
                 className='px-6 py-3 rounded-full border-2 border-orange-500 bg-white text-orange-500 font-medium hover:bg-orange-50 transition-all duration-200 hover:scale-105 shadow-sm'
@@ -89,15 +91,15 @@ export default function SUTNewsUI() {
             <div className='grid grid-cols-1 lg:grid-cols-2 gap-8'>
               {/* Left Column - Top 2 Topics */}
               <div className='space-y-6'>
-                {/* First topic - Large with image */}
+                {/* First topic */}
                 {topTopics[0] && (
                   <div
                     onClick={() =>
                       router.push(`/user/talk/detail/${topTopics[0].id}`)
                     }
-                    className='bg-linear-to-br from-white to-orange-50 rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer border-2 border-orange-200 hover:border-orange-400 hover:scale-[1.02] group'
+                    // แก้ไข 4: bg-linear -> bg-gradient
+                    className='bg-gradient-to-br from-white to-orange-50 rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer border-2 border-orange-200 hover:border-orange-400 hover:scale-[1.02] group'
                   >
-                    {/* Upper part - Image */}
                     {topTopics[0].topicImage && (
                       <div className='w-full h-64 overflow-hidden relative'>
                         <img
@@ -110,10 +112,10 @@ export default function SUTNewsUI() {
                         </div>
                       </div>
                     )}
-                    {/* Lower part - Topic name with rank on left */}
                     <div className='p-6'>
                       <div className='flex items-center gap-4'>
-                        <div className='bg-linear-to-br from-orange-500 to-orange-600 text-white w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl shrink-0 shadow-lg'>
+                        {/* แก้ไข 5: bg-linear -> bg-gradient */}
+                        <div className='bg-gradient-to-br from-orange-500 to-orange-600 text-white w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl shrink-0 shadow-lg'>
                           1
                         </div>
                         <div className='flex-1'>
@@ -126,7 +128,7 @@ export default function SUTNewsUI() {
                   </div>
                 )}
 
-                {/* Second topic - Smaller with image */}
+                {/* Second topic */}
                 {topTopics[1] && (
                   <div
                     onClick={() =>
@@ -136,7 +138,8 @@ export default function SUTNewsUI() {
                   >
                     <div className='p-6'>
                       <div className='flex items-start space-x-4'>
-                        <div className='bg-linear-to-br from-orange-400 to-orange-500 text-white w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shrink-0 shadow-md'>
+                        {/* แก้ไข 6: bg-linear -> bg-gradient */}
+                        <div className='bg-gradient-to-br from-orange-400 to-orange-500 text-white w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shrink-0 shadow-md'>
                           2
                         </div>
                         {topTopics[1].topicImage && (
@@ -162,7 +165,7 @@ export default function SUTNewsUI() {
                 )}
               </div>
 
-              {/* Right Column - Topics 3-6 without images */}
+              {/* Right Column - Topics 3-6 */}
               <div className='space-y-4'>
                 {topTopics.slice(2, 6).map((topic, index) => (
                   <div
@@ -171,7 +174,8 @@ export default function SUTNewsUI() {
                     className='bg-white rounded-xl p-6 hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-orange-50 hover:border-orange-200 hover:scale-[1.02] group'
                   >
                     <div className='flex items-start space-x-4'>
-                      <div className='bg-linear-to-br from-orange-300 to-orange-400 text-white w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shrink-0 shadow-md'>
+                      {/* แก้ไข 7: bg-linear -> bg-gradient */}
+                      <div className='bg-gradient-to-br from-orange-300 to-orange-400 text-white w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shrink-0 shadow-md'>
                         {index + 3}
                       </div>
                       <div className='flex-1'>
@@ -199,7 +203,8 @@ export default function SUTNewsUI() {
         <div
           className={
             'relative flex items-center gap-2 px-6 py-4 rounded-full overflow-hidden ' +
-            'backdrop-blur-md bg-linear-to-r from-orange-500 to-orange-600 border-2 border-orange-400 shadow-2xl ' +
+            // แก้ไข 8: bg-linear -> bg-gradient
+            'backdrop-blur-md bg-gradient-to-r from-orange-500 to-orange-600 border-2 border-orange-400 shadow-2xl ' +
             'hover:scale-110 transition-all duration-300 hover:shadow-orange-300/50'
           }
           style={{
@@ -207,7 +212,7 @@ export default function SUTNewsUI() {
             backdropFilter: 'blur(8px) saturate(120%)',
           }}
         >
-          <span className='absolute inset-0 pointer-events-none bg-linear-to-r from-white/20 via-white/10 to-transparent mix-blend-overlay' />
+          <span className='absolute inset-0 pointer-events-none bg-gradient-to-r from-white/20 via-white/10 to-transparent mix-blend-overlay' />
           <Plus className='w-6 h-6 text-white z-10 group-hover:rotate-90 transition-transform duration-300' />
           <span className='text-white font-bold z-10 text-lg'>
             ตั้งกระทู้ใหม่
