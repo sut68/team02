@@ -588,20 +588,6 @@ model PictureContent {
   @@unique([Path, ContentID])
 }
 
-// การชำระเงิน
-// model Payment {
-//   id            Int               @id @default(autoincrement())
-//   amount        Float
-//   paymentDate   DateTime          @default(now())
-//   paymentMethod String? // เช่น "credit_card", "bank_transfer", "qr_code"
-//   status        TransactionStatus @default(PENDING)
-//   referenceNo   String? // เลขที่อ้างอิง/slip
-
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-
-//   booking Booking?
-// }
 
 // ========================================
 // Budget & Project Management System
