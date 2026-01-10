@@ -233,7 +233,12 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
   };
 
   const handleDelete = async () => {
-    if (!itemId || isCreating) return;
+    // ตรวจสอบ: formData ต้องมี id หรือใช้ itemId
+    const idToDelete = formData?.id || itemId;
+    if (!idToDelete || isCreating) {
+      alert('ไม่พบข้อมูลของที่ระลึก');
+      return;
+    }
     
     const confirmed = window.confirm(
       `คุณต้องการลบของที่ระลึก "${formData?.name}" หรือไม่?\n\nการลบจะทำให้สินค้าหายไปจากระบบ (ตั้งค่า active = false)`
@@ -242,7 +247,7 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
     if (!confirmed) return;
     
     try {
-      const res = await fetch(`/api/admin/souvenir/items/${itemId}`, {
+      const res = await fetch(`/api/admin/souvenir/items/${idToDelete}`, {
         method: 'DELETE',
       });
       
@@ -250,8 +255,12 @@ export function SouvenirDetailForm({ itemId, isCreating, onSuccess }: SouvenirDe
         alert('ลบของที่ระลึกสำเร็จ');
         onSuccess?.();
       } else {
-        const error = await res.json();
-        alert('เกิดข้อผิดพลาด: ' + (error.error || 'ไม่สามารถลบได้'));
+        try {
+          const error = await res.json();
+          alert('เกิดข้อผิดพลาด: ' + (error.error || error.message || 'ไม่สามารถลบได้'));
+        } catch {
+          alert('เกิดข้อผิดพลาด: ' + res.statusText);
+        }
       }
     } catch (error) {
       console.error('Error deleting souvenir:', error);

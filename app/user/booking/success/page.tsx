@@ -2,7 +2,6 @@
 
 import { useRef, useEffect, useState, Suspense } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { toPng } from "html-to-image";
 import { PrimaryButton } from "../../../components/ui/Button";
 import { useSearchParams } from "next/navigation";
 
@@ -54,16 +53,59 @@ function BookingSuccessContent() {
     if (ticketRef.current === null) return;
     
     try {
-      const dataUrl = await toPng(ticketRef.current, {
-        cacheBust: true,
-        backgroundColor: '#ffffff'
-      });
-      const link = document.createElement("a");
-      link.download = `ticket-${bookingData?.qrToken || Date.now()}.png`;
-      link.href = dataUrl;
-      link.click();
+      const svgElements = ticketRef.current?.querySelectorAll('svg');
+      if (svgElements && svgElements.length > 0) {
+        const svg = svgElements[0] as SVGElement;
+        
+        // Convert SVG to Canvas
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          alert('ไม่สามารถบันทึกรูปได้');
+          return;
+        }
+
+        // Set canvas size
+        const svgRect = svg.getBoundingClientRect();
+        canvas.width = svgRect.width * 2;
+        canvas.height = svgRect.height * 2;
+        
+        // Get SVG as data URL
+        const serializer = new XMLSerializer();
+        const svgString = serializer.serializeToString(svg);
+        const svg64 = btoa(unescape(encodeURIComponent(svgString)));
+        const image = new Image();
+        
+        image.onload = () => {
+          ctx.scale(2, 2);
+          ctx.fillStyle = 'white';
+          ctx.fillRect(0, 0, canvas.width / 2, canvas.height / 2);
+          ctx.drawImage(image, 0, 0);
+          
+          // Download as PNG
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `qrcode-${bookingData?.qrToken || Date.now()}.png`;
+              link.click();
+              URL.revokeObjectURL(url);
+            }
+          }, 'image/png');
+        };
+        
+        image.onerror = () => {
+          alert('ไม่สามารถแปลงรูปได้');
+        };
+        
+        image.src = 'data:image/svg+xml;base64,' + svg64;
+      } else {
+        alert('ไม่พบ QR Code');
+      }
     } catch (err) {
-      console.error("Error generating image:", err);
+      console.error("Error downloading QR code:", err);
+      alert('ไม่สามารถบันทึกรูปได้ กรุณาลองอีกครั้ง');
     }
   };
 

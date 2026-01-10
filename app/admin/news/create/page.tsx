@@ -293,7 +293,7 @@ function EditPostPageInner() {
                   {/* อัปโหลดหลายรูป */}
                   <label
                     htmlFor="extra-upload"
-                    className="block w-full h-24 rounded-lg border border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-xs text-gray-500 cursor-pointer hover:border-orange-400"
+                    className="w-full h-24 rounded-lg border border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-xs text-gray-500 cursor-pointer hover:border-orange-400"
                   >
                     <ImageIcon className="w-5 h-5 mb-1" />
                     เพิ่มรูปภาพเพิ่มเติม

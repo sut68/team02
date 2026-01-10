@@ -80,6 +80,29 @@ const fetchBookingDetails = useCallback((text: string) => {
               }))
             : prev.souvenirs,
       }));
+
+      // 🔔 Trigger activity page refresh when souvenir is claimed
+      if (action === "SOUVENIR") {
+        try {
+          console.log('🔔 Sending notification:', {
+            contentId: scanResult.contentId,
+            userId: scanResult.userId,
+            action: "souvenir_claimed",
+          });
+          await fetch("/api/admin/souvenir/activity-notification", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contentId: scanResult.contentId,
+              userId: scanResult.userId,
+              action: "souvenir_claimed",
+            }),
+          });
+        } catch (notifyError) {
+          console.error("Notification failed:", notifyError);
+          // Don't fail the main operation if notification fails
+        }
+      }
     } catch {
       alert("เกิดข้อผิดพลาด");
     }
