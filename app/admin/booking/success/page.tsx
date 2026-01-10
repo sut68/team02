@@ -135,7 +135,7 @@ const fetchBookingDetails = useCallback((text: string) => {
     (text) => {
       if (!text) return;
 
-      // 🔥 ปิดกล้องทันทีหลังแสกน
+      //  ปิดกล้องทันทีหลังแสกน
       scanner.clear().then(() => {
         scannerRef.current = null;
         fetchBookingDetails(text);
