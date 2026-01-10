@@ -264,7 +264,7 @@ if (pricing.totalPrice === 0) {
       {errorText && <p className="text-red-500 text-sm mb-4">{errorText}</p>}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* ซ้าย: รายละเอียดกิจกรรม */}
+        {/* ซ้าย  รายละเอียดกิจกรรม */}
         <div className="bg-gray-50 rounded-xl p-6 lg:col-span-1 w-full">
           <div className="space-y-5">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
