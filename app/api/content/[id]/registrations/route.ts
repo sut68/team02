@@ -57,7 +57,14 @@ export async function GET(
               item: { select: { name: true } },
             },
           });
-          if (ent) entitlements.push(ent);
+          if (ent) {
+            // 🛡️ Map entitlement to match frontend expectations
+            entitlements.push({
+              item: ent.item,
+              qtyUsed: ent.qtyUsed || 0,
+              qtyGranted: ent.qtyGranted || 0,
+            });
+          }
         }
 
         return {

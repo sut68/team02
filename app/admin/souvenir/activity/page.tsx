@@ -124,6 +124,10 @@ export default function SouvenirActivityPage() {
               user: reg?.user || { fullName: 'Unknown', email: '-' }
             };
           }) : [];
+          // 🔍 Debug: Log first registration to verify entitlements structure
+          if (normalized.length > 0) {
+            console.log('✅ First registration entitlements:', normalized[0].entitlements);
+          }
           setRegistrations(normalized);
         } else {
           setRegistrations([]);
@@ -223,12 +227,17 @@ export default function SouvenirActivityPage() {
       return false;
     }
     
-    return entitlements.some((e: any) => {
+    const claimed = entitlements.some((e: any) => {
       if (!e || typeof e !== 'object') return false;
       if (typeof e.qtyUsed !== 'number') return false;
       if (typeof e.qtyGranted !== 'number') return false;
       return e.qtyUsed >= e.qtyGranted;
     });
+    
+    // 🔍 Debug: Log hasClaimed result
+    console.log(`hasClaimed for user ${reg.userId}:`, claimed, 'entitlements:', entitlements);
+    
+    return claimed;
   };
 
   const safeRegistrations = Array.isArray(registrations) ? registrations : [];
