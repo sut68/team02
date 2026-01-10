@@ -1,10 +1,12 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { CATEGORY_LABEL } from "@/constants/category";
-import Image from "next/image";
 import { ChevronLeft, ChevronRight, MapPin, Calendar, RefreshCw, Layers, CheckCircle, Search } from "lucide-react";
-import { Card, CardContent } from "@/app/components/ui/Card";
-import { Input } from "@/app/components/ui/Input";
+
+const CATEGORY_LABEL = {
+  ACTIVITY: "กิจกรรม",
+  SEMINAR: "สัมมนา",
+  OTHER: "อื่นๆ"
+};
 
 interface SouvenirItem {
   id: number;
@@ -59,10 +61,7 @@ export default function SouvenirActivityPage() {
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'remaining' | 'registered' | 'claimed'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Section 2 (Activity Carousel) ref
   const activityScrollRef = React.useRef<HTMLDivElement>(null);
-  
-  // Section 1 (Souvenir Carousel) refs
   const souvenirScrollRef = React.useRef<HTMLDivElement>(null);
   const souvenirTrackRef = React.useRef<HTMLDivElement>(null);
   const offsetRef = React.useRef(0);
@@ -70,11 +69,9 @@ export default function SouvenirActivityPage() {
   const cardWidthRef = React.useRef(0);
   const speedRef = React.useRef(50);
 
-  // Fetch data from API
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch souvenir items
         const itemsRes = await fetch('/api/admin/souvenir/items');
         if (itemsRes.ok) {
           const itemsData = await itemsRes.json();
@@ -83,7 +80,6 @@ export default function SouvenirActivityPage() {
           }
         }
 
-        // Fetch activities from content
         const contentRes = await fetch('/api/content?category=ACTIVITY'); 
         if (contentRes.ok) {
           const data = await contentRes.json();
@@ -98,10 +94,8 @@ export default function SouvenirActivityPage() {
           }));
 
           setActivities(mapped);
-
           if (mapped.length > 0) setSelectedActivity(mapped[0]);
         }
-
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -112,25 +106,33 @@ export default function SouvenirActivityPage() {
     fetchData();
   }, []);
 
-  // Fetch registrations when activity is selected
   useEffect(() => {
     const fetchRegistrations = async () => {
-      if (!selectedActivity) return;
-      
+      if (!selectedActivity) {
+        setRegistrations([]);
+        return;
+      }
       try {
         const res = await fetch(`/api/content/${selectedActivity.id}/registrations`);
         if (res.ok) {
           const data = await res.json();
-          console.log('📊 Registrations data:', data); // Debug
-          // ✅ Defensive: Ensure it is an array
-          setRegistrations(Array.isArray(data) ? data : []);
+          const normalized = Array.isArray(data) ? data.map((reg: any) => {
+            const rawEntitlements = reg?.entitlements || reg?.redemptions || [];
+            return {
+              ...reg,
+              entitlements: Array.isArray(rawEntitlements) ? rawEntitlements : [],
+              user: reg?.user || { fullName: 'Unknown', email: '-' }
+            };
+          }) : [];
+          setRegistrations(normalized);
+        } else {
+          setRegistrations([]);
         }
       } catch (error) {
         console.error('Error fetching registrations:', error);
-        setRegistrations([]); // Fallback to empty array
+        setRegistrations([]);
       }
     };
-
     fetchRegistrations();
     const pollInterval = setInterval(fetchRegistrations, 1000);
     return () => clearInterval(pollInterval);
@@ -206,7 +208,29 @@ export default function SouvenirActivityPage() {
     return () => cancelAnimationFrame(rafId);
   }, [isPaused, souvenirItems.length]);
 
-  // ✅ Helper to safely check registrations
+  const hasClaimed = (reg: any): boolean => {
+    if (!reg) return false;
+    
+    let entitlements: any[] = [];
+    
+    if (Array.isArray(reg.entitlements)) {
+      entitlements = reg.entitlements;
+    } else if (Array.isArray(reg.redemptions)) {
+      entitlements = reg.redemptions;
+    }
+    
+    if (entitlements.length === 0) {
+      return false;
+    }
+    
+    return entitlements.some((e: any) => {
+      if (!e || typeof e !== 'object') return false;
+      if (typeof e.qtyUsed !== 'number') return false;
+      if (typeof e.qtyGranted !== 'number') return false;
+      return e.qtyUsed >= e.qtyGranted;
+    });
+  };
+
   const safeRegistrations = Array.isArray(registrations) ? registrations : [];
 
   return (
@@ -217,359 +241,323 @@ export default function SouvenirActivityPage() {
         </div>
       ) : (
         <>
-      {/* Section 1: รายการของที่ระลึกแต่ละกิจกรรม */}
-      <section className="py-8">
-        <div className="max-w-7xl mx-auto px-4 mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
-            จัดการของที่ระลึกสำหรับกิจกรรม
-          </h1>
-        </div>
-        {/* Carousel Container */}
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="relative">
-            {/* Left Arrow */}
-            <button
-              onClick={() => { setIsPaused(true); stepBy(-cardWidthRef.current); }}
-              onMouseEnter={() => setIsPaused(true)}
-              onMouseLeave={() => setIsPaused(false)}
-              className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
-              aria-label="Previous"
-            >
-              <ChevronLeft className="w-6 h-6 text-gray-700" />
-            </button>
-
-            {/* Scrollable Container */}
-            <div
-              ref={souvenirScrollRef}
-              className="overflow-hidden py-4"
-              onMouseEnter={() => setIsPaused(true)}
-              onMouseLeave={() => setIsPaused(false)}
-            >
-              <div
-                ref={souvenirTrackRef}
-                className="flex gap-6 will-change-transform"
-                style={{ transform: 'translateX(0)', transition: 'none' }}
-              >
-                {loopItems.map((item, index) => (
-                  <div
-                    data-souvenir-card
-                    key={`${item.id}-${index}`}
-                    className="shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)]"
-                  >
-                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
-                      <div className="relative h-72 md:h-80 bg-white">
-                        {item.imageUrl ? (
-                          <Image
-                            src={item.imageUrl}
-                            alt={item.name}
-                            fill
-                            className="object-contain p-6"
-                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-50">
-                            <div className="text-center text-gray-400">
-                              <Layers className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                              <span className="text-xs">ไม่มีรูปภาพ</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="pt-6 text-center">
-                      <h3 className="text-xl md:text-2xl font-bold text-orange-500 mb-2 line-clamp-1">
-                        {item.name}
-                      </h3>
-
-                      <div className="text-gray-500 text-sm mb-2">
-                        จำนวนคงเหลือ: <span className="font-semibold">{item.currentStock}</span>{" "}
-                        {item.unit || "ชิ้น"}
-                      </div>
-
-                      <div className="text-gray-400 text-sm mb-4">
-                        หมวดหมู่: {CATEGORY_LABEL[item.category as keyof typeof CATEGORY_LABEL] || "กิจกรรม"}
-                      </div>
-
-                      <span className="inline-flex items-center justify-center px-4 py-1.5 rounded-full text-sm bg-orange-100 text-orange-700 font-medium">
-                        ใช้งาน
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <section className="py-8">
+            <div className="max-w-7xl mx-auto px-4 mb-8">
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
+                จัดการของที่ระลึกสำหรับกิจกรรม
+              </h1>
             </div>
-
-            {/* Right Arrow */}
-            <button
-              onClick={() => { setIsPaused(true); stepBy(cardWidthRef.current); }}
-              onMouseEnter={() => setIsPaused(true)}
-              onMouseLeave={() => setIsPaused(false)}
-              className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
-              aria-label="Next"
-            >
-              <ChevronRight className="w-6 h-6 text-gray-700" />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
-
-        {/* Section 2: กิจกรรม */}
-        <section className="mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
-            กิจกรรม
-          </h2>
-          <div className="relative">
-            <button
-              onClick={() => {
-                const el = activityScrollRef.current;
-                if (!el) return;
-                el.scrollBy({ left: -el.clientWidth, behavior: 'smooth' });
-              }}
-              className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
-              aria-label="Previous activity"
-            >
-              <ChevronLeft className="w-6 h-6 text-gray-700" />
-            </button>
-
-            <div
-              ref={activityScrollRef}
-              className="overflow-x-auto px-2 py-4 scrollbar-hide"
-              style={{ scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch' }}
-            >
-              <div className="flex gap-6">
-                {activities.map((activity, index) => (
-                  <div
-                    key={activity.id}
-                    onClick={() => {
-                      setSelectedActivity(activity);
-                      setCurrentActivityIndex(index);
-                    }}
-                    className={`shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)] bg-white rounded-xl transition-all duration-300 cursor-pointer ${
-                      selectedActivity?.id === activity.id
-                        ? "shadow-xl"
-                        : "shadow-md hover:shadow-lg"
-                    }`}
-                  >
-                    <div className="p-10 text-center min-h-[300px] flex flex-col items-center justify-center">
-                      <h3 className="text-lg font-medium mb-3 text-orange-500">
-                        {activity.name}
-                      </h3>
-                      <div className="flex items-center justify-center gap-2 text-gray-600">
-                        <Calendar className="w-5 h-5" />
-                        <span className="text-base">
-                          {new Date(activity.startDate).toLocaleDateString('th-TH', {
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric'
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                const el = activityScrollRef.current;
-                if (!el) return;
-                el.scrollBy({ left: el.clientWidth, behavior: 'smooth' });
-              }}
-              className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
-              aria-label="Next activity"
-            >
-              <ChevronRight className="w-6 h-6 text-gray-700" />
-            </button>
-          </div>
-        </section>
-
-        {/* Section 3 & 4: Only show when activity is selected */}
-        {selectedActivity && (
-          <>
-            {/* Section 3: สถิติของกิจกรรมที่เลือก */}
-            <section>
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
-                {selectedActivity.name}
-              </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Card 1: ลงทะเบียน */}
-            <div 
-              onClick={() => setSelectedStatus('registered')}
-              className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
-                selectedStatus === 'registered' 
-                  ? 'border-orange-300 shadow-xl' 
-                  : 'border-orange-100 hover:shadow-lg'
-              }`}
-            >
-              <div className="p-10 text-center w-full">
-                <div className="flex items-center justify-center mb-4">
-                  <Layers className="w-8 h-8 text-orange-500" />
-                </div>
-                <div className={`text-5xl font-bold mb-2 ${
-                  selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-800'
-                }`}>
-                  {safeRegistrations.length}
-                </div>
-                <div className={`font-medium ${
-                  selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-600'
-                }`}>ลงทะเบียน</div>
-              </div>
-            </div>
-
-            {/* Card 2: คงเหลือ */}
-            <div 
-              onClick={() => setSelectedStatus('remaining')}
-              className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
-                selectedStatus === 'remaining' 
-                  ? 'border-orange-300 shadow-xl' 
-                  : 'border-orange-100 hover:shadow-lg'
-              }`}
-            >
-              <div className="p-10 text-center w-full">
-                <div className="flex items-center justify-center mb-4">
-                  <RefreshCw className="w-8 h-8 text-orange-500" />
-                </div>
-                <div className={`text-5xl font-bold mb-2 ${
-                  selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-800'
-                }`}>
-                  {/* ✅ Fixed filter logic: handle entitlements safely */}
-                  {safeRegistrations.filter(r => {
-                    return !(r.entitlements || []).some(e => e && e.qtyUsed >= e.qtyGranted);
-                  }).length}
-                </div>
-                <div className={`font-medium ${
-                  selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-600'
-                }`}>คงเหลือ</div>
-              </div>
-            </div>
-
-            {/* Card 3: รับของแล้ว */}
-            <div 
-              onClick={() => setSelectedStatus('claimed')}
-              className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
-                selectedStatus === 'claimed' 
-                  ? 'border-orange-300 shadow-xl' 
-                  : 'border-orange-100 hover:shadow-lg'
-              }`}
-            >
-              <div className="p-10 text-center w-full">
-                <div className="flex items-center justify-center mb-4">
-                  <CheckCircle className="w-8 h-8 text-orange-500" />
-                </div>
-                <div className={`text-5xl font-bold mb-2 ${
-                  selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-800'
-                }`}>
-                  {/* ✅ Fixed filter logic: handle entitlements safely */}
-                  {safeRegistrations.filter(r => {
-                    return (r.entitlements || []).some(e => e && e.qtyUsed >= e.qtyGranted);
-                  }).length}
-                </div>
-                <div className={`font-medium ${
-                  selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-600'
-                }`}>รับของแล้ว</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Section 4: Search & Table */}
-        <section className="mt-12">
-          {/* Search Bar */}
-          <Card className="mb-6">
-            <CardContent className="p-6">
+            <div className="max-w-7xl mx-auto px-4">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <Input
-                  type="text"
-                  placeholder="ค้นหาด้วยชื่อ หรืออีเมล"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-12"
-                  size="md"
-                  radius="md"
-                />
-              </div>
-            </CardContent>
-          </Card>
+                <button
+                  onClick={() => { setIsPaused(true); stepBy(-cardWidthRef.current); }}
+                  onMouseEnter={() => setIsPaused(true)}
+                  onMouseLeave={() => setIsPaused(false)}
+                  className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
+                >
+                  <ChevronLeft className="w-6 h-6 text-gray-700" />
+                </button>
 
-          <div className="bg-white rounded-xl shadow-md overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-100 border-b border-gray-200">
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">ลำดับ</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">ชื่อ-สกุล</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">อีเมล</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">วันที่ลงทะเบียน</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">ของที่ระลึก</th>
-                    <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">สถานะ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {safeRegistrations
-                    .filter(reg => {
-                      if (selectedStatus === 'all') return true;
-                      // ✅ Safe check
-                      const hasClaimed = (reg.entitlements || []).some(e => e && e.qtyUsed >= e.qtyGranted);
-                      if (selectedStatus === 'claimed') return hasClaimed;
-                      if (selectedStatus === 'remaining') return !hasClaimed;
-                      if (selectedStatus === 'registered') return true;
-                      return true;
-                    })
-                    .filter(reg => {
-                      const term = searchTerm.toLowerCase().trim();
-                      if (!term) return true;
-                      // ✅ Added safe check for reg.user being potentially null/undefined
-                      const fullName = reg.user?.fullName?.toLowerCase() || '';
-                      const email = reg.user?.email?.toLowerCase() || '';
-                      return fullName.includes(term) || email.includes(term);
-                    })
-                    .map((reg, index) => {
-                      const registeredDate = new Date(reg.registeredAt);
-                      const thaiDate = registeredDate.toLocaleDateString('th-TH', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric'
-                      });
-                      
-                      const hasClaimed = (reg.entitlements || []).some(e => e && e.qtyUsed >= e.qtyGranted);
-                      const souvenirName = reg.entitlements?.[0]?.item?.name || selectedActivity.souvenirItem?.name || 'ของที่ระลึกกิจกรรม';
-                      
-                      let statusText = 'รอรับ';
-                      let statusColor = 'bg-gray-100 text-gray-700';
-                      
-                      if (hasClaimed) {
-                        statusText = 'รับแล้ว';
-                        statusColor = 'bg-orange-100 text-orange-700';
-                      }
-                      
-                      return (
-                        <tr key={reg.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 text-sm text-gray-800">{index + 1}</td>
-                          <td className="px-6 py-4 text-sm text-gray-800 font-medium">{reg.user?.fullName || '-'}</td>
-                          <td className="px-6 py-4 text-sm text-gray-600">{reg.user?.email || '-'}</td>
-                          <td className="px-6 py-4 text-sm text-gray-600">{thaiDate}</td>
-                          <td className="px-6 py-4 text-sm text-orange-600">{souvenirName}</td>
-                          <td className="px-6 py-4">
-                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}>
-                              {statusText}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
+                <div
+                  ref={souvenirScrollRef}
+                  className="overflow-hidden py-4"
+                  onMouseEnter={() => setIsPaused(true)}
+                  onMouseLeave={() => setIsPaused(false)}
+                >
+                  <div
+                    ref={souvenirTrackRef}
+                    className="flex gap-6 will-change-transform"
+                    style={{ transform: 'translateX(0)', transition: 'none' }}
+                  >
+                    {loopItems.map((item, index) => (
+                      <div
+                        data-souvenir-card
+                        key={`${item.id}-${index}`}
+                        className="shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)]"
+                      >
+                        <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                          <div className="relative h-72 md:h-80 bg-white">
+                            {item.imageUrl ? (
+                              <img
+                                src={item.imageUrl}
+                                alt={item.name}
+                                className="w-full h-full object-contain p-6"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                                <div className="text-center text-gray-400">
+                                  <Layers className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                  <span className="text-xs">ไม่มีรูปภาพ</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="pt-6 text-center">
+                          <h3 className="text-xl md:text-2xl font-bold text-orange-500 mb-2 line-clamp-1">
+                            {item.name}
+                          </h3>
+
+                          <div className="text-gray-500 text-sm mb-2">
+                            จำนวนคงเหลือ: <span className="font-semibold">{item.currentStock}</span>{" "}
+                            {item.unit || "ชิ้น"}
+                          </div>
+
+                          <div className="text-gray-400 text-sm mb-4">
+                            หมวดหมู่: {CATEGORY_LABEL[item.category as keyof typeof CATEGORY_LABEL] || "กิจกรรม"}
+                          </div>
+
+                          <span className="inline-flex items-center justify-center px-4 py-1.5 rounded-full text-sm bg-orange-100 text-orange-700 font-medium">
+                            ใช้งาน
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => { setIsPaused(true); stepBy(cardWidthRef.current); }}
+                  onMouseEnter={() => setIsPaused(true)}
+                  onMouseLeave={() => setIsPaused(false)}
+                  className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
+                >
+                  <ChevronRight className="w-6 h-6 text-gray-700" />
+                </button>
+              </div>
             </div>
+          </section>
+
+          <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
+            <section className="mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
+                กิจกรรม
+              </h2>
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    const el = activityScrollRef.current;
+                    if (!el) return;
+                    el.scrollBy({ left: -el.clientWidth, behavior: 'smooth' });
+                  }}
+                  className="absolute -left-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
+                >
+                  <ChevronLeft className="w-6 h-6 text-gray-700" />
+                </button>
+
+                <div
+                  ref={activityScrollRef}
+                  className="overflow-x-auto px-2 py-4"
+                  style={{ scrollBehavior: 'smooth', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                  <div className="flex gap-6">
+                    {activities.map((activity, index) => (
+                      <div
+                        key={activity.id}
+                        onClick={() => {
+                          setSelectedActivity(activity);
+                          setCurrentActivityIndex(index);
+                        }}
+                        className={`shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)] bg-white rounded-xl transition-all duration-300 cursor-pointer ${
+                          selectedActivity?.id === activity.id
+                            ? "shadow-xl"
+                            : "shadow-md hover:shadow-lg"
+                        }`}
+                      >
+                        <div className="p-10 text-center min-h-[300px] flex flex-col items-center justify-center">
+                          <h3 className="text-lg font-medium mb-3 text-orange-500">
+                            {activity.name}
+                          </h3>
+                          <div className="flex items-center justify-center gap-2 text-gray-600">
+                            <Calendar className="w-5 h-5" />
+                            <span className="text-base">
+                              {new Date(activity.startDate).toLocaleDateString('th-TH', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric'
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    const el = activityScrollRef.current;
+                    if (!el) return;
+                    el.scrollBy({ left: el.clientWidth, behavior: 'smooth' });
+                  }}
+                  className="absolute -right-4 top-1/2 -translate-y-1/2 z-10 bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white hover:scale-110 transition-all"
+                >
+                  <ChevronRight className="w-6 h-6 text-gray-700" />
+                </button>
+              </div>
+            </section>
+
+            {selectedActivity && (
+              <>
+                <section>
+                  <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
+                    {selectedActivity.name}
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div 
+                      onClick={() => setSelectedStatus('registered')}
+                      className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
+                        selectedStatus === 'registered' 
+                          ? 'border-orange-300 shadow-xl' 
+                          : 'border-orange-100 hover:shadow-lg'
+                      }`}
+                    >
+                      <div className="p-10 text-center w-full">
+                        <div className="flex items-center justify-center mb-4">
+                          <Layers className="w-8 h-8 text-orange-500" />
+                        </div>
+                        <div className={`text-5xl font-bold mb-2 ${
+                          selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-800'
+                        }`}>
+                          {safeRegistrations.length}
+                        </div>
+                        <div className={`font-medium ${
+                          selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-600'
+                        }`}>ลงทะเบียน</div>
+                      </div>
+                    </div>
+
+                    <div 
+                      onClick={() => setSelectedStatus('remaining')}
+                      className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
+                        selectedStatus === 'remaining' 
+                          ? 'border-orange-300 shadow-xl' 
+                          : 'border-orange-100 hover:shadow-lg'
+                      }`}
+                    >
+                      <div className="p-10 text-center w-full">
+                        <div className="flex items-center justify-center mb-4">
+                          <RefreshCw className="w-8 h-8 text-orange-500" />
+                        </div>
+                        <div className={`text-5xl font-bold mb-2 ${
+                          selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-800'
+                        }`}>
+                          {safeRegistrations.filter(r => !hasClaimed(r)).length}
+                        </div>
+                        <div className={`font-medium ${
+                          selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-600'
+                        }`}>คงเหลือ</div>
+                      </div>
+                    </div>
+
+                    <div 
+                      onClick={() => setSelectedStatus('claimed')}
+                      className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
+                        selectedStatus === 'claimed' 
+                          ? 'border-orange-300 shadow-xl' 
+                          : 'border-orange-100 hover:shadow-lg'
+                      }`}
+                    >
+                      <div className="p-10 text-center w-full">
+                        <div className="flex items-center justify-center mb-4">
+                          <CheckCircle className="w-8 h-8 text-orange-500" />
+                        </div>
+                        <div className={`text-5xl font-bold mb-2 ${
+                          selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-800'
+                        }`}>
+                          {safeRegistrations.filter(r => hasClaimed(r)).length}
+                        </div>
+                        <div className={`font-medium ${
+                          selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-600'
+                        }`}>รับของแล้ว</div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="mt-12">
+                  <div className="bg-white rounded-xl shadow-md p-6 mb-6">
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                      <input
+                        type="text"
+                        placeholder="ค้นหาด้วยชื่อ หรืออีเมล"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gray-100 border-b border-gray-200">
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">ลำดับ</th>
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">ชื่อ-สกุล</th>
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">อีเมล</th>
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">วันที่ลงทะเบียน</th>
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">ของที่ระลึก</th>
+                            <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">สถานะ</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {safeRegistrations
+                            .filter(reg => {
+                              if (selectedStatus === 'all') return true;
+                              if (selectedStatus === 'claimed') return hasClaimed(reg);
+                              if (selectedStatus === 'remaining') return !hasClaimed(reg);
+                              if (selectedStatus === 'registered') return true;
+                              return true;
+                            })
+                            .filter(reg => {
+                              const term = searchTerm.toLowerCase().trim();
+                              if (!term) return true;
+                              const fullName = reg.user?.fullName?.toLowerCase() || '';
+                              const email = reg.user?.email?.toLowerCase() || '';
+                              return fullName.includes(term) || email.includes(term);
+                            })
+                            .map((reg, index) => {
+                              const registeredDate = new Date(reg.registeredAt);
+                              const thaiDate = registeredDate.toLocaleDateString('th-TH', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric'
+                              });
+                              
+                              const claimed = hasClaimed(reg);
+                              const souvenirName = reg.entitlements?.[0]?.item?.name || selectedActivity.souvenirItem?.name || 'ของที่ระลึกกิจกรรม';
+                              let statusText = 'รอรับ';
+                              let statusColor = 'bg-gray-100 text-gray-700';
+                              if (claimed) {
+                                statusText = 'รับแล้ว';
+                                statusColor = 'bg-orange-100 text-orange-700';
+                              }
+                              return (
+                                <tr key={reg.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                  <td className="px-6 py-4 text-sm text-gray-800">{index + 1}</td>
+                                  <td className="px-6 py-4 text-sm text-gray-800 font-medium">{reg.user?.fullName || '-'}</td>
+                                  <td className="px-6 py-4 text-sm text-gray-600">{reg.user?.email || '-'}</td>
+                                  <td className="px-6 py-4 text-sm text-gray-600">{thaiDate}</td>
+                                  <td className="px-6 py-4 text-sm text-orange-600">{souvenirName}</td>
+                                  <td className="px-6 py-4">
+                                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}>
+                                      {statusText}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </section>
+              </>
+            )}
           </div>
-        </section>
-          </>
-        )}
-      </div>
         </>
       )}
     </main>
