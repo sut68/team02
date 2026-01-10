@@ -3,7 +3,6 @@ import { prisma } from "@/app/lib/prisma";
 import path from "path";
 import { promises as fs } from "fs";
 import { ContentCategoryType, Option } from "@prisma/client";
-// ✅ Import Config
 import { CONTENT_CONFIG, ERROR_MESSAGES } from "@/lib/models/validation";
 
 // Helper (เอาไว้เหมือนเดิม หรือจะย้ายไป utils ก็ได้)

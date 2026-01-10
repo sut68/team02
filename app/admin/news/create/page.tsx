@@ -6,7 +6,7 @@ import { useState, useEffect, ChangeEvent, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Card, CardHeader, CardContent } from '../../../components/ui/Card'; // CardHeader ไม่ได้ใช้ แต่คงไว้ตามเดิมเผื่อคุณอยากใช้
+import { Card, CardHeader, CardContent } from '../../../components/ui/Card'; 
 import { PrimaryButton, CancelButton } from '../../../components/ui/Button';
 import {
   Image as ImageIcon,
