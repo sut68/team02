@@ -240,7 +240,7 @@ function UserBookingPageInner() {
 
       const json = await res.json();
 const bookingId = json.booking?.id;
-const paymentId = json.paymentId; // ต้องตรงกับที่ API ส่งกลับมา
+const paymentId = json.paymentId; //ต้องตรงกับที่ API ส่งกลับมา
 
 if (pricing.totalPrice === 0) {
     router.push(`/user/booking/success?bookingId=${bookingId}`);
