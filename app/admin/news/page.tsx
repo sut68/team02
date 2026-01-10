@@ -142,8 +142,7 @@ export default function DashboardPage() {
     }
   };
 
-  const title = 'รายการโพสต์ทั้งหมด';
-  // ✅ เพิ่ม Header "จัดการ"
+  const title = 'รายการโพสต์ทั้งหมด'
   const headers = ['ลำดับ', 'ชื่อกิจกรรม / เนื้อหา', 'ผู้สร้าง', 'สถานะ', 'จัดการ'];
   
   // ✅ Map ข้อมูลพร้อมปุ่มลบ
@@ -154,7 +153,6 @@ export default function DashboardPage() {
     <span key="status" className={`px-2 py-1 rounded-full text-xs ${p.status === 'ลงทะเบียน' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
       {p.status}
     </span>,
-    // ปุ่มลบ
     <button
       key="delete-btn"
       onClick={() => handleDeletePost(p.id)}
