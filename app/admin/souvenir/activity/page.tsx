@@ -58,6 +58,7 @@ export default function SouvenirActivityPage() {
   const [isPaused, setIsPaused] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'remaining' | 'registered' | 'claimed'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  
   // Section 2 (Activity Carousel) ref
   const activityScrollRef = React.useRef<HTMLDivElement>(null);
   
@@ -82,25 +83,24 @@ export default function SouvenirActivityPage() {
           }
         }
 
-        // Fetch events
-        // Fetch activities from content (แทน events)
-          const contentRes = await fetch('/api/content?category=ACTIVITY'); // หรือ EVENT
-          if (contentRes.ok) {
-            const data = await contentRes.json();
-            const contents = data.contents ?? [];
+        // Fetch activities from content
+        const contentRes = await fetch('/api/content?category=ACTIVITY'); 
+        if (contentRes.ok) {
+          const data = await contentRes.json();
+          const contents = data.contents ?? [];
 
-            const mapped: Activity[] = contents.map((c: any) => ({
-              id: c.id,
-              name: c.TitleName || "(ไม่มีชื่อกิจกรรม)",
-              startDate: c.createdAt || new Date().toISOString(),
-              location: null,
-              souvenirItem: null,
-            }));
+          const mapped: Activity[] = contents.map((c: any) => ({
+            id: c.id,
+            name: c.TitleName || "(ไม่มีชื่อกิจกรรม)",
+            startDate: c.createdAt || new Date().toISOString(),
+            location: null,
+            souvenirItem: null,
+          }));
 
-            setActivities(mapped);
+          setActivities(mapped);
 
-            if (mapped.length > 0) setSelectedActivity(mapped[0]);
-          }
+          if (mapped.length > 0) setSelectedActivity(mapped[0]);
+        }
 
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -122,18 +122,17 @@ export default function SouvenirActivityPage() {
         if (res.ok) {
           const data = await res.json();
           console.log('📊 Registrations data:', data); // Debug
-          setRegistrations(data);
+          // ✅ Defensive: Ensure it is an array
+          setRegistrations(Array.isArray(data) ? data : []);
         }
       } catch (error) {
         console.error('Error fetching registrations:', error);
+        setRegistrations([]); // Fallback to empty array
       }
     };
 
     fetchRegistrations();
-
-    // Set up polling to refresh registrations every 1 second for real-time updates
     const pollInterval = setInterval(fetchRegistrations, 1000);
-
     return () => clearInterval(pollInterval);
   }, [selectedActivity]);
 
@@ -148,24 +147,11 @@ export default function SouvenirActivityPage() {
     }
   };
 
-  const handleNextActivity = () => {
-    setCurrentActivityIndex((prev) => {
-      const next = prev + 1;
-      return next >= activities.length ? 0 : next;
-    });
-  };
-
-  const handlePrevActivity = () => {
-    setCurrentActivityIndex((prev) => {
-      const previous = prev - 1;
-      return previous < 0 ? activities.length - 1 : previous;
-    });
-  };
-
   const loopItems = React.useMemo(() => {
     const items = [...souvenirItems, ...souvenirItems, ...souvenirItems, ...souvenirItems];
     return items;
   }, [souvenirItems]);
+
   React.useEffect(() => {
     if (souvenirItems.length === 0) return;
     
@@ -174,7 +160,6 @@ export default function SouvenirActivityPage() {
       const container = souvenirScrollRef.current;
       if (!track || !container) return;
       track.offsetHeight;
-      // Measure actual card width + gap
       const firstCard = track.querySelector('[data-souvenir-card]');
       const gap = parseFloat(getComputedStyle(track).gap || '0');
       if (firstCard) {
@@ -220,6 +205,9 @@ export default function SouvenirActivityPage() {
     rafId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(rafId);
   }, [isPaused, souvenirItems.length]);
+
+  // ✅ Helper to safely check registrations
+  const safeRegistrations = Array.isArray(registrations) ? registrations : [];
 
   return (
     <main className="min-h-screen bg-white pt-10">
@@ -268,7 +256,6 @@ export default function SouvenirActivityPage() {
                     key={`${item.id}-${index}`}
                     className="shrink-0 w-[90vw] md:w-[calc(33.333vw-32px)] lg:w-[calc(28vw-24px)]"
                   >
-                    {/* ✅ Card เฉพาะรูป */}
                     <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
                       <div className="relative h-72 md:h-80 bg-white">
                         {item.imageUrl ? (
@@ -290,7 +277,6 @@ export default function SouvenirActivityPage() {
                       </div>
                     </div>
 
-                    {/* ✅ เนื้อหาอยู่นอกกรอบ (แต่ยังเลื่อนไปพร้อมกันเพราะอยู่ใน item wrapper เดียวกัน) */}
                     <div className="pt-6 text-center">
                       <h3 className="text-xl md:text-2xl font-bold text-orange-500 mb-2 line-clamp-1">
                         {item.name}
@@ -330,13 +316,12 @@ export default function SouvenirActivityPage() {
 
       <div className="max-w-7xl mx-auto px-4 py-8 md:py-12">
 
-        {/* Section 2: กิจกรรม (Activity Selector) */}
+        {/* Section 2: กิจกรรม */}
         <section className="mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
             กิจกรรม
           </h2>
           <div className="relative">
-            {/* Arrow Left */}
             <button
               onClick={() => {
                 const el = activityScrollRef.current;
@@ -349,7 +334,6 @@ export default function SouvenirActivityPage() {
               <ChevronLeft className="w-6 h-6 text-gray-700" />
             </button>
 
-            {/* Activity Cards Container - Carousel (manual scroll) */}
             <div
               ref={activityScrollRef}
               className="overflow-x-auto px-2 py-4 scrollbar-hide"
@@ -389,7 +373,6 @@ export default function SouvenirActivityPage() {
               </div>
             </div>
 
-            {/* Arrow Right */}
             <button
               onClick={() => {
                 const el = activityScrollRef.current;
@@ -429,7 +412,7 @@ export default function SouvenirActivityPage() {
                 <div className={`text-5xl font-bold mb-2 ${
                   selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-800'
                 }`}>
-                  {registrations.length}
+                  {safeRegistrations.length}
                 </div>
                 <div className={`font-medium ${
                   selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-600'
@@ -453,9 +436,9 @@ export default function SouvenirActivityPage() {
                 <div className={`text-5xl font-bold mb-2 ${
                   selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-800'
                 }`}>
-                  {registrations.filter(r => {
-                    // ยังไม่ได้รับของ = qtyUsed < qtyGranted
-                    return !r.entitlements?.some(e => e.qtyUsed >= e.qtyGranted);
+                  {/* ✅ Fixed filter logic: handle entitlements safely */}
+                  {safeRegistrations.filter(r => {
+                    return !(r.entitlements || []).some(e => e && e.qtyUsed >= e.qtyGranted);
                   }).length}
                 </div>
                 <div className={`font-medium ${
@@ -480,9 +463,9 @@ export default function SouvenirActivityPage() {
                 <div className={`text-5xl font-bold mb-2 ${
                   selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-800'
                 }`}>
-                  {registrations.filter(r => {
-                    // รับของแล้ว = qtyUsed >= qtyGranted
-                    return r.entitlements?.some(e => e.qtyUsed >= e.qtyGranted);
+                  {/* ✅ Fixed filter logic: handle entitlements safely */}
+                  {safeRegistrations.filter(r => {
+                    return (r.entitlements || []).some(e => e && e.qtyUsed >= e.qtyGranted);
                   }).length}
                 </div>
                 <div className={`font-medium ${
@@ -527,10 +510,11 @@ export default function SouvenirActivityPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {registrations
+                  {safeRegistrations
                     .filter(reg => {
                       if (selectedStatus === 'all') return true;
-                      const hasClaimed = reg.entitlements?.some(e => e.qtyUsed >= e.qtyGranted);
+                      // ✅ Safe check
+                      const hasClaimed = (reg.entitlements || []).some(e => e && e.qtyUsed >= e.qtyGranted);
                       if (selectedStatus === 'claimed') return hasClaimed;
                       if (selectedStatus === 'remaining') return !hasClaimed;
                       if (selectedStatus === 'registered') return true;
@@ -539,8 +523,9 @@ export default function SouvenirActivityPage() {
                     .filter(reg => {
                       const term = searchTerm.toLowerCase().trim();
                       if (!term) return true;
-                      const fullName = reg.user.fullName?.toLowerCase() || '';
-                      const email = reg.user.email?.toLowerCase() || '';
+                      // ✅ Added safe check for reg.user being potentially null/undefined
+                      const fullName = reg.user?.fullName?.toLowerCase() || '';
+                      const email = reg.user?.email?.toLowerCase() || '';
                       return fullName.includes(term) || email.includes(term);
                     })
                     .map((reg, index) => {
@@ -551,8 +536,8 @@ export default function SouvenirActivityPage() {
                         year: 'numeric'
                       });
                       
-                      const hasClaimed = reg.entitlements?.some(e => e.qtyUsed >= e.qtyGranted);
-                      const souvenirName = reg.entitlements?.[0]?.item.name || selectedActivity.souvenirItem?.name || 'ของที่ระลึกกิจกรรม';
+                      const hasClaimed = (reg.entitlements || []).some(e => e && e.qtyUsed >= e.qtyGranted);
+                      const souvenirName = reg.entitlements?.[0]?.item?.name || selectedActivity.souvenirItem?.name || 'ของที่ระลึกกิจกรรม';
                       
                       let statusText = 'รอรับ';
                       let statusColor = 'bg-gray-100 text-gray-700';
@@ -565,8 +550,8 @@ export default function SouvenirActivityPage() {
                       return (
                         <tr key={reg.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 text-sm text-gray-800">{index + 1}</td>
-                          <td className="px-6 py-4 text-sm text-gray-800 font-medium">{reg.user.fullName}</td>
-                          <td className="px-6 py-4 text-sm text-gray-600">{reg.user.email}</td>
+                          <td className="px-6 py-4 text-sm text-gray-800 font-medium">{reg.user?.fullName || '-'}</td>
+                          <td className="px-6 py-4 text-sm text-gray-600">{reg.user?.email || '-'}</td>
                           <td className="px-6 py-4 text-sm text-gray-600">{thaiDate}</td>
                           <td className="px-6 py-4 text-sm text-orange-600">{souvenirName}</td>
                           <td className="px-6 py-4">
@@ -590,4 +575,3 @@ export default function SouvenirActivityPage() {
     </main>
   );
 }
-
