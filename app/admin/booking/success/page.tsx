@@ -84,6 +84,11 @@ const fetchBookingDetails = useCallback((text: string) => {
       // 🔔 Trigger activity page refresh when souvenir is claimed
       if (action === "SOUVENIR") {
         try {
+          console.log('🔔 Sending notification:', {
+            contentId: scanResult.contentId,
+            userId: scanResult.userId,
+            action: "souvenir_claimed",
+          });
           await fetch("/api/admin/souvenir/activity-notification", {
             method: "POST",
             headers: { "Content-Type": "application/json" },

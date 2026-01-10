@@ -43,10 +43,8 @@ interface EventRegistration {
     item: {
       name: string;
     };
-    redemptions: Array<{
-      id: number;
-      redeemedAt: string;
-    }>;
+    qtyUsed: number;
+    qtyGranted: number;
   }>;
 }
 
@@ -123,6 +121,7 @@ export default function SouvenirActivityPage() {
         const res = await fetch(`/api/content/${selectedActivity.id}/registrations`);
         if (res.ok) {
           const data = await res.json();
+          console.log('📊 Registrations data:', data); // Debug
           setRegistrations(data);
         }
       } catch (error) {
@@ -132,8 +131,8 @@ export default function SouvenirActivityPage() {
 
     fetchRegistrations();
 
-    // Set up polling to refresh registrations every 3 seconds
-    const pollInterval = setInterval(fetchRegistrations, 3000);
+    // Set up polling to refresh registrations every 1 second for real-time updates
+    const pollInterval = setInterval(fetchRegistrations, 1000);
 
     return () => clearInterval(pollInterval);
   }, [selectedActivity]);
@@ -455,8 +454,8 @@ export default function SouvenirActivityPage() {
                   selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-800'
                 }`}>
                   {registrations.filter(r => {
-                    // ยังไม่ได้รับของ = ไม่มี redemptions
-                    return !r.entitlements?.some(e => e.redemptions.length > 0);
+                    // ยังไม่ได้รับของ = qtyUsed < qtyGranted
+                    return !r.entitlements?.some(e => e.qtyUsed >= e.qtyGranted);
                   }).length}
                 </div>
                 <div className={`font-medium ${
@@ -482,8 +481,8 @@ export default function SouvenirActivityPage() {
                   selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-800'
                 }`}>
                   {registrations.filter(r => {
-                    // รับของแล้ว = มี redemptions
-                    return r.entitlements?.some(e => e.redemptions.length > 0);
+                    // รับของแล้ว = qtyUsed >= qtyGranted
+                    return r.entitlements?.some(e => e.qtyUsed >= e.qtyGranted);
                   }).length}
                 </div>
                 <div className={`font-medium ${
@@ -531,9 +530,9 @@ export default function SouvenirActivityPage() {
                   {registrations
                     .filter(reg => {
                       if (selectedStatus === 'all') return true;
-                      const hasRedemption = reg.entitlements?.some(e => e.redemptions.length > 0);
-                      if (selectedStatus === 'claimed') return hasRedemption;
-                      if (selectedStatus === 'remaining') return !hasRedemption;
+                      const hasClaimed = reg.entitlements?.some(e => e.qtyUsed >= e.qtyGranted);
+                      if (selectedStatus === 'claimed') return hasClaimed;
+                      if (selectedStatus === 'remaining') return !hasClaimed;
                       if (selectedStatus === 'registered') return true;
                       return true;
                     })
@@ -552,13 +551,13 @@ export default function SouvenirActivityPage() {
                         year: 'numeric'
                       });
                       
-                      const hasRedemption = reg.entitlements?.some(e => e.redemptions.length > 0);
+                      const hasClaimed = reg.entitlements?.some(e => e.qtyUsed >= e.qtyGranted);
                       const souvenirName = reg.entitlements?.[0]?.item.name || selectedActivity.souvenirItem?.name || 'ของที่ระลึกกิจกรรม';
                       
                       let statusText = 'รอรับ';
                       let statusColor = 'bg-gray-100 text-gray-700';
                       
-                      if (hasRedemption) {
+                      if (hasClaimed) {
                         statusText = 'รับแล้ว';
                         statusColor = 'bg-orange-100 text-orange-700';
                       }

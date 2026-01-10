@@ -55,9 +55,6 @@ export async function GET(
             },
             include: {
               item: { select: { name: true } },
-              redemptions: {
-                select: { id: true, redeemedAt: true },
-              },
             },
           });
           if (ent) entitlements.push(ent);
