@@ -334,7 +334,7 @@ export function SubmissionPage() {
 
                   <p className="text-sm text-gray-400 mt-2">อัปโหลดไฟล์</p>
                   <p className="text-xs text-gray-400">
-                    รองรับไฟล์เอกสาร / PDF / รูปภาพ
+                    รองรับไฟล์เอกสาร WORD / PDF / ZIP
                   </p>
 
                   {fileName && (
