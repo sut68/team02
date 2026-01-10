@@ -142,8 +142,7 @@ export default function DashboardPage() {
     }
   };
 
-  const title = 'รายการโพสต์ทั้งหมด';
-  // ✅ เพิ่ม Header "จัดการ"
+  const title = 'รายการโพสต์ทั้งหมด'
   const headers = ['ลำดับ', 'ชื่อกิจกรรม / เนื้อหา', 'ผู้สร้าง', 'สถานะ', 'จัดการ'];
   
   // ✅ Map ข้อมูลพร้อมปุ่มลบ
