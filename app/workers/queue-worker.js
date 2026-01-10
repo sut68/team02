@@ -6,6 +6,7 @@
  * Or with PM2: pm2 start app/workers/queue-worker.js --name bull-queue
  */
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const Queue = require('bull');
 
 const redisConfig = {

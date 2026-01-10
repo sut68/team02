@@ -39,7 +39,7 @@ export default function SUTNewsUI() {
   }, []);
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50'>
+    <div className='min-h-screen bg-linear-to-br from-orange-50 via-white to-orange-50'>
       {/* Hero Image */}
       <div className='relative w-screen h-[700px]'>
         <img
@@ -47,7 +47,7 @@ export default function SUTNewsUI() {
           alt='Students studying'
           className='w-full h-full object-cover'
         />
-        <div className='absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black/60'></div>
+        <div className='absolute inset-0 bg-linear-to-b from-transparent via-black/20 to-black/60'></div>
       </div>
 
       {/* Content */}
@@ -57,7 +57,7 @@ export default function SUTNewsUI() {
           <div className='flex justify-between items-center mb-8 pb-6 border-b-2 border-orange-100'>
             <div className='flex items-center gap-3'>
               <div className='w-1 h-8 bg-orange-500 rounded-full'></div>
-              <h1 className='text-3xl font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent'>
+              <h1 className='text-3xl font-bold bg-linear-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent'>
                 Topic คอมเม้นยอะสุด
               </h1>
             </div>
@@ -95,7 +95,7 @@ export default function SUTNewsUI() {
                     onClick={() =>
                       router.push(`/user/talk/detail/${topTopics[0].id}`)
                     }
-                    className='bg-gradient-to-br from-white to-orange-50 rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer border-2 border-orange-200 hover:border-orange-400 hover:scale-[1.02] group'
+                    className='bg-linear-to-br from-white to-orange-50 rounded-2xl overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer border-2 border-orange-200 hover:border-orange-400 hover:scale-[1.02] group'
                   >
                     {/* Upper part - Image */}
                     {topTopics[0].topicImage && (
@@ -113,7 +113,7 @@ export default function SUTNewsUI() {
                     {/* Lower part - Topic name with rank on left */}
                     <div className='p-6'>
                       <div className='flex items-center gap-4'>
-                        <div className='bg-gradient-to-br from-orange-500 to-orange-600 text-white w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl flex-shrink-0 shadow-lg'>
+                        <div className='bg-linear-to-br from-orange-500 to-orange-600 text-white w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl shrink-0 shadow-lg'>
                           1
                         </div>
                         <div className='flex-1'>
@@ -136,7 +136,7 @@ export default function SUTNewsUI() {
                   >
                     <div className='p-6'>
                       <div className='flex items-start space-x-4'>
-                        <div className='bg-gradient-to-br from-orange-400 to-orange-500 text-white w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0 shadow-md'>
+                        <div className='bg-linear-to-br from-orange-400 to-orange-500 text-white w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shrink-0 shadow-md'>
                           2
                         </div>
                         {topTopics[1].topicImage && (
@@ -144,7 +144,7 @@ export default function SUTNewsUI() {
                             <img
                               src={topTopics[1].topicImage}
                               alt={topTopics[1].title}
-                              className='w-24 h-24 object-cover rounded-lg flex-shrink-0 group-hover:scale-105 transition-transform duration-300 shadow-md'
+                              className='w-24 h-24 object-cover rounded-lg shrink-0 group-hover:scale-105 transition-transform duration-300 shadow-md'
                             />
                           </div>
                         )}
@@ -171,7 +171,7 @@ export default function SUTNewsUI() {
                     className='bg-white rounded-xl p-6 hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-orange-50 hover:border-orange-200 hover:scale-[1.02] group'
                   >
                     <div className='flex items-start space-x-4'>
-                      <div className='bg-gradient-to-br from-orange-300 to-orange-400 text-white w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0 shadow-md'>
+                      <div className='bg-linear-to-br from-orange-300 to-orange-400 text-white w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg shrink-0 shadow-md'>
                         {index + 3}
                       </div>
                       <div className='flex-1'>
@@ -199,7 +199,7 @@ export default function SUTNewsUI() {
         <div
           className={
             'relative flex items-center gap-2 px-6 py-4 rounded-full overflow-hidden ' +
-            'backdrop-blur-md bg-gradient-to-r from-orange-500 to-orange-600 border-2 border-orange-400 shadow-2xl ' +
+            'backdrop-blur-md bg-linear-to-r from-orange-500 to-orange-600 border-2 border-orange-400 shadow-2xl ' +
             'hover:scale-110 transition-all duration-300 hover:shadow-orange-300/50'
           }
           style={{
@@ -207,7 +207,7 @@ export default function SUTNewsUI() {
             backdropFilter: 'blur(8px) saturate(120%)',
           }}
         >
-          <span className='absolute inset-0 pointer-events-none bg-gradient-to-r from-white/20 via-white/10 to-transparent mix-blend-overlay' />
+          <span className='absolute inset-0 pointer-events-none bg-linear-to-r from-white/20 via-white/10 to-transparent mix-blend-overlay' />
           <Plus className='w-6 h-6 text-white z-10 group-hover:rotate-90 transition-transform duration-300' />
           <span className='text-white font-bold z-10 text-lg'>
             ตั้งกระทู้ใหม่

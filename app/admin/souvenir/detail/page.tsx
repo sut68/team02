@@ -50,7 +50,7 @@ export default function SouvenirDetailPage({
     unit: "ชิ้น",
     quantity: 0,
     status: "active",
-    imageUrl: "/souvenir/placeholder.png",
+    imageUrl: "",
     linkedId: null,
   });
 
@@ -109,7 +109,7 @@ export default function SouvenirDetailPage({
           unit: data.unit || "ชิ้น",
           quantity: data.currentStock || 0,
           status: data.active ? "active" : "inactive",
-          imageUrl: data.imageUrl || "/souvenir/placeholder.png",
+          imageUrl: data.imageUrl || "",
           linkedId: currentLinkedId,
         });
       } catch (error) {

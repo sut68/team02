@@ -106,7 +106,7 @@ export default function AdminTalkPage() {
                     <tr key={comment.id} className="hover:bg-orange-50 transition-colors">
                       <td className="p-4 align-top">
                         <div className="bg-orange-50 p-3 rounded-lg text-gray-700 text-sm border border-orange-200 max-w-md">
-                          "{comment.content}"
+                          <p>&quot;{comment.content}&quot;</p>
                         </div>
                       </td>
                       <td className="p-4 align-top">

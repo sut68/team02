@@ -234,6 +234,8 @@ if (!token && !id) {
       qrToken: booking.qrToken,
       totalSeats: booking.content?.bookingForm?.TotalSeats ?? 0,
       isCheckedIn,
+      contentId: booking.ContentID,
+      userId: booking.Userid,
       souvenirs: booking.entitlement.map((e) => ({
         itemName: e.item.name,
         claimed: e.qtyUsed >= e.qtyGranted,
