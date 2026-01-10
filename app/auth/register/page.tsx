@@ -393,43 +393,65 @@ const handleInputBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElem
   );
 
   const RegisterSelect = () => (
-    <div className="py-30 px-20 pb-40">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-white flex items-center justify-center py-2 px-4">
+      <div className="max-w-5xl w-full">
         <div className="text-center mb-20">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-            กรุณาเลือกประเภทของคุณ
-          </h2>
-          <p className="text-gray-500 text-base font-normal">
-            เพื่อเริ่มต้นการลงทะเบียนในระบบศิษย์เก่าวิศวกรรมศาสตร์
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+            สร้างบัญชีของคุณ
+          </h1>
+          <p className="text-gray-600 text-base md:text-lg font-normal max-w-3xl mx-auto">
+            เลือกประเภทสมาชิกของคุณเพื่อเริ่มต้นการลงทะเบียนในระบบศิษย์เก่าสัมพันธ์วิศวกรรมศาสตร์
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-16 max-w-5xl mx-auto">
-          <Card
-            className="cursor-pointer border-2 border-orange-100 hover:border-orange-300 transition-all"
-            onClick={() => {
-              setUserType('alumni');
-              setStep(1);
-            }}
-          >
-            <CardContent className="p-20 text-center flex flex-col items-center justify-center h-full">
-              <GraduationCap className="w-20 h-20 text-orange-500 mb-8" strokeWidth={1.5} />
-              <h3 className="text-3xl md:text-4xl font-bold text-gray-900">ศิษย์เก่า</h3>
-            </CardContent>
-          </Card>
+        <div className="flex flex-col md:flex-row justify-center gap-12 mb-20">
+          {/* Alumni Card */}
+          <div className="flex-1 max-w-sm">
+            <Card
+              className="cursor-pointer border-2 border-orange-200 hover:border-orange-400 hover:shadow-lg transition-all duration-300 h-full p-20"
+              onClick={() => {
+                setUserType('alumni');
+                setStep(1);
+              }}
+            >
+              <CardContent className="p-16 text-center flex flex-col items-center justify-center h-full gap-6">
+                <GraduationCap className="w-20 h-20 text-orange-500 hover:text-orange-600 transition-colors" strokeWidth={1.2} />
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">ศิษย์เก่า</h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    สำหรับผู้ที่จบการศึกษาแล้ว
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-          <Card
-            className="cursor-pointer border-2 border-orange-100 hover:border-orange-300 transition-all"
-            onClick={() => {
-              setUserType('student');
-              setStep(1);
-            }}
-          >
-            <CardContent className="p-20 text-center flex flex-col items-center justify-center h-full">
-              <UserCircle className="w-20 h-20 text-orange-500 mb-8" strokeWidth={1.5} />
-              <h3 className="text-3xl md:text-4xl font-bold text-gray-900">ศิษย์ปัจจุบัน</h3>
-            </CardContent>
-          </Card>
+          {/* Student Card */}
+          <div className="flex-1 max-w-sm">
+            <Card
+              className="cursor-pointer border-2 border-orange-200 hover:border-orange-400 hover:shadow-lg transition-all duration-300 h-full"
+              onClick={() => {
+                setUserType('student');
+                setStep(1);
+              }}
+            >
+              <CardContent className="p-16 text-center flex flex-col items-center justify-center h-full gap-6">
+                <UserCircle className="w-20 h-20 text-orange-500 hover:text-orange-600 transition-colors" strokeWidth={1.2} />
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">ศิษย์ปัจจุบัน</h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    สำหรับนักศึกษาปัจจุบันของสำนักวิศวกรรมศาสตร์
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        <div className="mt-16 text-center">
+          <p className="text-gray-500 text-sm">
+            มีบัญชีแล้ว? <a href="/auth/login" className="text-orange-600 hover:text-orange-700 font-medium transition-colors underline">เข้าสู่ระบบ</a>
+          </p>
         </div>
       </div>
     </div>
