@@ -257,7 +257,7 @@ export async function PATCH(request: NextRequest) {
           data: { qtyUsed: { increment: 1 } },
         });
 
-        // 2.3 ✅ เพิ่ม: สร้างประวัติการแลก (Redemption)
+        // 2.3  เพิ่ม: สร้างประวัติการแลก (Redemption)
         await tx.redemption.create({
           data: {
             entitlementId: entitlementToUse.id,
