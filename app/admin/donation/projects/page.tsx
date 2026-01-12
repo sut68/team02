@@ -5,7 +5,7 @@ import { Layers, CheckCircle, Clock, Search, ChevronDown, PlusCircle, Landmark, 
 import { Card, CardContent } from '@/app/components/ui/Card';
 import Link from 'next/link';
 
-type ProjectStatus = 'OPEN' | 'CLOSED' | 'COMPLETED';
+type ProjectStatus = 'OPEN' | 'CLOSED' | 'COMPLETED' ;
 type FilterStatus = 'all' | 'open' | 'closed' | 'completed' | 'central';
 
 // กำหนด Type ให้ตรงกับ Response จาก API
@@ -20,7 +20,8 @@ type Project = {
   ownerName: string;
   posterUrl: string | null;
   createdAt: string;
-  isCentralFund: boolean;
+  projectType: string;
+  // isCentralFund: boolean;
 };
 
 // Response Shape จาก API
@@ -85,7 +86,7 @@ export default function ProjectManagementUI() {
       if (activeStatus === 'all') {
         matchesStatus = true;
       } else if (activeStatus === 'central') {
-        matchesStatus = project.isCentralFund === true;
+        matchesStatus = project.projectType === 'CENTRAL';
       } else {
         matchesStatus = project.status.toLowerCase() === activeStatus;
       }
@@ -101,7 +102,7 @@ export default function ProjectManagementUI() {
   const getStatusCount = (status: FilterStatus) => {
     if (!projects) return 0;
     if (status === 'all') return projects.length;
-    if (status === 'central') return projects.filter(p => p.isCentralFund).length;
+    if (status === 'central') return projects.filter(p => p.projectType === 'CENTRAL').length;
     return projects.filter(p => p.status.toLowerCase() === status).length;
   };
 
@@ -282,7 +283,7 @@ export default function ProjectManagementUI() {
                       <tr key={project.id} className="hover:bg-gray-50 transition">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           <Link href={`/admin/donation/${project.id}/edit`} className="text-indigo-600 hover:text-indigo-900 hover:underline flex items-center">
-                            {project.isCentralFund && (
+                            {project.projectType === 'CENTRAL' && (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mr-2">
                                     <Star className="w-3 h-3 mr-1 fill-current" />
                                     กองทุนกลาง

@@ -683,6 +683,33 @@ async function main() {
       contact: "044-223-366",
       posterUrl: "/donation_poster/research.jpg",
       skuToLink: null 
+    },
+    // 1. โครงการทุนการศึกษา
+    {
+      title: "โครงการทุนการศึกษาเพื่อพี่น้องวิศวฯ มทส. 2569",
+      description: "ร่วมเป็นส่วนหนึ่งในการมอบโอกาสทางการศึกษาให้กับน้องๆ คณะวิศวกรรมศาสตร์ที่ตั้งใจเรียนแต่ขาดแคลนทุนทรัพย์ เพื่อสร้างวิศวกรคุณภาพสู่สังคม",
+      goalAmount: 300000, 
+      startDate: new Date("2026-01-01T00:00:00Z"),
+      endDate: new Date("2026-06-30T23:59:59Z"),
+      projectType: DonationProjectType.SCHOLARSHIP,
+      ownerName: "งานพัฒนานักศึกษา คณะวิศวกรรมศาสตร์",
+      contact: "044-224-1234",
+      posterUrl: "/donation_poster/scholarship-2026.jpg",
+      skuToLink: "BOOK-NEW-2025" // เชื่อมกับสมุดบันทึกเป็นของที่ระลึก
+    },
+
+    // 2. โครงการช่วยเหลือฉุกเฉิน
+    {
+      title: "กองทุนบรรเทาสาธารณภัย CPE ร่วมใจช่วยน้ำท่วม",
+      description: "ระดมทุนเร่งด่วนเพื่อช่วยเหลือครอบครัวนักศึกษาและบุคลากรสาขาวิชาวิศวกรรมคอมพิวเตอร์ที่ได้รับผลกระทบจากอุทกภัยในพื้นที่จังหวัดนครราชสีมา",
+      goalAmount: 100000,
+      startDate: new Date("2026-08-15T00:00:00Z"),
+      endDate: new Date("2026-10-15T23:59:59Z"),
+      projectType: DonationProjectType.EMERGENCY,
+      ownerName: "สาขาวิชาวิศวกรรมคอมพิวเตอร์",
+      contact: "081-999-XXXX",
+      posterUrl: "/donation_poster/flood-relief.jpg",
+      skuToLink: "UMBRELLA-NEW-2025" // เชื่อมกับร่มเป็นของที่ระลึก
     }
   ];
 

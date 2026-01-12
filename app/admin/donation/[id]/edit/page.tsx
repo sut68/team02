@@ -8,9 +8,6 @@ import { UploadCloud, Trash2 } from 'lucide-react';
 import { Card } from '@/app/components/ui/Card';
 import { PrimaryButton, CancelButton } from '@/app/components/ui/Button';
 
-// --------------------------------------------------------------------------
-//  Interfaces/Types
-// --------------------------------------------------------------------------
 interface ProjectData {
   id: number;
   title: string;
@@ -20,7 +17,6 @@ interface ProjectData {
   endDate: string;
   status: string;
   posterUrl: string | null;
-  // ✅ เพิ่มฟิลด์ใหม่ให้ตรงกับ Schema
   projectType: string;
   ownerName: string; 
   contact: string;
@@ -29,30 +25,24 @@ interface ProjectData {
 interface EditFormData extends Omit<ProjectData, 'id' | 'goalAmount' | 'posterUrl'> {
   id?: number;
   goalAmount: number;
-  posterImage: FileList | null; // สำหรับรูปภาพใหม่
+  posterImage: FileList | null; 
 }
 
-// --------------------------------------------------------------------------
-// 💡 Component หลัก: หน้าแก้ไขโครงการ
-// --------------------------------------------------------------------------
 export default function EditProjectPage({ params }: { params: any }) { 
   const router = useRouter();
   const [projectId, setProjectId] = useState<number | null>(null);
   const [initialData, setInitialData] = useState<ProjectData | null>(null);
   
-  // Loading & Error States
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const { register, handleSubmit, reset, formState: { errors }, watch } = useForm<EditFormData>();
   
-  // Image States
   const [currentPosterUrl, setCurrentPosterUrl] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const watchedImage = watch("posterImage");
 
-  // Logic: Preview รูปภาพเมื่อมีการเลือกไฟล์ใหม่
   useEffect(() => {
     let objectUrl: string | null = null;
     if (watchedImage && watchedImage.length > 0) {
@@ -67,7 +57,6 @@ export default function EditProjectPage({ params }: { params: any }) {
     };
   }, [watchedImage]);
 
-  // Logic: ดึงข้อมูลโครงการเดิมมาแสดง
   const fetchAndSetData = useCallback(async (id: number) => {
     setLoading(true);
     setError(null);
@@ -89,7 +78,6 @@ export default function EditProjectPage({ params }: { params: any }) {
 
         const formatISODate = (iso: string) => iso ? new Date(iso).toISOString().split('T')[0] : '';
 
-        // ✅ Reset ค่าในฟอร์มให้ตรงกับข้อมูลเดิม
         reset({
           title: p.title,
           description: p.description,
@@ -97,7 +85,7 @@ export default function EditProjectPage({ params }: { params: any }) {
           startDate: formatISODate(p.startDate),
           endDate: formatISODate(p.endDate),
           status: p.status,
-          projectType: p.projectType || "", // ใส่ค่า default
+          projectType: p.projectType || "", 
           ownerName: p.ownerName || "",
           contact: p.contact || "",
         });
@@ -112,7 +100,6 @@ export default function EditProjectPage({ params }: { params: any }) {
 
   }, [reset]);
 
-  // Logic: อ่าน Params ID
   useEffect(() => {
     Promise.resolve(params)
       .then((resolved: any) => {
@@ -134,7 +121,6 @@ export default function EditProjectPage({ params }: { params: any }) {
       });
   }, [params, fetchAndSetData]);
 
-  // Logic: Upload รูปภาพ
   const uploadPoster = async (file: File): Promise<string> => {
     const uploadFormData = new window.FormData();
     uploadFormData.append('file', file);
@@ -151,7 +137,6 @@ export default function EditProjectPage({ params }: { params: any }) {
     return data.url; 
   };
 
-  // Logic: บันทึกข้อมูล (Submit)
   const onSubmit: SubmitHandler<EditFormData> = async (data) => {
     if (!projectId) return;
     setIsSubmitting(true);
@@ -160,12 +145,10 @@ export default function EditProjectPage({ params }: { params: any }) {
     let updatedPosterUrl = currentPosterUrl;
 
     try {
-      // ถ้ามีการอัปโหลดรูปใหม่
       if (data.posterImage && data.posterImage.length > 0) {
         updatedPosterUrl = await uploadPoster(data.posterImage[0]);
       }
 
-      // ✅ เตรียมข้อมูล JSON ให้ตรงกับหน้า Create
       const apiData = {
         title: data.title,
         description: data.description,
@@ -174,9 +157,9 @@ export default function EditProjectPage({ params }: { params: any }) {
         endDate: data.endDate,
         status: data.status,
         posterUrl: updatedPosterUrl,
-        projectType: data.projectType, // ส่งค่า Enum
-        ownerName: data.ownerName,     // ส่งค่า ownerName
-        contact: data.contact,         // ส่งค่า contact
+        projectType: data.projectType, 
+        ownerName: data.ownerName,     
+        contact: data.contact,       
       };
 
       const response = await fetch(`/api/donation-project/${projectId}`, {
@@ -199,7 +182,6 @@ export default function EditProjectPage({ params }: { params: any }) {
     }
   };
 
-  // Logic: ลบโครงการ
   const handleDelete = async () => {
     if (!projectId) return;
     if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบโครงการนี้?')) return;
@@ -224,7 +206,6 @@ export default function EditProjectPage({ params }: { params: any }) {
     }
   };
 
-  // Render Loading
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -233,7 +214,6 @@ export default function EditProjectPage({ params }: { params: any }) {
     );
   }
 
-  // Render Error
   if (error && !initialData) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -242,9 +222,6 @@ export default function EditProjectPage({ params }: { params: any }) {
     );
   }
 
-  // ----------------------------------------------------
-  // Render Form
-  // ----------------------------------------------------
   return (
     <div className="flex justify-center items-start min-h-screen bg-gray-50 p-4 pt-8">
       <Card className="w-full max-w-4xl p-8 shadow-lg rounded-xl bg-white">
@@ -266,7 +243,6 @@ export default function EditProjectPage({ params }: { params: any }) {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
 
-          {/* ชื่อโครงการ */}
           <div>
             <label htmlFor="title" className="block text-gray-700 text-sm font-semibold mb-2">ชื่อโครงการ</label>
             <input
@@ -279,7 +255,7 @@ export default function EditProjectPage({ params }: { params: any }) {
             {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
           </div>
 
-          {/* ✅ เพิ่ม: ประเภททุน (Dropdown) */}
+          {/* เพิ่ม: ประเภททุน (Dropdown) */}
           <div>
             <label htmlFor="projectType" className="block text-gray-700 text-sm font-semibold mb-2">
               ประเภททุน (Project Type)
@@ -301,7 +277,7 @@ export default function EditProjectPage({ params }: { params: any }) {
             {errors.projectType && <p className="text-red-500 text-xs mt-1">{errors.projectType.message}</p>}
           </div>
 
-          {/* ✅ เพิ่ม: ชื่อผู้รับผิดชอบ & ข้อมูลติดต่อ */}
+          {/* เพิ่ม: ชื่อผู้รับผิดชอบ & ข้อมูลติดต่อ */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="ownerName" className="block text-gray-700 text-sm font-semibold mb-2">
