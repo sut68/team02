@@ -1,9 +1,10 @@
 generator client {
   provider = "prisma-client-js"
 }
+
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL") // Moved to prisma.config.ts for Prisma 5+
 }
 
 model PasswordResetToken {
@@ -57,6 +58,15 @@ enum CommentStatus {
   ACTIVE
   HIDDEN
   DELETED
+}
+
+enum CommentDeletionReason {
+  PROFANITY_INSULTS          // คำหยาบ/ดูถูก
+  HARASSMENT_THREATS         // การคุกคาม/ข่มขู่
+  SPAM_ADVERTISEMENT         // สแปม/โฆษณา
+  IMPERSONATION              // แอบอ้างตัวตน
+  ILLEGAL_ACTIVITIES         // ส่งเสริมสิ่งผิดกฎหมาย
+  OTHER_PLATFORM_VIOLATIONS  // อื่นๆ/ละเมิดกฎแพลตฟอร์ม
 }
 
 enum ContentTargetType {
@@ -193,6 +203,13 @@ model User {
   jobPostings      JobPosting[]
   approvalLogs     ApprovalLog[]
   jobEditHistories JobEditHistory[]
+
+  // Scalability Indexes
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@index([createdAt])
+  @@index([updatedAt])
 }
 
 model EducationRecord {
@@ -331,9 +348,11 @@ model Entitlement {
   qtyUsed     Int               @default(0) // ใช้สิทธิ์ไปแล้วกี่ชิ้น
   // ✅ เพิ่มอันนี้
   redeemToken String?           @unique
+  bookingId   Int?
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  booking     Booking?     @relation(fields: [bookingId], references: [id])
   user        User         @relation(fields: [userId], references: [id])
   item        SouvenirItem @relation(fields: [itemId], references: [id])
   donation    Donation?    @relation(fields: [donationId], references: [id])
@@ -403,9 +422,7 @@ enum RedeemMethod {
 
 enum ShipStatus {
   PENDING
-  IN_TRANSIT
   DELIVERED
-  FAILED
 }
 
 // ========================================
@@ -487,6 +504,8 @@ model Booking {
   BookingFieldID    Int?              @unique
   //PaymentID         Int?              @unique
   transactionStatus TransactionStatus @default(PENDING)
+  qrToken           String?           @unique // สำหรับ QR Code
+  bookingNumber     String?           @unique // รหัสการจอง (BK20250108xxxx)
 
   // createdAt DateTime @default(now())
   // updatedAt DateTime @updatedAt
@@ -499,6 +518,7 @@ model Booking {
 
   // bookingFormId Int?
   attendees     Attendee[]
+  entitlement   Entitlement[]
 
   // Relation to SouvenirItem (กิจกรรมแจกของที่ระลึก)
   souvenirItems SouvenirItem[] @relation("BookingToSouvenirItem")
@@ -554,7 +574,7 @@ model Content {
   @@index([souvenirItemId])
 }
 
-// รูปภาพที่เกี่ยวข้องกับเนื้อหา
+
 model PictureContent {
   id        Int    @id @default(autoincrement())
   Path      String
@@ -568,20 +588,6 @@ model PictureContent {
   @@unique([Path, ContentID])
 }
 
-// การชำระเงิน
-// model Payment {
-//   id            Int               @id @default(autoincrement())
-//   amount        Float
-//   paymentDate   DateTime          @default(now())
-//   paymentMethod String? // เช่น "credit_card", "bank_transfer", "qr_code"
-//   status        TransactionStatus @default(PENDING)
-//   referenceNo   String? // เลขที่อ้างอิง/slip
-
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-
-//   booking Booking?
-// }
 
 // ========================================
 // Budget & Project Management System
@@ -652,7 +658,7 @@ model ProjectProposal {
   id                 Int       @id @default(autoincrement())
   projectName        String
   objective          String?
-  description        String?
+  description        String?  @db.Text
   requestedAmount    Float?
   projectStartDate   DateTime?
   projectEndDate     DateTime?
@@ -776,7 +782,7 @@ model Category {
 model Topic {
   id               Int         @id @default(autoincrement())
   title            String
-  content          String
+  content          String  @db.Text  // ⭐ ระบุเป็น Text
   topicImage       String?
   status           TopicStatus @default(ACTIVE)
   createddate      DateTime    @default(now())
@@ -801,10 +807,11 @@ model Topic {
 // ควาศคิดเห็น
 model Comment {
   id           Int           @id @default(autoincrement())
-  content      String
+  content      String  @db.Text  // ⭐ ระบุเป็น Text สำหรับข้อความยาว
   createddate  DateTime      @default(now())
   status       CommentStatus @default(ACTIVE)
   commentcount Int           @default(0)
+  reasonForDeletion CommentDeletionReason? // ⭐ เพิ่มฟิลด์นี้
 
   topic_id Int
   user_id  Int
@@ -821,7 +828,7 @@ model Comment {
 model TopicEditHistory {
   id             Int      @id @default(autoincrement())
   editedByUserID String
-  oldcontent     String
+  oldcontent     String  @db.Text  // ⭐ ระบุเป็น Text
   editdate       DateTime @default(now())
 
   staffuser_id Int?
@@ -876,6 +883,13 @@ model DonationProject {
   budgetDonations BudgetDonation[]
   souvenirItemId Int?              
   souvenirItem   SouvenirItem?     @relation(fields: [souvenirItemId], references: [id])
+
+  // Scalability Indexes
+  @@index([status])
+  @@index([projectType])
+  @@index([createdAt])
+  @@index([endDate])
+  @@index([currentAmount])
 }
 
 // ธุรกรรมการบริจาค (DonationTransaction)

@@ -236,11 +236,13 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
     
-    // Logic: กู้คืนข้อมูล (Restore)
     if (body.restore === true && body.id) {
         const restoredProposal = await prisma.projectProposal.update({
             where: { id: Number(body.id) },
-            data: { deletedAt: null },
+            data: { 
+                deletedAt: null,
+                status: 'PENDING'  // รีเซ็ตสถานะเป็น รอดำเนินการ (PENDING)
+            },
         });
         return NextResponse.json({ message: 'กู้คืนสำเร็จ', proposal: restoredProposal }, { status: 200 });
     }

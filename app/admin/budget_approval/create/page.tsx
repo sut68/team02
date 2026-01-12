@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ImageUp, Search as SearchIcon } from "lucide-react"; // แก้ import ให้กระชับ
+import { Search as SearchIcon, CloudUpload, X } from "lucide-react"; 
 import { ProjectManager } from "@/app/types/budget_approval";
 
 // เรียกใช้ Components
@@ -14,6 +14,8 @@ import SuccessModal from "@/app/components/ui/SuccessModal";
 
 export default function CreateBudgetProjectPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -37,6 +39,7 @@ export default function CreateBudgetProjectPage() {
     coverFilePath: "",
   });
   const [coverFilePreview, setCoverFilePreview] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   // --- Step 2: Manager Data ---
   const [managerData, setManagerData] = useState({
@@ -68,10 +71,8 @@ export default function CreateBudgetProjectPage() {
     return errors[fieldName] ? errorClass : baseClass;
   };
 
-  // ✅ FIX: ใช้ Local Time แทน UTC เพื่อป้องกันบั๊กวันที่ผิดเพี้ยนตอนเช้า
   const getTodayString = () => {
     const date = new Date();
-    // ปรับ Format เป็น YYYY-MM-DD แบบ Local
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
@@ -79,7 +80,6 @@ export default function CreateBudgetProjectPage() {
   };
 
   useEffect(() => {
-    // 1.1 ดึง User ID
     const fetchUser = async () => {
       try {
         const res = await fetch("/api/auth/me");
@@ -92,23 +92,15 @@ export default function CreateBudgetProjectPage() {
       }
     };
 
-    // 1.2 ดึงรอบงบประมาณปัจจุบัน
     const fetchActiveRound = async () => {
       try {
         const res = await fetch("/api/budget-round");
         if (res.ok) {
           const data = await res.json();
           const rounds = data.budgetRounds || [];
-          // const now = new Date();
-          
-          // หา active round ที่ status เป็น 'OPEN'
           const active = rounds.find((r: any) => r.status === 'OPEN');
-
           if (active) {
             setBudgetRoundId(active.id);
-            console.log("Active Budget Round ID:", active.id);
-          } else {
-            console.warn("No active budget round found.");
           }
         }
       } catch (err) {
@@ -147,44 +139,62 @@ export default function CreateBudgetProjectPage() {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("folder", "budget/upload");
+  // ✅ New Upload Logic
+  const processFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      alert("กรุณาอัปโหลดไฟล์รูปภาพเท่านั้น");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("ขนาดไฟล์ต้องไม่เกิน 5MB");
+      return;
+    }
 
-      try {
-        const res = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", "budget/upload");
 
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || "Upload failed");
-        }
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-        const data = await res.json();
-        setProjectData((prev) => ({ ...prev, coverFilePath: data.url }));
-        setCoverFilePreview(data.url);
-
-        if (errors.coverFilePath) {
-          setErrors((prev) => {
-            const n = { ...prev };
-            delete n.coverFilePath;
-            return n;
-          });
-        }
-      } catch (error) {
-        console.error("Upload error:", error);
-        alert("อัปโหลดรูปภาพไม่สำเร็จ: " + (error as Error).message);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Upload failed");
       }
+
+      const data = await res.json();
+      setProjectData((prev) => ({ ...prev, coverFilePath: data.url }));
+      setCoverFilePreview(data.url);
+
+      if (errors.coverFilePath) {
+        setErrors((prev) => {
+          const n = { ...prev };
+          delete n.coverFilePath;
+          return n;
+        });
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("อัปโหลดรูปภาพไม่สำเร็จ: " + (error as Error).message);
     }
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) processFile(file);
+  };
+
   // --- Search Logic ---
- // ฟังก์ชันกลางสำหรับการค้นหา
   const executeSearch = async (query: string) => {
     if (!query.trim()) {
         setSearchResult([]);
@@ -205,7 +215,6 @@ export default function CreateBudgetProjectPage() {
     }
   };
 
-  // 1. Auto Search: ค้นหาอัตโนมัติเมื่อหยุดพิมพ์ 0.5 วินาที
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (searchQuery) {
@@ -214,11 +223,9 @@ export default function CreateBudgetProjectPage() {
         setSearchResult([]);
       }
     }, 500);
-
     return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
-  // 2. Handle Enter Key: ค้นหาทันทีเมื่อกด Enter
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -226,7 +233,6 @@ export default function CreateBudgetProjectPage() {
     }
   };
 
-  // 3. Manual Click: ปุ่มค้นหา
   const handleManualSearch = () => {
     executeSearch(searchQuery);
   };
@@ -302,13 +308,12 @@ export default function CreateBudgetProjectPage() {
     setIsSubmitting(true);
 
     try {
-      // ✅ 2. ส่ง staffId และ budgetRoundId ไปด้วย
       const payload = {
         project: {
           ...projectData,
           requestedAmount: Number(projectData.requestedAmount),
-          staffId: staffId,           // ส่ง ID คนทำรายการ
-          budgetRoundId: budgetRoundId, // ส่ง ID รอบงบประมาณปัจจุบัน
+          staffId: staffId,
+          budgetRoundId: budgetRoundId,
         },
         manager: {
           ...managerData,
@@ -419,7 +424,6 @@ export default function CreateBudgetProjectPage() {
                     className={getInputClass("objective")}
                     placeholder="เช่น เพื่อสนับสนุนทุนการศึกษาให้แก่นักศึกษาที่ขาดแคลน"
                   />
-                  {/* ✅ ส่วน Error + ตัวนับคำ: จัดให้อยู่บรรทัดเดียวกัน */}
                   <div className="flex justify-between items-start mt-1">
                     <div className="flex-1">
                       {errors.objective && (
@@ -458,7 +462,6 @@ export default function CreateBudgetProjectPage() {
                   <label className={labelStyle}>
                     วันเริ่มจัดโครงการ <span className="text-red-500">*</span>
                   </label>
-                  {/* ✅ FIX: เปลี่ยนจาก InputIcon เป็น Input ธรรมดา (เหมือน End Date) */}
                   <Input
                     type="date"
                     name="projectStartDate"
@@ -507,67 +510,63 @@ export default function CreateBudgetProjectPage() {
                 </div>
               </div>
 
-              {/* Upload */}
+              {/* ✅ Upload Image Section (Updated UI) */}
               <div>
                 <label className={labelStyle}>
                   ภาพปก/ภาพโปสเตอร์กิจกรรม <span className="text-red-500">*</span>
                 </label>
-                <div
-                  className={`mt-2 border rounded-2xl h-64 flex flex-col items-center justify-center relative overflow-hidden bg-white hover:bg-orange-50 transition-colors cursor-pointer ${
-                    errors.coverFilePath
-                      ? "border-red-500 border-2"
-                      : "border-gray-300 border-dashed hover:border-orange-500"
-                  }`}
+                
+                <div 
+                    onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
+                    onDrop={handleDrop}
+                    onClick={() => !coverFilePreview && fileInputRef.current?.click()}
+                    className={`mt-2 border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all h-64 relative overflow-hidden bg-white
+                    ${isDragging ? 'border-orange-500 bg-orange-50/50' : 'border-gray-200 hover:border-gray-300'} 
+                    ${errors.coverFilePath ? 'border-red-300 bg-red-50/10' : ''}
+                    ${!coverFilePreview ? 'cursor-pointer' : ''}
+                    `}
                 >
-                  {coverFilePreview ? (
-                    <>
-                      <img
-                        src={coverFilePreview}
-                        alt="Preview"
-                        className="w-full h-full object-contain"
-                      />
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCoverFilePreview(null);
-                          setProjectData((p) => ({ ...p, coverFilePath: "" }));
-                        }}
-                        className="absolute top-4 right-4 bg-white/80 rounded-lg p-2 shadow-md hover:bg-red-50 text-red-500 z-10 text-xs font-bold px-3"
-                      >
-                        ลบรูปภาพ
-                      </button>
-                    </>
-                  ) : (
-                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer">
-                      <div className="mb-6">
-                        <ImageUp className="w-8 h-8 text-gray-400" />
-                      </div>
-                      <span className="text-gray-500 text-[14px] font-medium">
-                        คลิกเพื่ออัปโหลดรูปภาพ
-                      </span>
-                      <span className="text-gray-400 text-xs mt-2">(รองรับ jpg, png, gif)</span>
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleFileUpload}
-                      />
-                    </label>
-                  )}
-                </div>
-                <div className="flex justify-between items-start mt-2 px-1">
-                  <div className="flex-1 text-left">
-                    {errors.coverFilePath && (
-                      <p className="text-red-500 text-xs animate-in slide-in-from-top-1">
-                        {errors.coverFilePath}
-                      </p>
+                    {coverFilePreview ? (
+                        <>
+                            <img src={coverFilePreview} alt="Cover Preview" className="w-full h-full object-contain z-10" />
+                            <button
+                                type="button"
+                                onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    setCoverFilePreview(null); 
+                                    setProjectData(p => ({ ...p, coverFilePath: "" }));
+                                    if(fileInputRef.current) fileInputRef.current.value = "";
+                                }}
+                                className="absolute top-4 right-4 bg-white/90 p-2 rounded-full text-gray-500 hover:text-red-500 shadow-md transition-all z-20"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <CloudUpload className={`w-12 h-12 mb-3 ${errors.coverFilePath ? 'text-red-300' : 'text-gray-300'}`} />
+                            <p className="text-gray-700 font-medium mb-1">คลิกเพื่อเลือกรูปภาพ หรือลากไฟล์มาวางที่นี่</p>
+                            <p className="text-gray-400 text-xs mb-4">รองรับไฟล์ภาพ JPEG, PNG ขนาดไม่เกิน 5 MB</p>
+                            <button type="button" className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 shadow-sm pointer-events-none">
+                              เลือกภาพ
+                            </button>
+                        </>
                     )}
-                  </div>
-                  <div className="text-right text-xs text-gray-500 ml-2">
-                    ขนาดไฟล์ไม่เกิน 5MB
-                  </div>
+                    <input 
+                        ref={fileInputRef} 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/*" 
+                        onChange={handleFileUpload} 
+                    />
                 </div>
+                
+                {errors.coverFilePath && (
+                  <p className="text-red-500 text-xs mt-2 ml-1 animate-in slide-in-from-top-1">
+                    {errors.coverFilePath}
+                  </p>
+                )}
               </div>
 
               {/* Buttons Step 1 */}

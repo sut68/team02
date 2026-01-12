@@ -35,6 +35,11 @@ jest.mock('fs', () => ({
   },
 }));
 
+jest.mock('@/lib/azureBlob', () => ({
+  uploadToAzureBlob: jest.fn().mockResolvedValue('https://mock-url.com/file.pdf'),
+  deleteFromAzureBlob: jest.fn(),
+}));
+
 // ============================================================================
 // 2. HELPER FUNCTIONS
 // ============================================================================

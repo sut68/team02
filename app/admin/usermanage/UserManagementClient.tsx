@@ -142,7 +142,7 @@ export default function UserManagementClient({ initialUsers }: Props) {
     <>
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-medium text-gray-700 mb-8">การจัดการสมาชิก</h1>
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">การจัดการสมาชิก</h1>
 
         {/* Status Cards */}
         <div className="grid grid-cols-4 gap-6 mb-8">
@@ -228,7 +228,7 @@ export default function UserManagementClient({ initialUsers }: Props) {
         {/* Members Table */}
         <Card>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-100 border-b border-gray-200">

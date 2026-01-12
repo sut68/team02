@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
-import path from "path";
-import { promises as fs } from "fs";
+import { Prisma } from "@prisma/client";
 import jwt from "jsonwebtoken";
+import { uploadToAzureBlob } from '@/lib/azureBlob'; 
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-this-in-production";
 
+// ฟังก์ชันแกะ User จาก Token
 function getUserFromToken(req: NextRequest) {
   const token = req.cookies.get("token")?.value;
   if (!token) return null;
@@ -16,31 +17,29 @@ function getUserFromToken(req: NextRequest) {
   }
 }
 
-async function saveFile(file: File, subFolder: string): Promise<string> {
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "budget", subFolder);
-  await fs.mkdir(uploadDir, { recursive: true });
-
+// 2. ฟังก์ชันช่วยอัปโหลดไป Cloud (ใช้ Azure Blob Storage)
+async function saveFileToCloud(file: File, subFolder: string): Promise<string> {
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
+  // ตั้งชื่อไฟล์ (Key) ที่จะเก็บใน Cloud
   const safeName = file.name.replace(/\s+/g, "_");
-  const fileNameOnDisk = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}_${safeName}`;
-  const filePathOnDisk = path.join(uploadDir, fileNameOnDisk);
-  
-  await fs.writeFile(filePathOnDisk, buffer);
-  return `/uploads/budget/${subFolder}/${fileNameOnDisk}`;
+  // ตัวอย่าง Path: uploads/budget/evidence/1709999_filename.pdf
+  const cloudPath = `uploads/budget/${subFolder}/${Date.now()}_${Math.random().toString(36).slice(2, 7)}_${safeName}`;
+
+  // ส่งไป Azure (Return เป็น URL เต็มๆ กลับมา)
+  return await uploadToAzureBlob(buffer, cloudPath, file.type);
 }
 
-// ============================================================================
-// GET: ดึงข้อมูลรายงาน
-// ============================================================================
+// GET: ดึงข้อมูลรายงาน (ส่วนนี้เหมือนเดิม 100%)
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     const projectId = searchParams.get("projectId");
     const status = searchParams.get("status");
-    const year = searchParams.get("year"); // ✅ รับ parameter ปีงบประมาณ
+    const year = searchParams.get("year"); 
+    const roundId = searchParams.get("roundId");
     const showTrash = searchParams.get("trash") === "true"; 
 
     // 1. กรณีดึงรายการเดียว (Detail)
@@ -61,31 +60,20 @@ export async function GET(req: NextRequest) {
     }
 
     // 2. กรณีดึงเป็น List
-    const where: any = {};
+    const where: Prisma.SummarySubmissionWhereInput = {};
 
-    if (showTrash) {
-      where.deletedAt = { not: null };
-    } else {
-      where.deletedAt = null;
-    }
+    if (showTrash) where.deletedAt = { not: null };
+    else where.deletedAt = null;
 
     if (projectId) where.proposalId = Number(projectId);
     
-    // ✅ เพิ่ม Logic กรองตามสถานะ และ ปีงบประมาณ
-    if (status && status !== "ทั้งหมด") {
-        where.status = status;
-    } else {
-        // ถ้าเป็น Public User (ไม่ระบุ status มา) อาจจะอยากเห็นเฉพาะ APPROVED
-        // หรือถ้าใน Admin ก็อาจจะส่ง status มา
-        // ในที่นี้ถ้าไม่ส่งมา ให้ดึงทั้งหมดที่ไม่ใช่ Draft (สำหรับหน้าบ้าน) หรือตามต้องการ
-        // where.status = "APPROVED"; 
-    }
+    if (status && status !== "ทั้งหมด") where.status = status as any;
 
-    // ✅ กรองตามปีงบประมาณ (Relation: Report -> Proposal -> BudgetRound -> fiscalYear)
-    if (year) {
+    if (year || (roundId && roundId !== "all")) {
         where.proposal = {
             budgetRound: {
-                fiscalYear: year
+                ...(year && { fiscalYear: year }),
+                ...(roundId && roundId !== "all" && { id: Number(roundId) })
             }
         };
     }
@@ -94,7 +82,6 @@ export async function GET(req: NextRequest) {
       where,
       include: {
         proposal: {
-            // Include ข้อมูล Proposal ให้ครบถ้วนเพื่อใช้ใน Type
             include: {
                 budgetRound: true,
                 manager: true
@@ -106,11 +93,10 @@ export async function GET(req: NextRequest) {
       orderBy: { updatedAt: "desc" },
     });
 
-    // ✅ Map ข้อมูลให้ตรงกับ BudgetReport Type และเพิ่ม Helper fields
     const formattedReports = reports.map(r => ({
-        ...r, // Spread properties เดิม (id, status, etc.)
-        reportTitle: `รายงานสรุปผลโครงการ ${r.proposal?.projectName || ''}`,
-        imageSrc: r.images[0]?.imagePath || null, // Helper สำหรับ UI
+        ...r, 
+        reportTitle: `รายงานสรุปผล ${r.proposal?.projectName || ''}`,
+        imageSrc: r.images[0]?.imagePath || null, 
     }));
 
     return NextResponse.json({ reports: formattedReports }, { status: 200 });
@@ -121,7 +107,9 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ... (ส่วน POST, PUT, DELETE คงเดิม)
+// ============================================================================
+// POST: สร้างรายงานใหม่ (แก้ไขให้ใช้ saveFileToCloud)
+// ============================================================================
 export async function POST(req: NextRequest) {
   try {
     const user = getUserFromToken(req);
@@ -140,14 +128,16 @@ export async function POST(req: NextRequest) {
     }
 
     let summaryFilePath = "";
+    // 3. เรียกใช้ฟังก์ชัน Cloud สำหรับไฟล์หลัก
     if (evidenceFiles.length > 0 && evidenceFiles[0].size > 0) {
-        summaryFilePath = await saveFile(evidenceFiles[0], "evidence");
+        summaryFilePath = await saveFileToCloud(evidenceFiles[0], "evidence");
     }
 
     const imagePaths: string[] = [];
+    // 4. เรียกใช้ฟังก์ชัน Cloud สำหรับรูปภาพกิจกรรม
     for (const file of activityImages) {
         if (file.size > 0) {
-            const path = await saveFile(file, "images");
+            const path = await saveFileToCloud(file, "images");
             imagePaths.push(path);
         }
     }
@@ -157,7 +147,7 @@ export async function POST(req: NextRequest) {
         proposalId: Number(projectId),
         totalActualExpense: Number(actualExpense),
         summaryFilePath: summaryFilePath || null,
-        status: "DRAFT", // Default status
+        status: "DRAFT", 
         submitterId: user.userId,
         submissionDate: new Date(),
         images: {
@@ -173,10 +163,16 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     console.error("POST Error:", error);
-    return NextResponse.json({ error: "เกิดข้อผิดพลาดในการบันทึกข้อมูล" }, { status: 500 });
+    return NextResponse.json({ 
+        error: "เกิดข้อผิดพลาดในการบันทึกข้อมูล", 
+        details: (error as Error).message 
+    }, { status: 500 });
   }
 }
 
+// ============================================================================
+// PUT: แก้ไขข้อมูล (แก้ไขให้ใช้ saveFileToCloud)
+// ============================================================================
 export async function PUT(req: NextRequest) {
   try {
     const user = getUserFromToken(req);
@@ -184,6 +180,7 @@ export async function PUT(req: NextRequest) {
 
     const contentType = req.headers.get("content-type") || "";
 
+    // กรณีส่ง JSON (เช่น อัปเดตสถานะอย่างเดียว)
     if (contentType.includes("application/json")) {
         const body = await req.json();
         const { id, status, ...updateData } = body;
@@ -197,6 +194,7 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({ message: "อัปเดตสถานะสำเร็จ", report: updated });
     }
 
+    // กรณีส่ง FormData (มีการอัปโหลดไฟล์)
     const formData = await req.formData();
     const id = formData.get("id"); 
     
@@ -210,12 +208,14 @@ export async function PUT(req: NextRequest) {
     const updatePayload: any = {};
     if (actualExpense) updatePayload.totalActualExpense = Number(actualExpense);
 
+    // 5. อัปโหลดไฟล์หลักใหม่ (ถ้ามี)
     if (newEvidenceFiles.length > 0 && newEvidenceFiles[0].size > 0) {
-        const path = await saveFile(newEvidenceFiles[0], "evidence");
+        const path = await saveFileToCloud(newEvidenceFiles[0], "evidence");
         updatePayload.summaryFilePath = path;
     }
 
     await prisma.$transaction(async (tx) => {
+        // ลบรูปภาพเดิม (ลบเฉพาะใน DB)
         if (deletedFileIds) {
             const idsToDelete = String(deletedFileIds).split(',').map(Number).filter(n => !isNaN(n));
             if (idsToDelete.length > 0) {
@@ -225,10 +225,11 @@ export async function PUT(req: NextRequest) {
             }
         }
 
+        // 6. เพิ่มรูปภาพใหม่ (ถ้ามี)
         if (newActivityImages.length > 0) {
             for (const file of newActivityImages) {
                 if (file.size > 0) {
-                    const path = await saveFile(file, "images");
+                    const path = await saveFileToCloud(file, "images");
                     await tx.submissionImage.create({
                         data: { submissionId: Number(id), imagePath: path }
                     });
@@ -250,23 +251,19 @@ export async function PUT(req: NextRequest) {
   }
 }
 
+// DELETE: ย้ายลงถังขยะ (Soft Delete)
 export async function DELETE(req: NextRequest) {
   try {
     const user = getUserFromToken(req);
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
-
     if (!id) return NextResponse.json({ error: "ไม่พบ ID" }, { status: 400 });
-
     await prisma.summarySubmission.update({
         where: { id: Number(id) },
         data: { deletedAt: new Date() }
     });
-
     return NextResponse.json({ message: "ย้ายลงถังขยะสำเร็จ" }, { status: 200 });
-
   } catch (error) {
     console.error("DELETE Error:", error);
     return NextResponse.json({ error: "ลบรายการไม่สำเร็จ" }, { status: 500 });

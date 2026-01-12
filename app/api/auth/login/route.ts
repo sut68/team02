@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '@/app/lib/prisma';
 import { loginLimiter } from '@/app/lib/rate-limit';
 import { validateEmail } from '@/app/lib/validation';
+import { checkBruteForce, recordFailedAttempt, clearFailedAttempts, logSecurityEvent, createSafeErrorResponse } from '@/app/lib/security';
 
 const JWT_SECRET =
   process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
@@ -12,6 +13,8 @@ const JWT_SECRET =
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+  
   try {
     // ตรวจสอบ rate limit
     const rateLimitResult = await loginLimiter(request);
@@ -20,10 +23,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (rateLimitError) {
     console.error('Rate limit error:', rateLimitError);
-    return NextResponse.json(
-      { error: 'เกิดข้อผิดพลาดในการตรวจสอบ rate limit' },
-      { status: 500 }
-    );
+    return createSafeErrorResponse(500, 'เกิดข้อผิดพลาดในการตรวจสอบ rate limit');
   }
 
   try {
@@ -32,29 +32,29 @@ export async function POST(request: NextRequest) {
     try {
       body = await request.json();
     } catch (parseError) {
-      console.error('JSON parse error:', parseError);
-      return NextResponse.json(
-        { error: 'รูปแบบข้อมูลไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง' },
-        { status: 400 }
-      );
+      logSecurityEvent('LOGIN_INVALID_JSON', 'Invalid JSON in login request', ip);
+      return createSafeErrorResponse(400, 'รูปแบบข้อมูลไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
     }
 
     const { email, password } = body;
 
     // Validation
     if (!email || !password) {
-      return NextResponse.json(
-        { error: 'กรุณากรอกอีเมลและรหัสผ่าน' },
-        { status: 400 }
-      );
+      logSecurityEvent('LOGIN_MISSING_CREDENTIALS', 'Missing email or password', ip);
+      return createSafeErrorResponse(400, 'กรุณากรอกอีเมลและรหัสผ่าน');
     }
 
     // Validate email format
     if (!validateEmail(email)) {
-      return NextResponse.json(
-        { error: 'รูปแบบอีเมลไม่ถูกต้อง' },
-        { status: 400 }
-      );
+      logSecurityEvent('LOGIN_INVALID_EMAIL', `Invalid email format: ${email}`, ip);
+      return createSafeErrorResponse(400, 'รูปแบบอีเมลไม่ถูกต้อง');
+    }
+
+    // Check brute force protection
+    const bruteForceCheck = checkBruteForce(email);
+    if (!bruteForceCheck.allowed) {
+      logSecurityEvent('LOGIN_BRUTE_FORCE', `Account locked: ${email}`, ip);
+      return createSafeErrorResponse(429, 'บัญชีของคุณถูกล็อกชั่วคราว กรุณาลองอีกครั้งในอีก 15 นาที');
     }
 
     // Find user with relations
@@ -72,46 +72,43 @@ export async function POST(request: NextRequest) {
       });
     } catch (dbError) {
       console.error('Database error:', dbError);
-      return NextResponse.json(
-        { error: 'เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล กรุณาลองใหม่อีกครั้ง' },
-        { status: 500 }
-      );
+      logSecurityEvent('LOGIN_DB_ERROR', `Database error for ${email}`, ip);
+      return createSafeErrorResponse(500, 'เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล');
     }
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' },
-        { status: 401 }
-      );
+      recordFailedAttempt(email);
+      logSecurityEvent('LOGIN_USER_NOT_FOUND', `User not found: ${email}`, ip);
+      return createSafeErrorResponse(401, 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
     }
 
     // Check password
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      return NextResponse.json(
-        { error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' },
-        { status: 401 }
-      );
+      recordFailedAttempt(email);
+      logSecurityEvent('LOGIN_INVALID_PASSWORD', `Invalid password for ${email}`, ip);
+      return createSafeErrorResponse(401, 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
     }
 
     // Check verification status (skip for ADMIN)
     if (user.role !== 'ADMIN') {
       if (!user.verification || user.verification.status !== 'APPROVED') {
         const verificationStatus = user.verification?.status || 'PENDING';
-        return NextResponse.json(
-          {
-            error:
-              verificationStatus === 'PENDING'
-                ? 'บัญชีของคุณรอการอนุมัติจากแอดมิน'
-                : 'บัญชีของคุณถูกปฏิเสธ กรุณาติดต่อผู้ดูแลระบบ',
-          },
-          { status: 403 }
+        logSecurityEvent('LOGIN_UNVERIFIED', `Unverified login attempt: ${email} (${verificationStatus})`, ip);
+        return createSafeErrorResponse(
+          403,
+          verificationStatus === 'PENDING'
+            ? 'บัญชีของคุณรอการอนุมัติจากแอดมิน'
+            : 'บัญชีของคุณถูกปฏิเสธ กรุณาติดต่อผู้ดูแลระบบ'
         );
       }
     }
 
-    // Generate JWT token
+    // Clear failed attempts after successful password check
+    clearFailedAttempts(email);
+
+    // Generate JWT token with shorter expiration
     const token = jwt.sign(
       {
         userId: user.id,
@@ -119,8 +116,11 @@ export async function POST(request: NextRequest) {
         role: user.role,
       },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '24h' } // Changed from 7d to 24h for better security
     );
+
+    // Log successful login
+    logSecurityEvent('LOGIN_SUCCESS', `Successful login for ${email}`, ip, user.id.toString());
 
     // Create response with token
     const response = NextResponse.json(
@@ -136,17 +136,19 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
 
-    // Set HTTP-only cookie
+    // Set HTTP-only cookie with enhanced security
     response.cookies.set('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      secure: process.env.NODE_ENV === 'production', // Only HTTPS in production
+      sameSite: 'strict', // Changed from 'lax' to 'strict' for CSRF protection
+      maxAge: 60 * 60 * 24, // 24 hours (matches JWT expiration)
+      path: '/',
     });
 
     return response;
   } catch (error: unknown) {
     console.error('Login error:', error);
+    logSecurityEvent('LOGIN_EXCEPTION', `Unexpected error during login`, ip);
 
     // Ensure we always return JSON, never HTML
     // This prevents the "Unexpected token '<'" error
@@ -161,13 +163,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    return NextResponse.json(
-      {
-        error: 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ',
-        details:
-          process.env.NODE_ENV === 'development' ? errorMessage : undefined,
-      },
-      { status: 500 }
+    return createSafeErrorResponse(
+      500,
+      'เกิดข้อผิดพลาดในการเข้าสู่ระบบ',
+      process.env.NODE_ENV === 'development' ? errorMessage : undefined
     );
   }
 }

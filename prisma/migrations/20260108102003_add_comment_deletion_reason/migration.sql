@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "CommentDeletionReason" AS ENUM ('PROFANITY_INSULTS', 'HARASSMENT_THREATS', 'SPAM_ADVERTISEMENT', 'IMPERSONATION', 'ILLEGAL_ACTIVITIES', 'OTHER_PLATFORM_VIOLATIONS');
+
+-- AlterTable
+ALTER TABLE "Comment" ADD COLUMN     "reasonForDeletion" "CommentDeletionReason";

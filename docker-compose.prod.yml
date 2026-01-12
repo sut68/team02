@@ -73,7 +73,7 @@ services:
              npx prisma migrate deploy && 
              npm run start"
     expose:
-      - "3000"  # ✅ เปิดพอร์ต 3000 แค่ภายใน (ไม่ให้ชนกับ web ข้างนอก)
+      - "3000"
     environment:
       # ให้ Nginx ส่งคนเข้า api.sut... มาที่นี่
       VIRTUAL_HOST: api.sut-alumniconnect.me

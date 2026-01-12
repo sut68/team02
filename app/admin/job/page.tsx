@@ -1,4 +1,5 @@
 'use client';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Layers,
@@ -7,7 +8,10 @@ import {
   XCircle,
   Edit2,
   Trash2,
+  Search,
 } from 'lucide-react';
+import { Card, CardContent } from '../../components/ui/Card';
+import { Input } from '../../components/ui/Input';
 
 interface Job {
   id: number;
@@ -41,11 +45,14 @@ interface Job {
   } | null;
 }
 
+type FilterStatus = 'all' | 'pending' | 'approved' | 'rejected';
+
 export default function JobManagementPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [activeStatus, setActiveStatus] = useState<FilterStatus>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [stats, setStats] = useState({
     all: 0,
     pending: 0,
@@ -57,7 +64,7 @@ export default function JobManagementPage() {
     try {
       setLoading(true);
       setError(null);
-      const statusParam = filterStatus === 'all' ? 'all' : filterStatus;
+      const statusParam = activeStatus === 'all' ? 'all' : activeStatus;
       const response = await fetch(`/api/admin/job?status=${statusParam}`);
       const data = await response.json();
 
@@ -77,7 +84,7 @@ export default function JobManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatus]);
+  }, [activeStatus]);
 
   useEffect(() => {
     loadJobs();
@@ -108,20 +115,19 @@ export default function JobManagementPage() {
   };
 
   const handleViewDetail = (jobId: number) => {
-    // redirect to edit page
     window.location.href = `/admin/job/edit/${jobId}`;
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'APPROVED':
-        return 'bg-orange-500';
+        return 'bg-orange-100 text-orange-700';
       case 'REJECTED':
-        return 'bg-red-500';
+        return 'bg-red-100 text-red-700';
       case 'PENDING':
-        return 'bg-yellow-500';
+        return 'bg-yellow-100 text-yellow-700';
       default:
-        return 'bg-gray-500';
+        return 'bg-gray-100 text-gray-700';
     }
   };
 
@@ -158,245 +164,263 @@ export default function JobManagementPage() {
     return mapping[jobType.typename] || jobType.typename;
   };
 
+  // Client-side filter logic
+  const filteredJobs = jobs.filter((job) => {
+    // Status filter
+    let matchStatus = true;
+    if (activeStatus !== 'all') {
+      const statusMap: Record<FilterStatus, string> = {
+        all: '',
+        pending: 'PENDING',
+        approved: 'APPROVED',
+        rejected: 'REJECTED',
+      };
+      matchStatus = job.status === statusMap[activeStatus];
+    }
+
+    // Search filter
+    const searchLower = searchTerm.toLowerCase();
+    const matchSearch =
+      (job.title || job.namejob)?.toLowerCase().includes(searchLower) ||
+      job.company?.companyname?.toLowerCase().includes(searchLower) ||
+      false;
+
+    return matchStatus && matchSearch;
+  });
+
+  const getStatusCount = (status: FilterStatus) => {
+    if (status === 'all') return stats.all;
+    const statusMap: Record<FilterStatus, keyof typeof stats> = {
+      all: 'all',
+      pending: 'pending',
+      approved: 'approved',
+      rejected: 'rejected',
+    };
+    return stats[statusMap[status]] || 0;
+  };
+
+  const headers = ['ชื่องาน', 'ประเภทงาน', 'วันที่', 'สถานะ', 'จัดการ'];
+  const tableData = jobs.map((job) => [
+    {
+      type: 'company',
+      logo: job.company?.CompanyLogoPath,
+      title: job.title || job.namejob || 'ไม่ระบุชื่องาน',
+      company: job.company?.companyname || 'ไม่ระบุบริษัท',
+    },
+    getJobTypeText(job.jobType),
+    formatDate(job.createdAt),
+    { type: 'status', status: job.status },
+    { type: 'actions', jobId: job.id },
+  ]);
+
   return (
-    <div className='min-h-screen bg-gray-50 py-8'>
-      <div className='max-w-7xl mx-auto px-4'>
-        <h2 className='text-2xl font-medium text-gray-800 mb-8'>
-          การจัดการรับสมัครงาน
-        </h2>
+    <div className="min-h-screen p-8">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
+          การจัดการประกาศรับสมัครงาน
+        </h1>
 
-        {/* Filter Cards */}
-        <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-8'>
-          <button
-            onClick={() => setFilterStatus('all')}
-            className={`bg-white rounded-2xl p-6 transition-all ${
-              filterStatus === 'all'
-                ? 'shadow-[0_0_20px_rgba(249,115,22,0.4)] scale-105'
-                : 'shadow-sm hover:shadow-md'
+        {/* Status Cards */}
+        <div className="grid grid-cols-4 gap-6 mb-8">
+          <Card
+            className={`cursor-pointer border-2 transition ${
+              activeStatus === 'all' ? 'border-orange-300' : 'border-orange-100'
             }`}
+            onClick={() => setActiveStatus('all')}
           >
-            <div className='flex flex-col items-center gap-3'>
-              <div className='w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center'>
-                <Layers className='w-6 h-6 text-orange-500' />
+            <CardContent className="p-8 text-center">
+              <div className="flex justify-center mb-4">
+                <Layers className="w-16 h-16 text-orange-500" strokeWidth={1.5} />
               </div>
-              <p className='text-sm text-gray-600'>ทั้งหมด</p>
-              <p className='text-2xl font-semibold text-gray-800'>
-                {stats.all}
+              <h3 className="text-base font-normal text-gray-700">ทั้งหมด</h3>
+              <p className="text-2xl font-medium text-gray-800 mt-2">
+                {getStatusCount('all')}
               </p>
-            </div>
-          </button>
+            </CardContent>
+          </Card>
 
-          <button
-            onClick={() => setFilterStatus('pending')}
-            className={`bg-white rounded-2xl p-4  transition-all ${
-              filterStatus === 'pending'
-                ? 'shadow-[0_0_20px_rgba(249,115,22,0.4)]  scale-105'
-                : 'shadow-sm hover:shadow-md'
+          <Card
+            className={`cursor-pointer border-2 transition ${
+              activeStatus === 'pending' ? 'border-orange-300' : 'border-orange-100'
             }`}
+            onClick={() => setActiveStatus('pending')}
           >
-            <div className='flex flex-col items-center gap-3'>
-              <div className='w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center'>
-                <RefreshCw className='w-6 h-6 text-orange-500' />
+            <CardContent className="p-8 text-center">
+              <div className="flex justify-center mb-4">
+                <RefreshCw className="w-16 h-16 text-orange-500" strokeWidth={1.5} />
               </div>
-              <p className='text-sm text-gray-600'>รออนุมัติ</p>
-              <p className='text-2xl font-semibold text-gray-800'>
-                {stats.pending}
+              <h3 className="text-base font-normal text-gray-700">รออนุมัติ</h3>
+              <p className="text-2xl font-medium text-gray-800 mt-2">
+                {getStatusCount('pending')}
               </p>
-            </div>
-          </button>
+            </CardContent>
+          </Card>
 
-          <button
-            onClick={() => setFilterStatus('approved')}
-            className={`bg-white rounded-2xl p-6 transition-all ${
-              filterStatus === 'approved'
-                ? 'shadow-[0_0_20px_rgba(249,115,22,0.4)]  scale-105'
-                : 'shadow-sm hover:shadow-md'
+          <Card
+            className={`cursor-pointer border-2 transition ${
+              activeStatus === 'approved' ? 'border-orange-300' : 'border-orange-100'
             }`}
+            onClick={() => setActiveStatus('approved')}
           >
-            <div className='flex flex-col items-center gap-3'>
-              <div className='w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center'>
-                <CheckCircle className='w-6 h-6 text-orange-500' />
+            <CardContent className="p-8 text-center">
+              <div className="flex justify-center mb-4">
+                <CheckCircle className="w-16 h-16 text-orange-500" strokeWidth={1.5} />
               </div>
-              <p className='text-sm text-gray-600'>อนุมัติแล้ว</p>
-              <p className='text-2xl font-semibold text-gray-800'>
-                {stats.approved}
+              <h3 className="text-base font-normal text-gray-700">อนุมัติแล้ว</h3>
+              <p className="text-2xl font-medium text-gray-800 mt-2">
+                {getStatusCount('approved')}
               </p>
-            </div>
-          </button>
+            </CardContent>
+          </Card>
 
-          <button
-            onClick={() => setFilterStatus('rejected')}
-            className={`bg-white rounded-2xl p-6 transition-all ${
-              filterStatus === 'rejected'
-                ? 'shadow-[0_0_20px_rgba(249,115,22,0.4)] scale-105'
-                : 'shadow-sm hover:shadow-md'
+          <Card
+            className={`cursor-pointer border-2 transition ${
+              activeStatus === 'rejected' ? 'border-orange-300' : 'border-orange-100'
             }`}
+            onClick={() => setActiveStatus('rejected')}
           >
-            <div className='flex flex-col items-center gap-3'>
-              <div className='w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center'>
-                <XCircle className='w-6 h-6 text-orange-500' />
+            <CardContent className="p-8 text-center">
+              <div className="flex justify-center mb-4">
+                <XCircle className="w-16 h-16 text-orange-500" strokeWidth={1.5} />
               </div>
-              <p className='text-sm text-gray-600'>ไม่อนุมัติ</p>
-              <p className='text-2xl font-semibold text-gray-800'>
-                {stats.rejected}
+              <h3 className="text-base font-normal text-gray-700">ไม่อนุมัติ</h3>
+              <p className="text-2xl font-medium text-gray-800 mt-2">
+                {getStatusCount('rejected')}
               </p>
-            </div>
-          </button>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Loading State */}
-        {loading && (
-          <div className='text-center py-16'>
-            <div className='inline-block animate-spin rounded-full h-8 w-8 border-4 border-orange-500 border-t-transparent'></div>
-            <p className='text-gray-500 mt-2'>กำลังโหลดข้อมูล...</p>
-          </div>
-        )}
+        {/* Search Card */}
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Input
+                type="text"
+                placeholder="ค้นหาด้วยชื่องานหรือบริษัท..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-12"
+                size="md"
+                radius="md"
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Error State */}
-        {error && !loading && (
-          <div className='text-center py-16'>
-            <p className='text-red-500 text-lg mb-4'>{error}</p>
-            <button
-              onClick={loadJobs}
-              className='px-6 py-3 bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors'
-            >
-              ลองอีกครั้ง
-            </button>
-          </div>
-        )}
-
-        {/* Job List Table */}
-        {!loading && !error && (
-          <div className='bg-white rounded-lg shadow-sm overflow-hidden'>
-            <div className='overflow-x-auto'>
-              <table className='w-full'>
-                <thead className='bg-gray-50 border-b border-gray-200'>
-                  <tr>
-                    <th className='px-6 py-4 text-left text-sm font-medium text-gray-600'>
-                      ชื่องาน
-                    </th>
-                    <th className='px-6 py-4 text-left text-sm font-medium text-gray-600'>
-                      ประเภทงาน
-                    </th>
-                    <th className='px-6 py-4 text-left text-sm font-medium text-gray-600'>
-                      วันที่
-                    </th>
-                    <th className='px-6 py-4 text-left text-sm font-medium text-gray-600'>
-                      สถานะ
-                    </th>
-                    <th className='px-6 py-4 text-right text-sm font-medium text-gray-600'>
-                      จัดการ
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className='divide-y divide-gray-200'>
-                  {jobs.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className='px-6 py-16 text-center'>
-                        <div className='flex flex-col items-center gap-3'>
-                          <div className='w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center'>
-                            <Layers className='w-8 h-8 text-gray-400' />
-                          </div>
-                          <p className='text-gray-500 font-medium'>
-                            ไม่มีข้อมูลงาน
-                          </p>
-                          <p className='text-sm text-gray-400'>
-                            {filterStatus === 'all'
-                              ? 'ยังไม่มีประกาศงาน'
-                              : `ไม่มีงานในสถานะ "${
-                                  filterStatus === 'approved'
-                                    ? 'อนุมัติแล้ว'
-                                    : filterStatus === 'pending'
-                                    ? 'รออนุมัติ'
-                                    : 'ไม่อนุมัติ'
-                                }"`}
-                          </p>
-                        </div>
-                      </td>
+        {/* Jobs Table */}
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
+              {loading ? (
+                <div className="flex justify-center items-center py-16">
+                  <div className="text-gray-500">กำลังโหลดข้อมูล...</div>
+                </div>
+              ) : error ? (
+                <div className="flex justify-center items-center py-16">
+                  <div className="text-red-500">{error}</div>
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-100 border-b border-gray-200">
+                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">
+                        ชื่องาน
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">
+                        บริษัท
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">
+                        ประเภทงาน
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">
+                        วันที่
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">
+                        สถานะ
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-medium text-gray-600">
+                        จัดการ
+                      </th>
                     </tr>
-                  ) : (
-                    jobs.map((job) => (
-                      <tr
-                        key={job.id}
-                        className='hover:bg-gray-50 transition-colors'
-                      >
-                        <td className='px-6 py-4'>
-                          <div className='flex items-center gap-3'>
-                            {job.company?.CompanyLogoPath ? (
-                              <img
-                                src={job.company.CompanyLogoPath}
-                                alt='Logo'
-                                className='w-12 h-12 rounded-lg object-cover border border-gray-200'
-                              />
-                            ) : (
-                              <div className='w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center'>
-                                <span className='text-gray-400 text-xs'>
-                                  No Logo
-                                </span>
-                              </div>
-                            )}
-                            <div>
-                              <p className='text-sm font-medium text-gray-800'>
-                                {job.title || job.namejob || 'ไม่ระบุชื่องาน'}
-                              </p>
-                              <p className='text-xs text-gray-500'>
-                                {job.company?.companyname || 'ไม่ระบุบริษัท'}
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className='px-6 py-4'>
-                          <span className='text-sm text-gray-600'>
-                            {getJobTypeText(job.jobType)}
-                          </span>
-                        </td>
-                        <td className='px-6 py-4'>
-                          <span className='text-sm text-gray-600'>
-                            {formatDate(job.createdAt)}
-                          </span>
-                        </td>
-                        <td className='px-6 py-4'>
-                          <span
-                            className={`inline-block px-3 py-1 text-xs font-medium text-white rounded-full ${getStatusColor(
-                              job.status
-                            )}`}
-                          >
-                            {getStatusText(job.status)}
-                          </span>
-                        </td>
-                        <td className='px-6 py-4'>
-                          <div className='flex items-center justify-end gap-2'>
-                            <button
-                              onClick={() => handleViewDetail(job.id)}
-                              className='p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors'
-                              title='ดูรายละเอียด'
-                            >
-                              <Edit2 className='w-4 h-4' />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(job.id)}
-                              className='p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors'
-                              title='ลบ'
-                            >
-                              <Trash2 className='w-4 h-4' />
-                            </button>
-                          </div>
+                  </thead>
+                  <tbody>
+                    {filteredJobs.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                          ไม่พบข้อมูลประกาศงาน
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      filteredJobs.map((job) => (
+                        <tr
+                          key={job.id}
+                          className="border-b border-gray-100 hover:bg-gray-50 transition"
+                        >
+                          <td className="px-6 py-4 text-sm text-gray-800">
+                            <div className="flex items-center gap-2">
+                              {job.company?.CompanyLogoPath ? (
+                                <img
+                                  src={job.company.CompanyLogoPath}
+                                  alt="Logo"
+                                  className="w-8 h-8 rounded object-cover border border-gray-200"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center">
+                                  <span className="text-gray-400 text-xs">-</span>
+                                </div>
+                              )}
+                              <span className="font-medium">
+                                {job.title || job.namejob || 'ไม่ระบุ'}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            {job.company?.companyname || '-'}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            {getJobTypeText(job.jobType)}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            {formatDate(job.createdAt)}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div
+                              className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                                job.status
+                              )}`}
+                            >
+                              {getStatusText(job.status)}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleViewDetail(job.id)}
+                                className="p-2 text-gray-600 hover:bg-gray-100 rounded transition"
+                                title="แก้ไข"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(job.id)}
+                                className="p-2 text-red-600 hover:bg-red-50 rounded transition"
+                                title="ลบ"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              )}
             </div>
-          </div>
-        )}
-
-        {/* Summary Info */}
-        {!loading && !error && jobs.length > 0 && (
-          <div className='mt-4 text-sm text-gray-500 text-right'>
-            แสดง {jobs.length} รายการ
-          </div>
-        )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

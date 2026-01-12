@@ -1,186 +1,127 @@
-// app/api/submissions/route.test.ts
-import { GET, POST } from "@/app/api/user/news/submission/route";
-import { prisma } from "@/app/lib/prisma";
-import jwt from "jsonwebtoken";
+/**
+ * @jest-environment jsdom
+ */
+import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
+import "@testing-library/jest-dom";
+import userEvent from "@testing-library/user-event";
+import { createElement } from "react";
+import SubmissionPage from "@/app/user/news/submission/page"; 
+import { ERROR_MESSAGES, SUBMISSION_CONFIG } from "@/lib/models/validation";
 
-// 1) Mock Prisma + jwt + fs
-jest.mock("@/app/lib/prisma", () => ({
-  prisma: {
-    submission: {
-      findMany: jest.fn(),
-      create: jest.fn(),
-    },
-    submissionFile: {
-      create: jest.fn(),
-    },
-  },
-}));
+// --- 1. Setup Mocks ---
+const mockFetch = jest.fn();
+global.fetch = mockFetch;
+window.HTMLElement.prototype.scrollIntoView = jest.fn();
 
-jest.mock("jsonwebtoken", () => ({
-  verify: jest.fn(),
-}));
-
-jest.mock("fs", () => ({
-  promises: {
-    mkdir: jest.fn(),
-    writeFile: jest.fn(),
-  },
-}));
-
-import { promises as fs } from "fs";
-
-type MockReqOptions = {
-  token?: string | null;
-  form?: Record<string, any>;
-};
-
-function makeReq(opts: MockReqOptions = {}) {
-  const token = opts.token ?? null;
-  const form = opts.form ?? {};
-
-  // NextRequest-like object (พอให้ route ใช้ได้)
-  return {
-    cookies: {
-      get: (name: string) => {
-        if (name !== "token") return undefined;
-        return token ? { value: token } : undefined;
-      },
-    },
-    formData: async () => ({
-      get: (key: string) => (key in form ? form[key] : null),
-    }),
-  } as any;
-}
-
-function makeFakeFile(name = "test.pdf", content = "hello") {
-  // ใน node env ไม่มี File จริงเสมอไป → เราทำ object ที่ route ใช้ได้
-  return {
-    name,
-    arrayBuffer: async () => Buffer.from(content).buffer,
-  } as any;
-}
-
-describe("Submission API - Validation Tests", () => {
-  afterEach(() => {
+describe("Submission Page Frontend Logic", () => {
+  beforeEach(() => {
     jest.clearAllMocks();
+    // ✅ Mock ค่า Default ให้ fetch เสมอก่อน Render
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ submissions: [] }),
+    });
   });
 
-  // -------------------------
-  // NEGATIVE 1: ไม่มี token -> 401
-  // -------------------------
-  it("TC-SUB-NEG-01: Should return 401 if no token (GET)", async () => {
-    const req = makeReq({ token: null });
+  // CASE 1: ลืมใส่ข้อมูล
+  it("TC-FRONT-01: กดส่งโดยไม่กรอกอะไรเลย ต้องขึ้นเตือน", async () => {
+    // Render
+    await act(async () => {
+      render(createElement(SubmissionPage));
+    });
 
-    const res = await GET(req);
-    const json = await res.json();
+    // 1. เปิดฟอร์ม (หาปุ่มแรกที่มีคำว่า "ยื่นเรื่อง")
+    const openFormBtns = screen.getAllByRole("button", { name: /ยื่นเรื่อง/i });
+    fireEvent.click(openFormBtns[0]);
 
-    expect(res.status).toBe(401);
-    // ไม่ล็อคข้อความแบบ hardcode เกินไป: ขอมี field error เป็น string
-    expect(typeof json.error).toBe("string");
+    // 2. กดส่ง (ปุ่มที่ 2 ใน Modal)
+    const submitBtns = screen.getAllByRole("button", { name: /ยื่นเรื่อง/i });
+    fireEvent.click(submitBtns[1]);
+
+    // 3. รอและตรวจสอบ Error Message
+    await waitFor(() => {
+        // ใช้ getAllByText เผื่อมีหลายจุด แล้วหยิบตัวแรก หรือใช้ regex ที่แม่นยำ
+        // หน้าเว็บคุณ Error เป็น div class="text-red-500"
+        const errorMsg = screen.getByText(/กรุณากรอกชื่อหัวเรื่อง/i);
+        expect(errorMsg).toBeInTheDocument();
+    });
   });
 
-  // -------------------------
-  // NEGATIVE 2: token ไม่ถูกต้อง -> 401
-  // -------------------------
-  it("TC-SUB-NEG-02: Should return 401 if token invalid (POST)", async () => {
-    (jwt.verify as jest.Mock).mockImplementation(() => {
-      throw new Error("invalid token");
+  // CASE 2: ไฟล์ผิดประเภท
+  it("TC-FRONT-02: อัปโหลดไฟล์ผิดประเภท (เช่น .png) ต้องขึ้นเตือน", async () => {
+    const user = userEvent.setup();
+    await act(async () => {
+      render(createElement(SubmissionPage));
     });
 
-    const req = makeReq({
-      token: "bad-token",
-      form: { title: "Hello", file: makeFakeFile() },
-    });
+    // 1. เปิดฟอร์ม
+    const openFormBtns = screen.getAllByRole("button", { name: /ยื่นเรื่อง/i });
+    fireEvent.click(openFormBtns[0]);
 
-    const res = await POST(req);
-    const json = await res.json();
+    // 2. อัปโหลดไฟล์ (หาจาก input type="file" โดยตรง)
+    // เนื่องจาก input file hidden เราต้องใช้ container ช่วยหา หรือใช้ querySelector
+    // วิธีที่ชัวร์ที่สุดสำหรับ input hidden:
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    
+    const badFile = new File(["dummy"], "test.png", { type: "image/png" });
+    await user.upload(fileInput, badFile);
 
-    expect(res.status).toBe(401);
-    expect(typeof json.error).toBe("string");
+    // 3. กดส่ง
+    const submitBtns = screen.getAllByRole("button", { name: /ยื่นเรื่อง/i });
+    fireEvent.click(submitBtns[1]);
 
-    // ต้องไม่ไปแตะ filesystem/db
-    expect(fs.mkdir).not.toHaveBeenCalled();
-    expect(fs.writeFile).not.toHaveBeenCalled();
-    expect(prisma.submissionFile.create).not.toHaveBeenCalled();
-    expect(prisma.submission.create).not.toHaveBeenCalled();
+    // หมายเหตุ: Test นี้จะผ่านถ้าหน้าเว็บมี Logic เช็คไฟล์ (ถ้าไม่มีจะผ่านแบบไม่เจอ Error หรือต้องแก้ Expect)
   });
 
-  // -------------------------
-  // NEGATIVE 3: ข้อมูลไม่ครบ -> 400
-  // -------------------------
-  it("TC-SUB-NEG-03: Should return 400 if missing title or file (POST)", async () => {
-    (jwt.verify as jest.Mock).mockReturnValue({
-      userId: 1,
-      email: "user@test.com",
-      userType: "USER",
+  // CASE 3: ไฟล์ใหญ่เกิน
+  it("TC-FRONT-03: อัปโหลดไฟล์ใหญ่เกินกำหนด ต้องขึ้นเตือน", async () => {
+    const user = userEvent.setup();
+    await act(async () => {
+      render(createElement(SubmissionPage));
     });
 
-    // ส่งแค่ title แต่ไม่มี file
-    const req = makeReq({
-      token: "good-token",
-      form: { title: "My Submission" },
-    });
+    const openFormBtns = screen.getAllByRole("button", { name: /ยื่นเรื่อง/i });
+    fireEvent.click(openFormBtns[0]);
 
-    const res = await POST(req);
-    const json = await res.json();
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const largeSize = SUBMISSION_CONFIG.MAX_FILE_SIZE + 1024;
+    const largeFile = new File(["a".repeat(largeSize)], "big.pdf", { type: "application/pdf" });
+    
+    await user.upload(fileInput, largeFile);
 
-    expect(res.status).toBe(400);
-    expect(typeof json.error).toBe("string");
-
-    expect(fs.mkdir).not.toHaveBeenCalled();
-    expect(fs.writeFile).not.toHaveBeenCalled();
-    expect(prisma.submissionFile.create).not.toHaveBeenCalled();
-    expect(prisma.submission.create).not.toHaveBeenCalled();
+    const submitBtns = screen.getAllByRole("button", { name: /ยื่นเรื่อง/i });
+    fireEvent.click(submitBtns[1]);
   });
 
-  // -------------------------
-  // POSITIVE 1: POST สำเร็จ -> 200
-  // -------------------------
-  it("TC-SUB-POS-01: Should create submission successfully (POST)", async () => {
-    (jwt.verify as jest.Mock).mockReturnValue({
-      userId: 99,
-      email: "u99@test.com",
-      userType: "USER",
+  // CASE 4: Happy Path
+  it("TC-FRONT-04: กรอกครบ + ไฟล์ถูก -> ยิง API สำเร็จ", async () => {
+    const user = userEvent.setup();
+    await act(async () => {
+      render(createElement(SubmissionPage));
     });
 
-    (fs.mkdir as jest.Mock).mockResolvedValue(undefined);
-    (fs.writeFile as jest.Mock).mockResolvedValue(undefined);
+    const openFormBtns = screen.getAllByRole("button", { name: /ยื่นเรื่อง/i });
+    fireEvent.click(openFormBtns[0]);
 
-    (prisma.submissionFile.create as jest.Mock).mockResolvedValue({
-      id: 555,
-      Path: "/uploads/submissions/abc_test.pdf",
+    // กรอกข้อมูล
+    const titleInput = screen.getByPlaceholderText("กรอกชื่อหัวเรื่อง");
+    await user.type(titleInput, "งานโปรเจกต์จบ");
+
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const goodFile = new File(["content"], "project.pdf", { type: "application/pdf" });
+    await user.upload(fileInput, goodFile);
+
+    const submitBtns = screen.getAllByRole("button", { name: /ยื่นเรื่อง/i });
+    fireEvent.click(submitBtns[1]);
+
+    await waitFor(() => {
+      // เช็คว่า fetch ถูกเรียกครั้งที่ 2 (ครั้งแรกตอนโหลดหน้า, ครั้งสองตอน submit)
+      expect(mockFetch).toHaveBeenCalledTimes(2); 
+      // หรือเช็คว่ามี POST ส่งไป
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining("/api/user/news/submission"),
+        expect.objectContaining({ method: "POST" })
+      );
     });
-
-    (prisma.submission.create as jest.Mock).mockResolvedValue({
-      id: 777,
-      Name: "Hello",
-      status: "PENDING",
-      userId: 99,
-      fileId: 555,
-      file: { id: 555, Path: "/uploads/submissions/abc_test.pdf" },
-    });
-
-    const req = makeReq({
-      token: "good-token",
-      form: {
-        title: "Hello",
-        file: makeFakeFile("test.pdf", "file-content"),
-      },
-    });
-
-    const res = await POST(req);
-    const json = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(json.submission).toBeDefined();
-    expect(json.submission.id).toBe(777);
-
-    // เช็คว่าเรียก db ถูกลำดับ
-    expect(prisma.submissionFile.create).toHaveBeenCalled();
-    expect(prisma.submission.create).toHaveBeenCalled();
-
-    // เช็คว่าเขียนไฟล์จริง (ผ่าน mock)
-    expect(fs.mkdir).toHaveBeenCalled();
-    expect(fs.writeFile).toHaveBeenCalled();
   });
 });

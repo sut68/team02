@@ -2,11 +2,11 @@
 
 'use client';
 
-import { useState,useEffect ,ChangeEvent } from 'react';
+import { useState, useEffect, ChangeEvent, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Card, CardHeader, CardContent } from '../../../components/ui/Card';
+import { Card, CardHeader, CardContent } from '../../../components/ui/Card'; 
 import { PrimaryButton, CancelButton } from '../../../components/ui/Button';
 import {
   Image as ImageIcon,
@@ -14,13 +14,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
-type ContentCategoryType =
-  | 'NEWS'
-  | 'EVENT'
-  | 'ANNOUNCEMENT'
-  | 'ACTIVITY'
-  | 'GENERAL';
-
+type ContentCategoryType = 'NEWS' | 'ACTIVITY';
 type Option = 'HAVE' | 'NOT';
 
 type PostData = {
@@ -33,36 +27,85 @@ type PostData = {
   Booking: Option;
 };
 
-import { Suspense } from 'react';
-
 function EditPostPageInner() {
   const searchParams = useSearchParams();
-  const bookingFormId = searchParams.get('bookingFormId');
   const router = useRouter();
-  const currentUserId = 1;
+  
+  // 1. รับ ID มาเช็คว่า "สร้างใหม่" หรือ "แก้ไข"
   const bookingFormIdFromQuery = searchParams.get('bookingFormId');
+  const postId = searchParams.get('id'); 
+  
+  const currentUserId = 1;
+
   const [postData, setPostData] = useState<PostData>({
     title: '',
     date: '',
     body: '',
     coverImageUrl: '',
     extraImages: [],
-    categories: 'NEWS', // default
-    Booking: 'NOT',     // ยังไม่ต้องลงทะเบียน
+    categories: 'NEWS',
+    Booking: 'NOT',
   });
 
   const [isBookingConfigured, setIsBookingConfigured] = useState(false);
+  const [mainImageFile, setMainImageFile] = useState<File | null>(null);
+  const [extraImageFiles, setExtraImageFiles] = useState<File[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false); // เพิ่ม loading state
+
+  // Effect 1: จัดการเรื่อง Booking Form
   useEffect(() => {
-    if (bookingFormId) {
+    if (bookingFormIdFromQuery) {
       setPostData((prev) => ({
         ...prev,
-        Booking: 'HAVE',   // ถ้ามี bookingForm แสดงว่าต้องลงทะเบียนแน่นอน
+        Booking: 'HAVE',
       }));
-      setIsBookingConfigured(true); // ให้โชว์ไอคอนติ๊กถูก
+      setIsBookingConfigured(true);
     }
-  }, [bookingFormId]);
+  }, [bookingFormIdFromQuery]);
 
-  // สำหรับ text field (ตามโครงเดิม)
+  // Effect 2: ดึงข้อมูลเก่ามาโชว์ (ถ้ามี postId)
+  useEffect(() => {
+    if (!postId) return;
+
+    const fetchPost = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch(`/api/content?id=${postId}`);
+        if (!res.ok) throw new Error('Failed to fetch');
+        
+        const data = await res.json();
+        const content = data.content;
+
+        // แปลงข้อมูลจาก API เข้า State
+        setPostData({
+          title: content.TitleName || '',
+          date: content.createdAt ? new Date(content.createdAt).toISOString().split('T')[0] : '', 
+          body: content.Description || '',
+          coverImageUrl: content.pictures?.[0]?.Path || '', // สมมติรูปแรกเป็นปก
+          extraImages: content.pictures?.slice(1).map((p: any) => p.Path) || [],
+          categories: (content.categories as ContentCategoryType) || 'NEWS',
+          Booking: (content.Booking as Option) || 'NOT',
+        });
+
+        if (content.Booking === 'HAVE') {
+            setIsBookingConfigured(true);
+        }
+
+      } catch (error) {
+        console.error("Error fetching post:", error);
+        alert("ไม่สามารถดึงข้อมูลโพสต์ได้");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPost();
+  }, [postId]);
+
+  // --- Handlers ---
+
   const handleFieldChange = (field: 'title' | 'date' | 'body', value: string) => {
     setPostData((prev) => ({
       ...prev,
@@ -70,7 +113,6 @@ function EditPostPageInner() {
     }));
   };
 
-  // เปลี่ยนหมวดหมู่
   const handleCategoryChange = (value: ContentCategoryType) => {
     setPostData((prev) => ({
       ...prev,
@@ -78,122 +120,125 @@ function EditPostPageInner() {
     }));
   };
 
-  // เปลี่ยน Booking option
   const handleBookingChange = (value: Option) => {
     setPostData((prev) => ({
       ...prev,
       Booking: value,
     }));
   };
-  const [mainImageFile, setMainImageFile] = useState<File | null>(null);
-  const [extraImageFiles, setExtraImageFiles] = useState<File[]>([]);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-
-  // รูปหลัก (กล่องใหญ่ตรงกลาง)
   const handleMainImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
-  if (!e.target.files || e.target.files.length === 0) return;
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    setMainImageFile(file);
+    const url = URL.createObjectURL(file);
 
-  const file = e.target.files[0];
-  setMainImageFile(file);
+    setPostData((prev) => ({
+      ...prev,
+      coverImageUrl: url,
+      extraImages: prev.extraImages.length ? prev.extraImages : [url],
+    }));
 
-  const url = URL.createObjectURL(file);
+    if (extraImageFiles.length === 0 && postData.extraImages.length === 0) {
+       setExtraImageFiles([file]); 
+    }
+    setErrorMsg(null);
+  };
 
-  setPostData((prev) => ({
-    ...prev,
-    coverImageUrl: url,
-    extraImages: prev.extraImages.length ? prev.extraImages : [url],
-  }));
+  const handleExtraImagesUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const files = Array.from(e.target.files);
+    setExtraImageFiles((prev) => [...prev, ...files]);
+    const urls = files.map((f) => URL.createObjectURL(f));
 
-  // ถ้าไม่มีภาพอื่น ให้เพิ่มเข้า extraImageFiles ด้วย
-  setExtraImageFiles((prev) => (prev.length ? prev : [file]));
-
-  // เคลียร์ข้อความเออเร่อถ้ามีภาพถูกอัปโหลด
-  setErrorMsg(null);
-};
-
-
-
- const handleExtraImagesUpload = (e: ChangeEvent<HTMLInputElement>) => {
-  if (!e.target.files || e.target.files.length === 0) return;
-
-  const files = Array.from(e.target.files);
-
-  setExtraImageFiles((prev) => [...prev, ...files]);
-
-  const urls = files.map((f) => URL.createObjectURL(f));
-
-  setPostData((prev) => ({
-    ...prev,
-    extraImages: [...prev.extraImages, ...urls],
-    coverImageUrl: prev.coverImageUrl || urls[0],
-  }));
-
-  // เคลียร์ข้อความเออเร่อถ้ามีภาพถูกอัปโหลด
-  setErrorMsg(null);
-};
-
+    setPostData((prev) => ({
+      ...prev,
+      extraImages: [...prev.extraImages, ...urls],
+      coverImageUrl: prev.coverImageUrl || urls[0],
+    }));
+    setErrorMsg(null);
+  };
 
   const handlePublish = async () => {
-  // client-side: require at least one image before submitting
-  if (extraImageFiles.length === 0 && !mainImageFile && postData.extraImages.length === 0) {
-    setErrorMsg("ต้องอัปโหลดรูปอย่างน้อย 1 รูป");
-    alert("❌ ต้องอัปโหลดรูปอย่างน้อย 1 รูป");
-    return;
-  }
-  setErrorMsg(null);
+    // Validation: เช็คว่ามีรูปไหม (ทั้งรูปเก่า หรือ รูปใหม่)
+    const hasExistingImages = postData.coverImageUrl || postData.extraImages.length > 0;
+    const hasNewImages = mainImageFile || extraImageFiles.length > 0;
 
-  const formData = new FormData();
-
-  formData.append("title", postData.title);
-  formData.append("description", postData.body);
-  formData.append("categories", postData.categories);
-  formData.append("booking", postData.Booking);
-  formData.append("userId", String(currentUserId));
-
-  // ✅ ส่ง bookingFormId เฉพาะตอน "ต้องลงทะเบียน"
-  if (postData.Booking === "HAVE") {
-    if (!bookingFormIdFromQuery) {
-      alert("ต้องกรอก/เลือก Booking Form ก่อน (ยังไม่มี bookingFormId)");
+    if (!hasExistingImages && !hasNewImages) {
+      setErrorMsg("ต้องอัปโหลดรูปอย่างน้อย 1 รูป");
+      alert("❌ ต้องอัปโหลดรูปอย่างน้อย 1 รูป");
       return;
     }
-    formData.append("bookingFormId", bookingFormIdFromQuery);
+    setErrorMsg(null);
+
+    const formData = new FormData();
+    formData.append("title", postData.title);
+    formData.append("description", postData.body);
+    formData.append("categories", postData.categories);
+    formData.append("booking", postData.Booking);
+    formData.append("userId", String(currentUserId));
+
+    if (postData.Booking === "HAVE") {
+      // ถ้ามี ID ใหม่จาก query ก็ใช้, ถ้าไม่มีให้ดูว่าแก้ไขของเก่าไหม (ถ้าแก้ไข API อาจจะรู้เอง แต่ส่งกันเหนียวก็ได้ถ้าเก็บไว้)
+      if (bookingFormIdFromQuery) {
+        formData.append("bookingFormId", bookingFormIdFromQuery);
+      } else if (!postId) {
+         // สร้างใหม่ แต่ไม่มี Form ID
+         alert("ต้องกรอก/เลือก Booking Form ก่อน (ยังไม่มี bookingFormId)");
+         return;
+      }
+    }
+
+    extraImageFiles.forEach((file) => formData.append("pictures", file));
+    if (mainImageFile && !extraImageFiles.includes(mainImageFile)) {
+      formData.append("pictures", mainImageFile);
+    }
+
+    try {
+      // ✅ สลับ method ตามสถานะ (มี id = แก้ไข, ไม่มี = สร้างใหม่)
+      const url = postId ? `/api/content?id=${postId}` : "/api/content";
+      // หมายเหตุ: API คุณต้องรองรับ PUT นะครับ ถ้าไม่รองรับ (มีแต่ POST/DELETE) โค้ดนี้จะพังตอนแก้ไข
+      const method = postId ? "PUT" : "POST"; 
+
+      const res = await fetch(url, { method: method, body: formData });
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        alert("❌ ดำเนินการไม่สำเร็จ: " + (data?.error || "Bad Request"));
+        return;
+      }
+
+      alert(postId ? "🎉 แก้ไขโพสต์สำเร็จ!" : "🎉 เผยแพร่โพสต์สำเร็จ!");
+      // ✅ แก้ Path ตรงนี้ให้ถูกต้อง
+      router.push("/user/news"); 
+
+    } catch (e) {
+      console.error(e);
+      alert("❌ เกิดข้อผิดพลาดในการเชื่อมต่อ");
+    }
+  };
+
+  if (isLoading) {
+    return <div className="p-10 text-center">กำลังโหลดข้อมูล...</div>;
   }
-  // ❌ ถ้า NOT: ไม่ต้อง append bookingFormId เลย
-
-  extraImageFiles.forEach((file) => formData.append("pictures", file));
-  if (mainImageFile && !extraImageFiles.includes(mainImageFile)) {
-    formData.append("pictures", mainImageFile);
-  }
-
-  const res = await fetch("/api/content", { method: "POST", body: formData });
-  const data = await res.json().catch(() => null);
-
-  if (!res.ok) {
-    alert("❌ สร้างเนื้อหาไม่สำเร็จ: " + (data?.error || "Bad Request"));
-    return;
-  }
-
-  alert("🎉 เผยแพร่โพสต์สำเร็จ!");
-  router.push("/admin/news");
-};
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-10">
       {/* HEADER */}
       <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-8">
         <h1 className="text-3xl font-bold text-gray-800">
-          สร้างโพสต์กิจกรรมใหม่
+          {postId ? 'แก้ไขโพสต์กิจกรรม' : 'สร้างโพสต์กิจกรรมใหม่'}
         </h1>
         <div className="flex gap-3">
           <CancelButton
-            onClick={() => history.back()}
+            onClick={() => router.back()}
             className="w-32"
           >
             ย้อนกลับ
           </CancelButton>
-          <PrimaryButton onClick={handlePublish} className="w-32">โพสต์</PrimaryButton>
+          <PrimaryButton onClick={handlePublish} className="w-32">
+            {postId ? 'บันทึกแก้ไข' : 'โพสต์'}
+          </PrimaryButton>
         </div>
       </header>
 
@@ -204,24 +249,16 @@ function EditPostPageInner() {
           <div className="sticky top-6 space-y-4">
             <Card>
               <CardContent className="p-6 space-y-6">
-                {/* หมวดหมู่ (แก้จาก text เป็น select แต่ layout เดิม) */}
+                {/* หมวดหมู่ */}
                 <div className="space-y-1">
                     <p className="text-xs text-gray-400">หมวดหมู่</p>
                     <select
                       value={postData.categories}
-                      onChange={(e) =>
-                        handleCategoryChange(
-                          e.target.value as ContentCategoryType
-                        )
-                      }
+                      onChange={(e) => handleCategoryChange(e.target.value as ContentCategoryType)}
                       className="mt-1 w-full border border-gray-300 rounded-lg p-2 text-sm"
                     >
                       <option value="NEWS">NEWS – ข่าวสาร</option>
-                      <option value="EVENT">EVENT – กิจกรรม</option>
-                      <option value="ANNOUNCEMENT">
-                        ANNOUNCEMENT – ประกาศ
-                      </option>
-                      <option value="GENERAL">GENERAL – ทั่วไป</option>
+                      <option value="ACTIVITY">ACTIVITY – กิจกรรม</option>
                     </select>
                   </div>
 
@@ -232,9 +269,7 @@ function EditPostPageInner() {
                     <input
                       type="date"
                       value={postData.date}
-                      onChange={(e) =>
-                        handleFieldChange('date', e.target.value)
-                      }
+                      onChange={(e) => handleFieldChange('date', e.target.value)}
                       className="text-sm border-b border-gray-300 focus:border-orange-500 outline-none bg-transparent"
                     />
                   </div>
@@ -260,9 +295,9 @@ function EditPostPageInner() {
                         value="NOT"
                         checked={postData.Booking === 'NOT'}
                         onChange={() => handleBookingChange('NOT')}
-                        disabled={!!bookingFormId}  // 👈 ถ้ามีฟอร์มแล้ว ไม่ให้เปลี่ยนกลับเป็น NOT
+                        disabled={!!bookingFormIdFromQuery || (!!postId && postData.Booking === 'HAVE')}
                       />
-                      <span className={bookingFormId ? 'text-gray-400 line-through' : ''}>ไม่ต้องลงทะเบียน</span>
+                      <span className={bookingFormIdFromQuery ? 'text-gray-400 line-through' : ''}>ไม่ต้องลงทะเบียน</span>
                     </label>
                     <label className="inline-flex items-center gap-2">
                       <input
@@ -281,10 +316,11 @@ function EditPostPageInner() {
                     <Link href="/admin/booking" passHref>
                       <button
                         type="button"
-                        className="w-full rounded-full text-sm appearance-none cursor-pointer bg-gray-100 text-gray-700 border border-gray-300"
+                        className="w-full rounded-full text-sm appearance-none cursor-pointer bg-gray-100 text-gray-700 border border-gray-300 p-2 hover:bg-gray-200"
                         onClick={() => setIsBookingConfigured(true)}
                       >
-                        กรอกข้อมูล
+                         {/* เปลี่ยนข้อความปุ่มตามสถานะ */}
+                        {(bookingFormIdFromQuery || (postId && isBookingConfigured)) ? 'เลือกฟอร์มแล้ว' : 'เลือก/สร้างฟอร์ม'}
                       </button>
                     </Link>
                   )}
@@ -293,12 +329,11 @@ function EditPostPageInner() {
                 {/* เพิ่มลงในโพสต์ของคุณ = รูปหลายรูป */}
                 <div className="pt-4 border-t border-gray-200">
                   <p className="text-xs text-gray-400 mb-2">
-                    เพิ่มลงในโพสต์ของคุณ
+                    เพิ่มรูปภาพเพิ่มเติม
                   </p>
-                  {/* อัปโหลดหลายรูป */}
                   <label
                     htmlFor="extra-upload"
-                    className="block w-full h-24 rounded-lg border border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-xs text-gray-500 cursor-pointer hover:border-orange-400"
+                    className="w-full h-24 rounded-lg border border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-xs text-gray-500 cursor-pointer hover:border-orange-400"
                   >
                     <ImageIcon className="w-5 h-5 mb-1" />
                     เพิ่มรูปภาพเพิ่มเติม
@@ -312,19 +347,17 @@ function EditPostPageInner() {
                     />
                   </label>
 
-                  {/* ข้อความเออเร่อถ้ามี */}
                   {errorMsg && (
                     <p className="text-sm text-red-600 mt-2">{errorMsg}</p>
                   )}
 
-                  {/* แสดง thumbnail หลายรูป */}
                   {postData.extraImages.length > 0 && (
                     <div className="grid grid-cols-3 gap-2 mt-3">
                       {postData.extraImages.map((src, idx) => (
                         <button
                           key={idx}
                           type="button"
-                          className="relative w-full pt-[100%] rounded-md overflow-hidden border border-gray-200 hover:border-orange-400"
+                          className={`relative w-full pt-[100%] rounded-md overflow-hidden border hover:border-orange-400 ${postData.coverImageUrl === src ? 'border-orange-500 ring-2 ring-orange-200' : 'border-gray-200'}`}
                           onClick={() =>
                             setPostData((prev) => ({
                               ...prev,
@@ -358,7 +391,7 @@ function EditPostPageInner() {
                 type="text"
                 value={postData.title}
                 onChange={(e) => handleFieldChange('title', e.target.value)}
-                placeholder="DSA Mascot Contest"
+                placeholder="ชื่อหัวข้อกิจกรรม..."
                 className="w-full text-3xl font-semibold p-2 border-b border-gray-200 focus:border-orange-500 outline-none"
               />
             </CardContent>

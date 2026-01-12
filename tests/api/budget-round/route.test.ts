@@ -13,6 +13,7 @@ jest.mock('@/app/lib/prisma', () => ({
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      findUnique: jest.fn(),
     },
   },
 }));
@@ -179,6 +180,14 @@ describe('Budget Round API Tests', () => {
       mockLogin('ADMIN');
       const body = { id: 1, roundName: 'Updated Name', totalBudget: 60000 };
 
+      // เพิ่ม: จำลองว่าค้นหา ID เจอ (ถ้า API มีการเช็คก่อน Update)
+      (prisma.budgetRound.findUnique as jest.Mock).mockResolvedValue({ 
+        id: 1, 
+        roundName: 'Old Name', 
+        isPublished: true 
+      });
+
+      // จำลองผลลัพธ์การ Update
       (prisma.budgetRound.update as jest.Mock).mockResolvedValue(body);
 
       const req = createRequest('PUT', '', body);
