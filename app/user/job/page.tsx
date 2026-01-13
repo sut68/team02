@@ -1,7 +1,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Calendar, User, Plus } from 'lucide-react';
+import { Calendar, User, Plus, Edit, Trash2 } from 'lucide-react'; // 1. เพิ่ม Edit, Trash2
 import Image from 'next/image';
+import Link from 'next/link'; // 2. เพิ่ม Link
 
 interface Job {
   id: number;
@@ -41,9 +42,11 @@ export default function JobListPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: number; email: string } | null>(null);
   const itemsPerPage = 3;
 
   useEffect(() => {
+    loadCurrentUser();
     loadJobs();
   }, []);
 
@@ -62,20 +65,35 @@ export default function JobListPage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [jobs, page, displayedJobs]);
 
+  const loadCurrentUser = async () => {
+    try {
+      const response = await fetch('/api/auth/me', { cache: 'no-store' });
+      if (response.ok) {
+        const userData = await response.json();
+        setCurrentUser({ id: userData.id, email: userData.email });
+        console.log('👤 Current user:', userData);
+      }
+    } catch (err) {
+      console.error('Error loading current user:', err);
+    }
+  };
+
   const loadJobs = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('/api/job?limit=100');
+      const response = await fetch('/api/job?limit=100',
+        { cache: 'no-store' });
       const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data.error || 'เกิดข้อผิดพลาดในการดึงข้อมูล');
       }
 
-      // Show all approved jobs (not filtering by JobPosterPath anymore)
-      // Jobs without poster will show placeholder
       if (data.jobs && Array.isArray(data.jobs)) {
+        // Debug: ตรวจสอบข้อมูล user
+        console.log('📊 Jobs data:', data.jobs);
+        console.log('👤 First job user data:', data.jobs[0]?.user);
         setJobs(data.jobs);
       } else {
         setJobs([]);
@@ -101,6 +119,35 @@ export default function JobListPage() {
   const handleViewDetail = (jobId: number) => {
     window.location.href = `/user/job/detail/${jobId}`;
   };
+
+  // ฟังก์ชันสำหรับการลบ
+  const handleDelete = async (jobId: number) => {
+    if (!confirm('ยืนยันที่จะลบประกาศนี้? การลบจะไม่สามารถกู้คืนได้')) return;
+
+    try {
+      console.log('🗑️ Deleting job:', jobId);
+
+      const response = await fetch(`/api/job/${jobId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'เกิดข้อผิดพลาดในการลบ');
+      }
+
+      const result = await response.json();
+      console.log('✅ Delete successful:', result);
+
+      alert('ลบประกาศงานสำเร็จ');
+
+      // Reload jobs list
+      await loadJobs();
+    } catch (error: any) {
+      console.error('❌ Delete error:', error);
+      alert(error.message || 'ไม่สามารถลบประกาศงานได้');
+    }
+  }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -155,8 +202,45 @@ export default function JobListPage() {
             {displayedJobs.map((job) => (
               <div
                 key={job.id}
-                className="bg-[#F5F5F5] rounded-none shadow-sm hover:shadow-md transition-shadow p-6"
+                // 3. เพิ่ม relative ที่นี่ เพื่อให้ปุ่ม Edit วางตำแหน่งได้
+                className="relative bg-[#F5F5F5] rounded-none shadow-sm hover:shadow-md transition-shadow p-6 group"
               >
+
+                {/* 4. ส่วนปุ่มจัดการ (แก้ไข/ลบ) มุมขวาบน - แสดงเฉพาะเจ้าของงาน */}
+                {(() => {
+                  const isOwner = currentUser && job.user && currentUser.id === job.user.id;
+                  console.log(`🔍 Job ${job.id} ownership:`, {
+                    jobId: job.id,
+                    jobTitle: job.title,
+                    currentUserId: currentUser?.id,
+                    jobUserId: job.user?.id,
+                    jobUserName: job.user?.fullName,
+                    isOwner
+                  });
+                  return isOwner ? (
+                    <div className="absolute top-4 right-4 flex gap-2 z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                      <Link
+                        href={`/user/job/edit/${job.id}`}
+                        className="p-2 bg-white rounded-full text-gray-500 hover:text-blue-600 hover:bg-blue-50 shadow-sm transition-colors"
+                        title="แก้ไขประกาศ"
+                      >
+                        <Edit size={18} />
+                      </Link>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDelete(job.id);
+                        }}
+                        className="p-2 bg-white rounded-full text-gray-500 hover:text-red-600 hover:bg-red-50 shadow-sm transition-colors"
+                        title="ลบประกาศ"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  ) : null;
+                })()}
+
                 <div className="flex flex-col md:flex-row gap-6">
                   {/* Image Section */}
                   <div className="w-full md:w-56 h-64 bg-[#FFFFFF] rounded-lg flex-shrink-0 overflow-hidden relative">
@@ -176,13 +260,13 @@ export default function JobListPage() {
                   {/* Content Section */}
                   <div className="flex-1 flex flex-col justify-between py-2">
                     <div>
-                      {/* Title */}
-                      <h3 className="text-2xl font-semibold text-[#111827] mb-2">
-                        {job.title || job.namejob || 'ไม่มีชื่องาน'}
+                      {/* Title: ใช้ namejob ตามที่ user ต้องการ */}
+                      <h3 className="text-2xl font-semibold text-[#111827] mb-2 pr-20">
+                        {job.title || 'ไม่มีชื่องาน'}
                       </h3>
-                      {/* Subtitle / Company Name could go here if you want it prominent */}
+                      {/* Subtitle: ใช้ namejob (เก็บ title รอง) */}
                       <p className="text-lg text-orange-600 font-medium">
-                        {job.company?.companyname || 'ไม่ระบุบริษัท'}
+                        {job.namejob || 'ไม่มีชื่อเรื่องย่อ'}
                       </p>
                     </div>
 
@@ -195,7 +279,7 @@ export default function JobListPage() {
                         </div>
                         <div className="flex items-center gap-1.5">
                           <User className="w-4 h-4" />
-                          <span>{job.company?.companyname || 'ไม่ระบุ'}</span>
+                          <span>{job.user?.fullName || 'ไม่ระบุผู้โพสต์'}</span>
                         </div>
                       </div>
 
@@ -220,12 +304,12 @@ export default function JobListPage() {
             )}
 
             {/* End of List */}
-            {displayedJobs.length === jobs.length && 
-             displayedJobs.length > itemsPerPage && (
-              <div className="text-center py-8">
-                <p className="text-gray-500">ไม่มีข้อมูลเพิ่มเติม</p>
-              </div>
-            )}
+            {displayedJobs.length === jobs.length &&
+              displayedJobs.length > itemsPerPage && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">ไม่มีข้อมูลเพิ่มเติม</p>
+                </div>
+              )}
           </div>
         )}
       </main>

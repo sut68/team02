@@ -147,14 +147,36 @@ describe("Booking API Full Tests", () => {
       expect(json.message).toBe(ERROR_MESSAGES.CHECKIN_SUCCESS);
     });
 
+    // ในไฟล์ tests/api/booking/route.test.ts
+
     it("TC-PATCH-02: Claim Souvenir Success", async () => {
+      // 1. แก้ Mock Data: ต้องใส่ id และ itemId ให้ครบ เพราะโค้ดจริงต้องใช้
       (prisma.booking.findFirst as jest.Mock).mockResolvedValue({
+        Userid: 1, // ✅ ต้องมี Userid เพราะในโค้ดมีการใช้ booking.Userid
         attendees: [],
-        entitlement: [{ qtyUsed: 0, qtyGranted: 1 }] // ยังมีสิทธิ์รับของ
+        entitlement: [
+          { 
+            id: 100,       // ✅ ใส่ id สมมติ
+            itemId: 50,    // ✅ ใส่ itemId สมมติ
+            qtyUsed: 0, 
+            qtyGranted: 1 
+          }
+        ]
       });
 
+      // 2. แก้ Transaction Mock: ต้องมี update, redemption.create, stockMovement.create
       (prisma.$transaction as jest.Mock).mockImplementation(async (fn: any) => {
-        return await fn({ entitlement: { updateMany: jest.fn() } });
+        return await fn({
+          entitlement: { 
+            update: jest.fn() // ✅ เปลี่ยนจาก updateMany เป็น update
+          },
+          redemption: {
+            create: jest.fn() // ✅ เพิ่ม Mock สำหรับ create redemption
+          },
+          stockMovement: {
+            create: jest.fn() // ✅ เพิ่ม Mock สำหรับ create stockMovement
+          }
+        });
       });
 
       const req = makeReq({ qrToken: "abc", action: BOOKING_API_CONFIG.ACTIONS.SOUVENIR }, "PATCH");

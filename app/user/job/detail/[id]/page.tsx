@@ -111,9 +111,15 @@ export default function JobDetailPage() {
 
       <div className='max-w-5xl mx-auto p-6 md:p-8'>
         {/* Job Title */}
-        <h1 className='text-2xl font-semibold text-[#1F2937] mb-6'>
-          {job.title || job.namejob || 'ไม่มีชื่องาน'}
-        </h1>
+        {/* Job Title */}
+        <div className="mb-6">
+          <h1 className='text-2xl font-semibold text-[#1F2937] mb-2'>
+            {job.title || 'ไม่มีชื่องาน'}
+          </h1>
+          <p className="text-xl text-orange-600 font-medium">
+            {job.namejob || 'ไม่มีชื่อเรื่องย่อ'}
+          </p>
+        </div>
 
         {/* Company Image & Overlay Logo */}
         <div className='relative w-full h-[300px] mb-4 overflow-hidden bg-[#F9FAFB] rounded-non group'>
