@@ -766,4 +766,3 @@ const RegisterSelect = () => {
 
   return <RegistrationForm />;
 }
-
