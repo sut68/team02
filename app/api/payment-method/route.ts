@@ -6,7 +6,7 @@ export async function GET() {
   try {
     const paymentMethods = await prisma.paymentMethodRecord.findMany({
       where: {
-        isActive: true,
+        // isActive: true,
       },
       orderBy: {
         methodName: 'asc',

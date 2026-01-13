@@ -20,7 +20,7 @@ export const BudgetSchema = z.object({
 export const ProjectSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   ownerName: z.string().optional(),
-  posterUrl: z.string().url("Invalid URL").optional().nullable(), // อนุญาตให้เป็น null
+  posterUrl: z.string().url("Invalid URL").optional().nullable(), 
   description: z.string().min(1, "Description is required"),
   goalAmount: z.number().positive("Goal must be positive"),
   isCentralFund: z.boolean().optional().default(false),
