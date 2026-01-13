@@ -8,9 +8,6 @@ import { Card } from './../../../components/ui/Card';
 import { PrimaryButton, CancelButton } from './../../../components/ui/Button'; 
 import { UploadCloud } from 'lucide-react'; 
 
-// --------------------------------------------------------------------------
-// 💡 Interfaces/Types
-// --------------------------------------------------------------------------
 interface FormData {
   projectName: string;
   projectType: string;
@@ -20,7 +17,6 @@ interface FormData {
   startDate: string;
   endDate: string;
   posterImage: FileList | null;
-  // ✅ เพิ่ม 2 ฟิลด์นี้
   ownerName: string; 
   contact: string;
 }
@@ -42,7 +38,6 @@ export default function CreateProjectPage() {
   const watchedImage = watch("posterImage");
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
 
-  // Preview Image Logic
   React.useEffect(() => {
     let objectUrl: string | null = null;
     if (watchedImage && watchedImage.length > 0) {
@@ -58,7 +53,6 @@ export default function CreateProjectPage() {
     };
   }, [watchedImage]);
 
-  // Upload Logic
   const uploadPoster = async (file: File): Promise<string> => {
     const uploadFormData = new window.FormData();
     uploadFormData.append('file', file);
@@ -77,7 +71,6 @@ export default function CreateProjectPage() {
     return data.url; 
   };
 
-  // 💡 Submit ฟอร์ม
   const onSubmit: SubmitHandler<FormData> = async (data) => {
     setLoading(true);
     let posterUrl: string | null = null;
@@ -87,15 +80,14 @@ export default function CreateProjectPage() {
         posterUrl = await uploadPoster(fileToUpload); 
       }
 
-      // ✅ เตรียมข้อมูลส่ง Backend (รวม ownerName และ contact)
       const apiData = {
         title: data.projectName,
         description: data.description,
         goalAmount: data.targetAmount,
         startDate: data.startDate,
         endDate: data.endDate,
-        ownerName: data.ownerName, // ✅ ใช้ค่าจากฟอร์ม
-        contact: data.contact,     // ✅ ใช้ค่าจากฟอร์ม
+        ownerName: data.ownerName, 
+        contact: data.contact,   
         posterUrl: posterUrl, 
         status: data.status,
         projectType: data.projectType,
@@ -136,7 +128,6 @@ export default function CreateProjectPage() {
         </h1>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* ชื่อโครงการ */}
           <div>
             <label htmlFor="projectName" className="block text-gray-700 text-sm font-semibold mb-2">
               ชื่อโครงการ
@@ -151,7 +142,6 @@ export default function CreateProjectPage() {
             {errors.projectName && <p className="text-red-500 text-xs mt-1">{errors.projectName.message}</p>}
           </div>
 
-          {/* ประเภททุน */}
           <div>
             <label htmlFor="projectType" className="block text-gray-700 text-sm font-semibold mb-2">
               ประเภททุน (Project Type)
@@ -173,7 +163,6 @@ export default function CreateProjectPage() {
             {errors.projectType && <p className="text-red-500 text-xs mt-1">{errors.projectType.message}</p>}
           </div>
 
-          {/* ✅ ส่วนที่เพิ่ม: ชื่อผู้รับผิดชอบ & ข้อมูลติดต่อ */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="ownerName" className="block text-gray-700 text-sm font-semibold mb-2">
@@ -203,7 +192,6 @@ export default function CreateProjectPage() {
             </div>
           </div>
 
-          {/* เป้าหมาย (จำนวนเงิน) */}
           <div>
             <label htmlFor="targetAmount" className="block text-gray-700 text-sm font-semibold mb-2">
               เป้าหมาย (จำนวนเงิน)
@@ -222,7 +210,6 @@ export default function CreateProjectPage() {
             {errors.targetAmount && <p className="text-red-500 text-xs mt-1">{errors.targetAmount.message}</p>}
           </div>
 
-          {/* วันที่เริ่มต้น/สิ้นสุด */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label htmlFor="startDate" className="block text-gray-700 text-sm font-semibold mb-2">
@@ -250,7 +237,6 @@ export default function CreateProjectPage() {
             </div>
           </div>
 
-          {/* สถานะ */}
           <div>
             <label htmlFor="status" className="block text-gray-700 text-sm font-semibold mb-2">
               สถานะ
@@ -266,7 +252,6 @@ export default function CreateProjectPage() {
             </select>
           </div>
 
-          {/* รายละเอียดโครงการ */}
           <div>
             <label htmlFor="description" className="block text-gray-700 text-sm font-semibold mb-2">
               รายละเอียดโครงการ
@@ -281,7 +266,6 @@ export default function CreateProjectPage() {
             {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
           </div>
 
-          {/* อัปโหลดโปสเตอร์ */}
           <div>
             <label htmlFor="posterImage" className="block text-gray-700 text-sm font-semibold mb-2">
               อัปโหลดโปสเตอร์
@@ -321,7 +305,6 @@ export default function CreateProjectPage() {
             {errors.posterImage && <p className="text-red-500 text-xs mt-1">{errors.posterImage.message}</p>}
           </div>
 
-          {/* ปุ่ม Submit / Cancel */}
           <div className="flex justify-end space-x-4 mt-8">
             <CancelButton type="button" onClick={() => router.back()}>
               ยกเลิก
