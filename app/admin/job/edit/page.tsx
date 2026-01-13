@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react';
 
 interface Job {
   id: number;
-  jobTitle: string;
+  namejob: string;
   title: string;
   position: string;
   jobType: string;
@@ -31,7 +31,7 @@ export default function JobDetailPage() {
   useEffect(() => {
     // ดึง jobId จาก localStorage (ในโปรเจคจริงใช้ router params)
     const jobId = localStorage.getItem('selectedJobId');
-    
+
     if (jobId) {
       const jobs = JSON.parse(localStorage.getItem('jobs') || '[]');
       const selectedJob = jobs.find((j: Job) => j.id === parseInt(jobId));
@@ -50,14 +50,14 @@ export default function JobDetailPage() {
 
     // บันทึกข้อมูลที่อัปเดตแล้วลง localStorage
     const jobs = JSON.parse(localStorage.getItem('jobs') || '[]');
-    const updatedJobs = jobs.map((j: Job) => 
+    const updatedJobs = jobs.map((j: Job) =>
       j.id === job.id ? job : j
     );
-    
+
     localStorage.setItem('jobs', JSON.stringify(updatedJobs));
-    
+
     alert('บันทึกข้อมูลสำเร็จ');
-    
+
     // กลับไปหน้าจัดการรายการ
     localStorage.removeItem('selectedJobId');
     window.location.href = '/admin/job';
@@ -92,7 +92,7 @@ export default function JobDetailPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-500 mb-4">ไม่พบข้อมูลงาน</p>
-          <button 
+          <button
             onClick={handleBack}
             className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
           >
@@ -108,7 +108,7 @@ export default function JobDetailPage() {
       <div className="max-w-4xl mx-auto px-4">
         {/* Back Button */}
         <div className="mb-6">
-          <button 
+          <button
             onClick={handleBack}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors group"
           >
@@ -126,15 +126,15 @@ export default function JobDetailPage() {
             {/* ข้อมูลหลัก */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-2">ชื่อหัวข้อของงาน</label>
+                <label className="block text-sm font-medium text-gray-600 mb-2">title</label>
                 <div className="bg-gray-50 px-4 py-3 rounded-lg">
-                  <p className="text-gray-800">{job.jobTitle || '-'}</p>
+                  <p className="text-gray-800">{job.title || '-'}</p>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-600 mb-2">Title</label>
                 <div className="bg-gray-50 px-4 py-3 rounded-lg">
-                  <p className="text-gray-800">{job.title || '-'}</p>
+                  <p className="text-gray-800">{job.namejob || '-'}</p>
                 </div>
               </div>
             </div>
@@ -213,9 +213,9 @@ export default function JobDetailPage() {
                   {job.previews?.attachment && (
                     <div>
                       <p className="text-xs text-gray-500 mb-2">ไฟล์แนบงาน</p>
-                      <img 
-                        src={job.previews.attachment} 
-                        alt="Attachment" 
+                      <img
+                        src={job.previews.attachment}
+                        alt="Attachment"
                         className="w-full h-48 object-cover rounded-lg border border-gray-200"
                       />
                     </div>
@@ -223,9 +223,9 @@ export default function JobDetailPage() {
                   {job.previews?.logo && (
                     <div>
                       <p className="text-xs text-gray-500 mb-2">ตราบริษัท</p>
-                      <img 
-                        src={job.previews.logo} 
-                        alt="Logo" 
+                      <img
+                        src={job.previews.logo}
+                        alt="Logo"
                         className="w-full h-48 object-cover rounded-lg border border-gray-200"
                       />
                     </div>
@@ -233,9 +233,9 @@ export default function JobDetailPage() {
                   {job.previews?.image && (
                     <div>
                       <p className="text-xs text-gray-500 mb-2">รูปบริษัท</p>
-                      <img 
-                        src={job.previews.image} 
-                        alt="Company" 
+                      <img
+                        src={job.previews.image}
+                        alt="Company"
                         className="w-full h-48 object-cover rounded-lg border border-gray-200"
                       />
                     </div>
@@ -268,21 +268,19 @@ export default function JobDetailPage() {
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={() => handleUpdateStatus('อนุมัติแล้ว')}
-                  className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                    job.status === 'อนุมัติแล้ว'
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-orange-100 text-orange-600 hover:bg-orange-200'
-                  }`}
+                  className={`px-6 py-3 rounded-lg font-medium transition-all ${job.status === 'อนุมัติแล้ว'
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-orange-100 text-orange-600 hover:bg-orange-200'
+                    }`}
                 >
                   อนุมัติแล้ว
                 </button>
                 <button
                   onClick={() => handleUpdateStatus('ไม่อนุมัติ')}
-                  className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                    job.status === 'ไม่อนุมัติ'
-                      ? 'bg-red-500 text-white'
-                      : 'bg-red-100 text-red-600 hover:bg-red-200'
-                  }`}
+                  className={`px-6 py-3 rounded-lg font-medium transition-all ${job.status === 'ไม่อนุมัติ'
+                    ? 'bg-red-500 text-white'
+                    : 'bg-red-100 text-red-600 hover:bg-red-200'
+                    }`}
                 >
                   ไม่อนุมัติ
                 </button>
@@ -291,13 +289,13 @@ export default function JobDetailPage() {
 
             {/* ปุ่มบันทึกและยกเลิก */}
             <div className="flex justify-end gap-4 pt-6 border-t border-gray-200">
-              <button 
+              <button
                 onClick={handleCancel}
                 className="px-8 py-3 border border-gray-300 text-gray-700 text-sm font-medium rounded-full hover:bg-gray-50 transition-colors"
               >
                 ยกเลิก
               </button>
-              <button 
+              <button
                 onClick={handleSave}
                 className="px-8 py-3 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-full transition-colors"
               >

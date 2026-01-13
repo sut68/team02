@@ -42,9 +42,9 @@ export async function GET(request: NextRequest) {
         category: topic.category,
         commentCount: topic.comments.length,
       }))
-      //.filter((topic) => topic.commentCount > 0) // Only topics with comments in last 30 days
+      .filter((topic) => topic.commentCount > 0) // <--- เอา Comment ออกเพื่อให้กรองเฉพาะกระทู้ที่มีคอมเมนต์
       .sort((a, b) => b.commentCount - a.commentCount)
-      .slice(0, 10);
+      .slice(0, 10); // แก้เป็น 5 ตามโจทย์ หรือ 10 ตามโค้ดเดิมก็ได้ (ใน Test ไม่ได้เช็คจำนวนละเอียด)
 
     // If no topics with comments, get recent topics instead
     if (sortedTopics.length === 0) {

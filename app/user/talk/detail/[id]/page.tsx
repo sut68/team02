@@ -292,7 +292,7 @@ export default function TopicDetailPage() {
       <div className='bg-white shadow-sm sticky top-0 z-50'>
         <div className='max-w-4xl mx-auto px-4 py-4'>
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push('/user/talk')}
             className='flex items-center space-x-2 text-gray-600 hover:text-orange-500 transition-colors'
           >
             <ArrowLeft className='w-5 h-5' />
@@ -424,11 +424,10 @@ export default function TopicDetailPage() {
                 return (
                   <div
                     key={comment.id}
-                    className={`flex space-x-3 p-4 rounded-lg relative ${
-                      comment.status === 'DELETED'
+                    className={`flex space-x-3 p-4 rounded-lg relative ${comment.status === 'DELETED'
                         ? 'bg-red-50 border border-red-200'
                         : 'bg-gray-50'
-                    }`}
+                      }`}
                   >
                     <div className='flex-shrink-0'>
                       <div className='w-10 h-10 bg-orange-200 rounded-full flex items-center justify-center'>
@@ -455,11 +454,10 @@ export default function TopicDetailPage() {
                       )}
 
                       <p
-                        className={`text-gray-700 whitespace-pre-wrap ${
-                          comment.status === 'DELETED'
+                        className={`text-gray-700 whitespace-pre-wrap ${comment.status === 'DELETED'
                             ? 'opacity-50 line-through'
                             : ''
-                        }`}
+                          }`}
                       >
                         {comment.content}
                       </p>

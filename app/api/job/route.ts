@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import path from 'path';
 import { promises as fs } from 'fs';
 
+export const dynamic = 'force-dynamic';
 const JWT_SECRET =
   process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
 
