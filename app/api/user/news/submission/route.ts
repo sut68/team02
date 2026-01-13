@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import path from "path";
 import { promises as fs } from "fs";
 import { SUBMISSION_CONFIG, ERROR_MESSAGES } from "@/lib/models/validation"; // ✅ ดึง Config
+import { uploadToAzureBlob, deleteFromAzureBlob } from "@/lib/azureBlob";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-this-in-production";
 
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: ERROR_MESSAGES.UNAUTHORIZED }, { status: 401 });
   }
 
-  let uploadedFilePath: string | null = null; // เอาไว้ลบไฟล์ทิ้งถ้า DB พัง
+  let uploadedFileUrl: string | null = null; // เอาไว้ลบไฟล์ทิ้งถ้า DB พัง (เก็บเป็น Azure URL)
 
   try {
     const formData = await req.formData();
@@ -67,24 +68,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: ERROR_MESSAGES.FILE_TOO_LARGE }, { status: 400 });
     }
 
-    // 4. Save File
-    const uploadDir = path.join(process.cwd(), "public", ...SUBMISSION_CONFIG.UPLOAD_DIR.split("/"));
-    await fs.mkdir(uploadDir, { recursive: true });
-
+    // 4. Upload File to Azure Blob
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
     const fileNameOnDisk = `${Date.now()}_${safeName}`;
-    const filePathOnDisk = path.join(uploadDir, fileNameOnDisk);
-    const publicPath = `/${SUBMISSION_CONFIG.UPLOAD_DIR}/${fileNameOnDisk}`;
-
-    await fs.writeFile(filePathOnDisk, buffer);
-    uploadedFilePath = filePathOnDisk; // จำ Path ไว้
+    const blobName = `${SUBMISSION_CONFIG.UPLOAD_DIR}/${fileNameOnDisk}`;
+    const publicUrl = await uploadToAzureBlob(buffer, blobName, file.type);
+    uploadedFileUrl = publicUrl;
 
     // 5. Save DB (Transaction)
     const submission = await prisma.$transaction(async (tx) => {
       const submissionFile = await tx.submissionFile.create({
-        data: { Path: publicPath },
+        data: { Path: publicUrl },
       });
 
       return await tx.submission.create({
@@ -104,9 +100,9 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("POST Error:", err);
     
-    // Cleanup: ลบไฟล์ทิ้งถ้า Error
-    if (uploadedFilePath) {
-      try { await fs.unlink(uploadedFilePath); } catch (e) { /* ignore */ }
+    // Cleanup: delete uploaded blob if present
+    if (uploadedFileUrl) {
+      try { await deleteFromAzureBlob(uploadedFileUrl); } catch (e) { /* ignore */ }
     }
 
     return NextResponse.json({ error: ERROR_MESSAGES.UPLOAD_FAILED }, { status: 500 });
