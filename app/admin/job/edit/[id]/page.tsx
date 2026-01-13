@@ -39,7 +39,7 @@ export default function JobDetailPage() {
   const params = useParams();
   const router = useRouter();
   const jobId = params?.id as string;
-  
+
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -185,7 +185,7 @@ export default function JobDetailPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-500 mb-4">{error || 'ไม่พบข้อมูลงาน'}</p>
-          <button 
+          <button
             onClick={handleBack}
             className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
           >
@@ -201,7 +201,7 @@ export default function JobDetailPage() {
       <div className="max-w-4xl mx-auto px-4">
         {/* Back Button */}
         <div className="mb-6">
-          <button 
+          <button
             onClick={handleBack}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors group"
           >
@@ -225,7 +225,7 @@ export default function JobDetailPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-2">ชื่อตำแหน่งงาน</label>
+                <label className="block text-sm font-medium text-gray-600 mb-2">title</label>
                 <div className="bg-gray-50 px-4 py-3 rounded-lg">
                   <p className="text-gray-800">{job.namejob || '-'}</p>
                 </div>
@@ -308,9 +308,9 @@ export default function JobDetailPage() {
                   {job.JobPosterPath && (
                     <div>
                       <p className="text-xs text-gray-500 mb-2">ไฟล์แนบงาน</p>
-                      <img 
-                        src={job.JobPosterPath} 
-                        alt="Attachment" 
+                      <img
+                        src={job.JobPosterPath}
+                        alt="Attachment"
                         className="w-full h-48 object-cover rounded-lg border border-gray-200"
                       />
                     </div>
@@ -318,9 +318,9 @@ export default function JobDetailPage() {
                   {job.company?.CompanyLogoPath && (
                     <div>
                       <p className="text-xs text-gray-500 mb-2">ตราบริษัท</p>
-                      <img 
-                        src={job.company.CompanyLogoPath} 
-                        alt="Logo" 
+                      <img
+                        src={job.company.CompanyLogoPath}
+                        alt="Logo"
                         className="w-full h-48 object-cover rounded-lg border border-gray-200"
                       />
                     </div>
@@ -328,9 +328,9 @@ export default function JobDetailPage() {
                   {job.company?.CompanyPicturePath && (
                     <div>
                       <p className="text-xs text-gray-500 mb-2">รูปบริษัท</p>
-                      <img 
-                        src={job.company.CompanyPicturePath} 
-                        alt="Company" 
+                      <img
+                        src={job.company.CompanyPicturePath}
+                        alt="Company"
                         className="w-full h-48 object-cover rounded-lg border border-gray-200"
                       />
                     </div>
@@ -363,31 +363,28 @@ export default function JobDetailPage() {
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={() => handleUpdateStatus('APPROVED')}
-                  className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                    job.status === 'APPROVED'
+                  className={`px-6 py-3 rounded-lg font-medium transition-all ${job.status === 'APPROVED'
                       ? 'bg-orange-500 text-white'
                       : 'bg-orange-100 text-orange-600 hover:bg-orange-200'
-                  }`}
+                    }`}
                 >
-                  อนุมัติแล้ว
+                  อนุมัติ
                 </button>
                 <button
                   onClick={() => handleUpdateStatus('REJECTED')}
-                  className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                    job.status === 'REJECTED'
+                  className={`px-6 py-3 rounded-lg font-medium transition-all ${job.status === 'REJECTED'
                       ? 'bg-red-500 text-white'
                       : 'bg-red-100 text-red-600 hover:bg-red-200'
-                  }`}
+                    }`}
                 >
                   ไม่อนุมัติ
                 </button>
                 <button
                   onClick={() => handleUpdateStatus('PENDING')}
-                  className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                    job.status === 'PENDING'
+                  className={`px-6 py-3 rounded-lg font-medium transition-all ${job.status === 'PENDING'
                       ? 'bg-yellow-500 text-white'
                       : 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
-                  }`}
+                    }`}
                 >
                   รออนุมัติ
                 </button>
@@ -396,13 +393,13 @@ export default function JobDetailPage() {
 
             {/* ปุ่มบันทึกและยกเลิก */}
             <div className="flex justify-end gap-4 pt-6 border-t border-gray-200">
-              <button 
+              <button
                 onClick={handleCancel}
                 className="px-8 py-3 border border-gray-300 text-gray-700 text-sm font-medium rounded-full hover:bg-gray-50 transition-colors"
               >
                 ยกเลิก
               </button>
-              <button 
+              <button
                 onClick={handleSave}
                 disabled={isSaving}
                 className="px-8 py-3 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

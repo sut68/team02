@@ -93,7 +93,7 @@ describe('/api/job/[id]', () => {
       const data = await response.json();
 
       expect(response.status).toBe(403);
-      expect(data.error).toBe('งานนี้ยังไม่ได้รับการอนุมัติ');
+      expect(data.error).toBe('คุณไม่มีสิทธิ์เข้าถึงประกาศนี้');
     });
 
     it('should return 400 for invalid job id', async () => {

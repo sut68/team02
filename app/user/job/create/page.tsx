@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Upload, ChevronDown } from 'lucide-react';
 
 export default function JobPostPage() {
+  // 1. กำหนด State เริ่มต้น
   const [formData, setFormData] = useState({
     jobTitle: '',
     title: '',
@@ -11,7 +12,7 @@ export default function JobPostPage() {
     education: 'Select Education',
     salary: '',
     companyName: '',
-    positions: '',
+    positions: '', // เริ่มต้นเป็น string ว่าง เพื่อให้ input ว่างได้
     address: '',
     contact: '',
     transportation: '',
@@ -40,6 +41,21 @@ export default function JobPostPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // ✅ เช็คความถูกต้องของฟอร์มแบบ Real-time
+  const isFormValid =
+    formData.jobTitle.trim() !== '' &&
+    formData.title.trim() !== '' &&
+    formData.education !== 'Select Education' &&
+    formData.jobType !== 'Select Type' &&
+    formData.position.trim() !== '' &&
+    formData.salary.trim() !== '' &&
+    formData.companyName.trim() !== '' &&
+    formData.positions.trim() !== '' && // เช็คว่ามีการกรอกจำนวนอัตรา
+    formData.address.trim() !== '' &&
+    formData.contact.trim() !== '' &&
+    formData.transportation.trim() !== '' &&
+    formData.qualifications.trim() !== '';
+
   const handleInputChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
   };
@@ -61,6 +77,7 @@ export default function JobPostPage() {
   };
 
   const handleCancel = () => {
+    // รีเซ็ตค่าทั้งหมด
     setFormData({
       jobTitle: '',
       title: '',
@@ -82,9 +99,15 @@ export default function JobPostPage() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.jobTitle) {
-      alert('กรุณาระบุชื่อหัวข้อของงาน');
+    if (!isFormValid) {
+      alert('กรุณากรอกข้อมูลให้ครบทุกช่อง');
       return;
+    }
+
+    // ✅ เพิ่มการตรวจสอบจำนวนอัตราก่อนส่ง ว่าต้องเป็นตัวเลขเท่านั้น
+    if (isNaN(Number(formData.positions)) || Number(formData.positions) < 1) {
+        alert('กรุณาระบุจำนวนอัตราให้ถูกต้อง (อย่างน้อย 1 อัตรา)');
+        return;
     }
 
     setIsSubmitting(true);
@@ -92,27 +115,25 @@ export default function JobPostPage() {
     try {
       const submitFormData = new FormData();
 
+      // Append ข้อมูล Text
       submitFormData.append('jobTitle', formData.jobTitle);
-      if (formData.title) submitFormData.append('title', formData.title);
-      if (formData.position)
-        submitFormData.append('position', formData.position);
-      if (formData.jobType) submitFormData.append('jobType', formData.jobType);
-      if (formData.education)
-        submitFormData.append('education', formData.education);
-      if (formData.salary) submitFormData.append('salary', formData.salary);
-      if (formData.companyName)
-        submitFormData.append('companyName', formData.companyName);
-      if (formData.positions)
-        submitFormData.append('positions', formData.positions);
-      if (formData.address) submitFormData.append('address', formData.address);
-      if (formData.contact) submitFormData.append('contact', formData.contact);
-      if (formData.transportation)
-        submitFormData.append('transportation', formData.transportation);
-      if (formData.qualifications)
-        submitFormData.append('qualifications', formData.qualifications);
+      submitFormData.append('title', formData.title);
+      submitFormData.append('position', formData.position);
+      submitFormData.append('jobType', formData.jobType);
+      submitFormData.append('education', formData.education);
+      submitFormData.append('salary', formData.salary);
+      submitFormData.append('companyName', formData.companyName);
+      
+      // ✅ ส่ง positions ไป (ค่าจะเป็น string ใน FormData เสมอ Backend ต้องแปลงเป็น Int เอง)
+      submitFormData.append('positions', formData.positions);
+      
+      submitFormData.append('address', formData.address);
+      submitFormData.append('contact', formData.contact);
+      submitFormData.append('transportation', formData.transportation);
+      submitFormData.append('qualifications', formData.qualifications);
 
-      if (files.attachment)
-        submitFormData.append('attachment', files.attachment);
+      // Append ข้อมูลไฟล์
+      if (files.attachment) submitFormData.append('attachment', files.attachment);
       if (files.logo) submitFormData.append('logo', files.logo);
       if (files.image) submitFormData.append('image', files.image);
 
@@ -129,6 +150,7 @@ export default function JobPostPage() {
 
       alert('บันทึกประกาศงานสำเร็จ!');
       window.location.href = '/user/job';
+      
     } catch (error) {
       const errorMessage =
         error instanceof Error
@@ -269,12 +291,15 @@ export default function JobPostPage() {
                   }
                 />
               </div>
+
+              {/* 🔴 ส่วนที่แก้ไข: จำนวนอัตรา (ให้พิมพ์เอา) */}
               <div>
                 <label className='block text-sm text-[#6B7280] mb-2'>
                   จำนวนอัตรา
                 </label>
                 <input
-                  type='number'
+                  type='number'     // บังคับให้ browser รับเฉพาะตัวเลข
+                  min="1"           // ป้องกันค่าติดลบ หรือ 0
                   className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none'
                   placeholder='ระบุจำนวนอัตรา'
                   value={formData.positions}
@@ -345,7 +370,7 @@ export default function JobPostPage() {
               />
             </div>
 
-            {/* File Uploads */}
+            {/* File Uploads (ส่วนเดิม) */}
             <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
               {/* ไฟล์แนบงาน */}
               <div>
@@ -499,7 +524,7 @@ export default function JobPostPage() {
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={isSubmitting}
+                disabled={isSubmitting || !isFormValid}
                 className='px-8 py-3 bg-[#F97316] hover:bg-[#EA580C] text-[#FFFFFF] text-sm font-medium rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
               >
                 {isSubmitting ? 'กำลังบันทึก...' : 'บันทึก'}
