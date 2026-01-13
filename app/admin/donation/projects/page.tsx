@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Layers, CheckCircle, Clock, Search, ChevronDown, PlusCircle, Landmark, Star, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/app/components/ui/Card';
 import Link from 'next/link';

@@ -391,12 +391,12 @@ describe('Authentication API Unit Tests', () => {
       const formData = new FormData();
       formData.append('email', 'err@example.com');
       formData.append('password', 'Password@123');
-      formData.append('fullName', 'User');
-      formData.append('phone', '081');
-      formData.append('address', 'Addr');
-      formData.append('subdistrict', 'Sub');
-      formData.append('district', 'Dist');
-      formData.append('province', 'Prov');
+      formData.append('fullName', 'Error User');
+      formData.append('phone', '0812345678');
+      formData.append('address', '123 Error Street');
+      formData.append('subdistrict', 'Error Sub');
+      formData.append('district', 'Error Dist');
+      formData.append('province', 'Error Prov');
       formData.append('postalCode', '10000');
       formData.append('studentCode', 'B6000001');
       formData.append('major', 'CPE');
