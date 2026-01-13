@@ -167,7 +167,7 @@ const LoginClient: React.FC = () => {
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    placeholder="b6612345@g.sut.ac.th"
+                    placeholder="alumni.engi@gmail.com"
                     className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                 </div>
