@@ -392,7 +392,7 @@ describe('Authentication API Unit Tests', () => {
       formData.append('email', 'err@example.com');
       formData.append('password', 'Password@123');
       formData.append('fullName', 'User');
-      formData.append('phone', '081');
+      formData.append('phone', '0812345678');
       formData.append('address', 'Addr');
       formData.append('subdistrict', 'Sub');
       formData.append('district', 'Dist');
