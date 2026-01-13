@@ -45,3 +45,99 @@ export const TransactionSchema = z.object({
   message: z.string().nullable().optional(),
   projectId: z.number().int().positive(),
 });
+
+
+ //kk system
+ // news system
+
+export const SUBMISSION_CONFIG = {
+  // Path ที่จะเซฟไฟล์ (Relative to public)
+  UPLOAD_DIR: "uploads/submissions", 
+  
+  // ขนาดไฟล์สูงสุด (เช่น 5MB)
+  MAX_FILE_SIZE: 5 * 1024 * 1024, 
+  
+  // ประเภทไฟล์ที่อนุญาต: PDF, Zip, Word (.doc, .docx)
+  ALLOWED_FILE_TYPES: [
+    "application/pdf",
+    "application/zip",
+    "application/x-zip-compressed", // บางเครื่องส่ง header นี้สำหรับ zip
+    "application/msword", // .doc
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document" // .docx
+  ], 
+};
+export const CONTENT_CONFIG = {
+  UPLOAD_DIR: "uploads/content",
+  TITLE_MIN_LENGTH: 3,
+  TITLE_MAX_LENGTH: 200,
+  DESC_MAX_LENGTH: 1000,
+  // ประเภทไฟล์รูปภาพที่รองรับ
+  ALLOWED_IMAGE_TYPES: ["image/jpeg", "image/png", "image/webp", "image/gif"],
+};
+export const BOOKINGFORM_CONFIG = {
+  PRICE_TYPE: {
+    SINGLE: "SINGLE",
+    BATCH: "BY_BATCH"
+  },
+  DEFAULT_SEATS: 0,
+};
+// Booking System
+export const BOOKING_API_CONFIG = {
+  DEFAULT_BOOKING_SEATS: 1,
+  PAYMENT_STATUS: {
+    CONFIRMED: "CONFIRMED",
+    PENDING: "PENDING"
+  },
+  TRANSACTION_STATUS: {
+    SUCCESS: "SUCCESS",
+    FAILED: "FAILED"
+  },
+  ACTIONS: {
+    CHECKIN: "CHECKIN",
+    SOUVENIR: "SOUVENIR"
+  }
+}as const;
+
+export const ERROR_MESSAGES = {
+  UNAUTHORIZED: "Unauthorized Access",
+  MISSING_FIELDS: "กรุณากรอกข้อมูลให้ครบถ้วน",
+  REQUIRED_TITLE: "กรุณากรอกหัวข้อ",
+  REQUIRED_FILE: "กรุณาอัปโหลดไฟล์",
+  SUCCESS: "ส่งงานสำเร็จ",
+  INVALID_FILE_TYPE: "ประเภทไฟล์ไม่ถูกต้อง (อนุญาตเฉพาะไฟล์ PDF, Zip และ Word เท่านั้น)",
+  FILE_TOO_LARGE: "ขนาดไฟล์ใหญ่เกินกำหนด (ไม่เกิน 5MB)",
+  UPLOAD_FAILED: "เกิดข้อผิดพลาดในการอัปโหลด",
+  DB_ERROR: "เกิดข้อผิดพลาดในการบันทึกข้อมูล",
+  // Content Specific
+  ID_INVALID: "id ไม่ถูกต้อง",
+  NOT_FOUND: "ไม่พบเนื้อหา",
+  TITLE_EMPTY: "ชื่อหัวเรื่องห้ามว่าง",
+  TITLE_TOO_SHORT: `ชื่อหัวเรื่องสั้นเกินไป (ต้องมากกว่า ${CONTENT_CONFIG.TITLE_MIN_LENGTH} ตัวอักษร)`,
+  TITLE_TOO_LONG: `ชื่อหัวเรื่องยาวเกินไป (ต้องไม่เกิน ${CONTENT_CONFIG.TITLE_MAX_LENGTH} ตัวอักษร)`,
+  DESC_TOO_LONG: `รายละเอียดต้องไม่เกิน ${CONTENT_CONFIG.DESC_MAX_LENGTH} ตัวอักษร`,
+  CATEGORY_REQUIRED: "ต้องระบุ categories",
+  CATEGORY_INVALID: "categories ไม่ถูกต้อง",
+  PICTURE_REQUIRED: "ต้องอัปโหลดรูปอย่างน้อย 1 รูป",
+  BOOKING_INVALID: "booking option ไม่ถูกต้อง",
+  USER_ID_INVALID: "userId ไม่ถูกต้อง",
+  FORM_ID_INVALID: "bookingFormId ไม่ถูกต้อง",
+  DELETE_ID_REQUIRED: "ต้องระบุ id สำหรับลบ",
+  DELETE_SUCCESS: "ลบเนื้อหาสำเร็จ",
+  CREATE_SUCCESS: "สร้างเนื้อหาสำเร็จ",
+  // BookingForm Specific
+  BOOKING_PRICE_TYPE_REQUIRED: "กรุณาระบุรูปแบบราคา (PriceType)",
+  BOOKING_SINGLE_PRICE_REQUIRED: "รูปแบบราคาเดียว ต้องระบุราคา (singlePrice)",
+  BOOKING_BATCH_PRICE_REQUIRED: "รูปแบบราคารอบ ต้องระบุข้อมูลรอบ (batchPrices) อย่างน้อย 1 รายการ",
+  BOOKING_ID_REQUIRED: "กรุณาระบุ id ของฟอร์ม",
+  BOOKING_UPDATE_SUCCESS: "อัปเดตฟอร์มสำเร็จ",
+  BOOKING_CREATE_SUCCESS: "สร้างฟอร์มสำเร็จ",
+  //Booking Specific
+  CONTENT_NOT_FOUND: "ไม่พบกิจกรรม",
+  SEATS_FULL: "ที่นั่งเต็มแล้ว",
+  BOOKING_NOT_FOUND: "ไม่พบข้อมูลการจอง",
+  TOKEN_REQUIRED: "ไม่มี token หรือ id ส่งมา",
+  SOUVENIR_CLAIMED: "รับของครบแล้ว",
+  INTERNAL_ERROR: "Internal Server Error",
+  CHECKIN_SUCCESS: "เช็คอินสำเร็จ",
+  SOUVENIR_SUCCESS: "รับของที่ระลึกสำเร็จ"
+};

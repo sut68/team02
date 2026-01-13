@@ -239,17 +239,15 @@ function UserBookingPageInner() {
       if (!res.ok) throw new Error(await res.text());
 
       const json = await res.json();
-      const bookingId = json.booking?.id || json.id; // ✅ ป้องกัน bookingId undefined
-      const paymentId = json.paymentId;
+const bookingId = json.booking?.id;
+const paymentId = json.paymentId; //ต้องตรงกับที่ API ส่งกลับมา
 
-      if (pricing.totalPrice === 0) {
-        alert("จองสำเร็จเรียบร้อยแล้ว ✅");
-        router.push(`/user/booking/success?bookingId=${bookingId}`);
-      } else if (paymentId) {
-        router.push(`/user/payment?paymentId=${paymentId}`);
-      } else {
-        router.push(`/user/payment?bookingId=${bookingId}`);
-      }
+if (pricing.totalPrice === 0) {
+    router.push(`/user/booking/success?bookingId=${bookingId}`);
+} else {
+    // ส่งไปหน้าชำระเงินพร้อม ID ที่จำเป็น
+    router.push(`/user/payment?paymentId=${paymentId}&bookingId=${bookingId}`);
+}
     } catch (err: any) {
       alert("จองไม่สำเร็จ: " + err.message);
     }
@@ -266,7 +264,7 @@ function UserBookingPageInner() {
       {errorText && <p className="text-red-500 text-sm mb-4">{errorText}</p>}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* ซ้าย: รายละเอียดกิจกรรม */}
+        {/* ซ้าย  รายละเอียดกิจกรรม */}
         <div className="bg-gray-50 rounded-xl p-6 lg:col-span-1 w-full">
           <div className="space-y-5">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-800">

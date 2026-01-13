@@ -115,10 +115,8 @@ export default function SouvenirMenuPage() {
               onSuccess={() => {
                 setShowDetail(false);
                 setSelectedItemId(null);
-                // Refresh carousel to show updated list
-                if (showCarousel) {
-                  window.location.reload();
-                }
+                // Always reload to refresh the carousel list
+                window.location.reload();
               }}
             />
           ) : null

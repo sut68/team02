@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react'; 
+import React, { useState, useEffect, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { FileText, PlusCircle, Camera } from 'lucide-react';
+import { FileText, PlusCircle, Camera, Trash2 } from 'lucide-react'; // ✅ เพิ่ม Trash2
 import {
   Table,
   TableHeader,
@@ -13,15 +13,16 @@ import {
   TableCell,
 } from '../../components/tables/Table';
 import { Card, CardHeader, CardContent } from '../../components/ui/Card';
+import { ERROR_MESSAGES } from '@/lib/models/validation'; 
 
-// Dynamically import AdminSubmissionPage client-side to avoid HMR issues with nested lucide-react icons
+// Dynamically import AdminSubmissionPage
 const AdminSubmissionPageComponent = dynamic(
   () => import('./appove/page').then(m => ({ default: m.AdminSubmissionPage })),
   { ssr: false, loading: () => <div className="bg-gray-100 rounded-lg p-8 animate-pulse min-h-[300px]" /> }
 );
 
 // ----------------------------------------------------------------------
-// Dashboard Menu Card
+// Dashboard Menu Card (เหมือนเดิม)
 // ----------------------------------------------------------------------
 const DashboardMenuCard = ({
   icon: Icon,
@@ -65,7 +66,6 @@ const DashboardMenuCard = ({
   );
 };
 
-// row ที่ใช้ render ในตาราง “โพสต์ทั้งหมด”
 type PostRow = {
   id: number;
   title: string;
@@ -77,11 +77,10 @@ type PostRow = {
 // Dashboard Page
 // ----------------------------------------------------------------------
 export default function DashboardPage() {
-  // state สำหรับโพสต์ที่ดึงจาก DB
   const [posts, setPosts] = useState<PostRow[]>([]);
   const [loadingPosts, setLoadingPosts] = useState<boolean>(false);
 
-  // ดึง Content จาก /api/content แค่ครั้งแรก
+  // ดึง Content
   useEffect(() => {
     const fetchContents = async () => {
       try {
@@ -100,7 +99,7 @@ export default function DashboardPage() {
           author: c.user?.fullName || 'ไม่ระบุ',
           status: c.Booking === 'HAVE' ? 'ลงทะเบียน' : 'ไม่ลงทะเบียน',
         }))
-        .sort((a: PostRow, b: PostRow) => a.id - b.id);
+        .sort((a: PostRow, b: PostRow) => b.id - a.id); // เรียงใหม่ไปเก่า (desc)
 
         setPosts(mapped);
       } catch (err) {
@@ -113,10 +112,56 @@ export default function DashboardPage() {
     fetchContents();
   }, []);
 
-  // ✅ ปรับส่วนแสดงผลตารางให้เหลือเฉพาะข้อมูลโพสต์
-  const title = 'รายการโพสต์ทั้งหมด';
-  const headers = ['ลำดับ', 'ชื่อกิจกรรม / เนื้อหา', 'ผู้สร้าง', 'สถานะ'];
-  const data = posts.map((p) => [p.id, p.title, p.author, p.status]);
+  // ✅ ฟังก์ชันลบโพสต์
+  const handleDeletePost = async (id: number) => {
+    // 1. Confirm ก่อนลบ
+    if (!confirm("คุณต้องการลบโพสต์นี้ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้")) {
+      return;
+    }
+
+    try {
+      // 2. ยิง API Delete
+      const res = await fetch(`/api/content?id=${id}`, {
+        method: 'DELETE',
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || ERROR_MESSAGES.DB_ERROR);
+        return;
+      }
+
+      // 3. ลบสำเร็จ -> เอาออกจาก State หน้าจอทันที (ไม่ต้องโหลดใหม่)
+      setPosts((prev) => prev.filter((p) => p.id !== id));
+      alert(ERROR_MESSAGES.DELETE_SUCCESS || "ลบเนื้อหาสำเร็จ");
+
+    } catch (error) {
+      console.error(error);
+      alert(ERROR_MESSAGES.DB_ERROR || "เกิดข้อผิดพลาดในการลบ");
+    }
+  };
+
+  const title = 'รายการโพสต์ทั้งหมด'
+  const headers = ['ลำดับ', 'ชื่อกิจกรรม / เนื้อหา', 'ผู้สร้าง', 'สถานะ', 'จัดการ'];
+  
+  // ✅ Map ข้อมูลพร้อมปุ่มลบ
+  const data = posts.map((p, index) => [
+    index + 1, // ลำดับที่ (Running Number)
+    p.title,
+    p.author,
+    <span key="status" className={`px-2 py-1 rounded-full text-xs ${p.status === 'ลงทะเบียน' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
+      {p.status}
+    </span>,
+    <button
+      key="delete-btn"
+      onClick={() => handleDeletePost(p.id)}
+      className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+      title="ลบโพสต์"
+    >
+      <Trash2 className="w-4 h-4" />
+    </button>
+  ]);
 
   return (
     <div className="container mx-auto px-4 py-10 space-y-12">
@@ -159,13 +204,12 @@ export default function DashboardPage() {
               <TableHeader>
                 <TableRow className="bg-gray-50">
                   {headers.map((h, idx) => (
-                    <TableHead key={idx}>{h}</TableHead>
+                    <TableHead key={idx} className={idx === headers.length - 1 ? "text-center" : ""}>{h}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
 
               <TableBody>
-                {/* แสดงสถานะกำลังโหลด */}
                 {loadingPosts ? (
                   <TableRow>
                     <TableCell colSpan={headers.length} className="py-4 text-center text-gray-500">
@@ -182,7 +226,13 @@ export default function DashboardPage() {
                   data.map((row, rowIdx) => (
                     <TableRow key={rowIdx}>
                       {row.map((cell, cellIdx) => (
-                        <TableCell key={cellIdx} className={cellIdx === 0 ? 'font-medium' : ''}>
+                        <TableCell 
+                          key={cellIdx} 
+                          className={`
+                            ${cellIdx === 0 ? 'font-medium' : ''}
+                            ${cellIdx === headers.length - 1 ? 'text-center' : ''} 
+                          `}
+                        >
                           {cell}
                         </TableCell>
                       ))}

@@ -5,6 +5,11 @@ import { Html5QrcodeScanner } from "html5-qrcode";
 import { Card, CardHeader, CardContent } from "../../../components/ui/Card";
 import { PrimaryButton } from "../../../components/ui/Button";
 
+function isInAppBrowser() {
+      const ua = navigator.userAgent || "";
+      return /Line|FBAN|FBAV|Instagram/i.test(ua);
+    } 
+
 export default function AdminScanPage() {
   const [scanResult, setScanResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -15,25 +20,35 @@ export default function AdminScanPage() {
   /* =========================
      Fetch booking by QR token
   ========================== */
-  const fetchBookingDetails = useCallback(async (token: string) => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch(`/api/booking?token=${token}`);
-      const data = await res.json();
+const fetchBookingDetails = useCallback((text: string) => {
+  let token = text;
 
+  if (text.includes("?")) {
+    const url = new URL(text);
+    token =
+      url.searchParams.get("token") ||
+      url.searchParams.get("qrToken") ||
+      "";
+  }
+
+  if (!token) {
+    alert("ไม่พบ token ใน QR");
+    return;
+  }
+
+  setLoading(true);
+  fetch(`/api/booking?token=${token}`)
+    .then((res) => res.json())
+    .then((data) => {
       if (data.success) {
         setScanResult(data.booking);
       } else {
         setError(data.error || "ไม่พบข้อมูล");
-        setScanResult(null);
       }
-    } catch {
-      setError("ดึงข้อมูลไม่สำเร็จ");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    })
+    .catch(() => setError("เกิดข้อผิดพลาดในการเชื่อมต่อ"))
+    .finally(() => setLoading(false));
+}, []);
 
   /* =========================
      Confirm actions
@@ -65,45 +80,81 @@ export default function AdminScanPage() {
               }))
             : prev.souvenirs,
       }));
+
+      // 🔔 Trigger activity page refresh when souvenir is claimed
+      if (action === "SOUVENIR") {
+        try {
+          console.log('🔔 Sending notification:', {
+            contentId: scanResult.contentId,
+            userId: scanResult.userId,
+            action: "souvenir_claimed",
+          });
+          await fetch("/api/admin/souvenir/activity-notification", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contentId: scanResult.contentId,
+              userId: scanResult.userId,
+              action: "souvenir_claimed",
+            }),
+          });
+        } catch (notifyError) {
+          console.error("Notification failed:", notifyError);
+          // Don't fail the main operation if notification fails
+        }
+      }
     } catch {
       alert("เกิดข้อผิดพลาด");
     }
   };
 
   /* =========================
-     QR Scanner
+      QR Scanner (ฉบับปรับปรุง)
   ========================== */
   useEffect(() => {
-    const node = document.getElementById("reader");
-    if (!node) return;
+  if (isInAppBrowser()) {
+    alert("❌ ระบบสแกน QR ไม่รองรับ LINE / IG\nกรุณาเปิดผ่าน Chrome หรือ Safari");
+    return;
+  }
 
-    const scanner = new Html5QrcodeScanner(
-      "reader",
-      {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        rememberLastUsedCamera: true,
-        supportedScanTypes: [0], // camera only
-      },
-      false
-    );
+  const node = document.getElementById("reader");
+  if (!node || scannerRef.current) return;
 
-    scannerRef.current = scanner;
+  const scanner = new Html5QrcodeScanner(
+    "reader",
+    {
+      fps: 10,
+      qrbox: { width: 250, height: 250 },
+      rememberLastUsedCamera: true,
+      supportedScanTypes: [0],
+    },
+    false
+  );
 
-    const timer = setTimeout(() => {
-      scanner.render(
-        (text) => {
-          scanner.clear().then(() => fetchBookingDetails(text));
-        },
-        () => {}
-      );
-    }, 300);
+  scanner.render(
+    (text) => {
+      if (!text) return;
 
-    return () => {
-      clearTimeout(timer);
-      scannerRef.current?.clear().catch(() => {});
-    };
-  }, [fetchBookingDetails]);
+      //  ปิดกล้องทันทีหลังแสกน
+      scanner.clear().then(() => {
+        scannerRef.current = null;
+        fetchBookingDetails(text);
+      });
+    },
+    () => {}
+  );
+
+  scannerRef.current = scanner;
+
+  // 🔥 cleanup สำคัญมาก
+  return () => {
+    if (scannerRef.current) {
+      scannerRef.current.clear().catch(() => {});
+      scannerRef.current = null;
+    }
+  };
+}, [fetchBookingDetails]); // ✅ ต้องมี dependency
+
 
   /* =========================
      Derived states

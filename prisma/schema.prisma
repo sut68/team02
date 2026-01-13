@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL") // Moved to prisma.config.ts for Prisma 5+
 }
 
 model PasswordResetToken {
@@ -574,7 +574,7 @@ model Content {
   @@index([souvenirItemId])
 }
 
-// รูปภาพที่เกี่ยวข้องกับเนื้อหา
+
 model PictureContent {
   id        Int    @id @default(autoincrement())
   Path      String
@@ -588,20 +588,6 @@ model PictureContent {
   @@unique([Path, ContentID])
 }
 
-// การชำระเงิน
-// model Payment {
-//   id            Int               @id @default(autoincrement())
-//   amount        Float
-//   paymentDate   DateTime          @default(now())
-//   paymentMethod String? // เช่น "credit_card", "bank_transfer", "qr_code"
-//   status        TransactionStatus @default(PENDING)
-//   referenceNo   String? // เลขที่อ้างอิง/slip
-
-//   createdAt DateTime @default(now())
-//   updatedAt DateTime @updatedAt
-
-//   booking Booking?
-// }
 
 // ========================================
 // Budget & Project Management System
