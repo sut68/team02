@@ -353,6 +353,25 @@ export default function PaymentMethodsPage() {
                   />
                 </div>
 
+                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-100">
+                  <label className="flex items-center cursor-pointer flex-1">
+                    <input 
+                      type="checkbox" 
+                      checked={formData.isActive}
+                      onChange={(e) => setFormData({...formData, isActive: e.target.checked})}
+                      className="w-5 h-5 rounded border-gray-300 text-orange-600 focus:ring-2 focus:ring-orange-500 cursor-pointer"
+                    />
+                    <span className="ml-3 text-sm font-medium text-gray-700">เปิดใช้งาน</span>
+                  </label>
+                  <div className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                    formData.isActive 
+                    ? 'bg-green-100 text-green-700 border-green-200' 
+                    : 'bg-gray-200 text-gray-600 border-gray-300'
+                  }`}>
+                    {formData.isActive ? 'ใช้งาน' : 'ปิดใช้งาน'}
+                  </div>
+                </div>
+
                 <div className="flex gap-3 mt-8 pt-4 border-t border-gray-100">
                   <button 
                     type="button"
