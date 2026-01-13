@@ -716,7 +716,7 @@ model SubmissionImage {
   submission   SummarySubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 }
 
-// การบริจาคเข้ารอบงบประมาณ
+// การบริจาคเข้ารอบงบประมาณ crowdfunding
 model BudgetDonation {
   id      Int   @id @default(autoincrement())
 
