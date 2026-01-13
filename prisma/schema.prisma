@@ -912,7 +912,7 @@ model DonationTransaction {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
-
+  //relations
   userId Int?
   user   User? @relation(fields: [userId], references: [id])
   projectId Int
@@ -954,7 +954,7 @@ model PaymentRecord {
   
   bookingId Int? @unique 
   bookings   Booking? @relation(fields: [bookingId], references: [id])
-  
+  //relation to BudgetDonation
   budgetDonationId Int? @unique 
   budgetDonation   BudgetDonation? @relation(fields: [budgetDonationId], references: [id])
 
