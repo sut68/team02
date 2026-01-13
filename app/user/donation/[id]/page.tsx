@@ -173,9 +173,6 @@ export default function DonationDetailPage() {
     const fetchProjectDetail = async () => {
       try {
         setIsLoading(true);
-        // เรียก API Endpoint สำหรับดึงรายละเอียดโครงการเดียว (สมมติว่ามี Endpoint นี้)
-        // **หมายเหตุ:** ใน Route Handler ก่อนหน้า คุณมีแค่ GET List, POST, PUT, DELETE
-        // หากต้องการดึงรายละเอียดเดียว คุณควรสร้าง Route Handler ใหม่: /api/donation/project/[id]/route.ts
         const response = await fetch(`/api/donation-project/${projectId}`);
 
         if (response.status === 404) {

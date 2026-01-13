@@ -66,7 +66,6 @@ export async function POST(request: NextRequest) {
 
       const newBudgetDonation = await tx.budgetDonation.create({
         data: {
-          // ✅ ใส่ ID ให้ครบทั้ง 2 ตัว
           projectId: project.id,                 // จาก Form ที่ User เลือก
           budgetRoundId: currentBudgetRound.id,  // จากการค้นหา Round ปัจจุบันในระบบ
           userId: userId,
