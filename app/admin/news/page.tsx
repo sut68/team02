@@ -29,27 +29,23 @@ const DashboardMenuCard = ({
   title,
   link,
   onClick,
-  isActive = false,
+
 }: {
   icon: React.ElementType;
   title: string;
   link?: string;
   onClick?: () => void;
-  isActive?: boolean;
+
 }) => {
-  const activeRing = isActive ? 'ring-2 ring-orange-500 ring-offset-2' : '';
+
 
   const cardInner = (
-    <Card className={`hover:shadow-xl transition duration-300 cursor-pointer h-40 w-full ${activeRing}`}>
-      <CardContent className="p-6 flex flex-col items-center justify-center">
-        <div className="p-3 mb-2 rounded-lg border border-orange-200 bg-orange-50 text-orange-500">
-          <Icon className="w-8 h-8" />
-        </div>
-        <p className="text-base font-medium text-gray-700 text-center">
-          {title}
-        </p>
-      </CardContent>
-    </Card>
+    <div className="group rounded-3xl bg-white shadow-lg border-2 border-orange-100 hover:border-orange-300 hover:shadow-2xl transition-all duration-200 py-8 px-6 cursor-pointer outline-none focus:ring-2 focus:ring-orange-400 h-40 w-full">
+      <div className="flex justify-center mb-4">
+        <Icon className="w-16 h-16 text-orange-500" strokeWidth={1.5} />
+      </div>
+      <div className="text-base font-medium text-gray-700 text-center">{title}</div>
+    </div>
   );
 
   if (onClick)
@@ -150,13 +146,13 @@ export default function DashboardPage() {
     index + 1, // ลำดับที่ (Running Number)
     p.title,
     p.author,
-    <span key="status" className={`px-2 py-1 rounded-full text-xs ${p.status === 'ลงทะเบียน' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
+    <span key="status" className={`px-2 py-1 rounded-full text-xs ${p.status === 'ลงทะเบียน' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-700'}`}>
       {p.status}
     </span>,
     <button
       key="delete-btn"
       onClick={() => handleDeletePost(p.id)}
-      className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+      className="p-2 text-gray-600 hover:bg-gray-600 rounded-full transition-colors"
       title="ลบโพสต์"
     >
       <Trash2 className="w-4 h-4" />
@@ -169,7 +165,7 @@ export default function DashboardPage() {
 
       <Card className="shadow-sm rounded-xl">
         <CardHeader>
-          <h2 className="text-2xl font-medium text-gray-800">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
             แดชบอร์ดข่าวสารและกิจกรรม
           </h2>
         </CardHeader>
@@ -180,7 +176,7 @@ export default function DashboardPage() {
             <DashboardMenuCard
               icon={FileText}
               title="โพสต์ทั้งหมด"
-              isActive={true}
+
             />
 
             <DashboardMenuCard

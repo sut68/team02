@@ -166,7 +166,7 @@ export function SubmissionPage() {
       {/* ==================== ตารางคำยื่นร้องขอ ==================== */}
       <Card className="shadow-sm rounded-xl">
         <CardHeader className="flex items-center justify-between">
-          <h2 className="text-2xl font-medium text-gray-800">คำยื่นร้องขอ</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">คำยื่นร้องขอ</h2>
 
           <PrimaryButton
             type="button"
@@ -180,8 +180,8 @@ export function SubmissionPage() {
         <CardContent className="space-y-4">
           {/* ลิงก์ PDF */}
           <Link
-            href="/02.jpg"
-            className="text-sm text-orange-500 underline underline-offset-2"
+            href="/submission/News_Submission_Guidelines.pdf"
+            className="text-sm text-orange-500 underline underline-offset-2 pb-1 block"
           >
             รายละเอียดการยื่นคำร้องขอ.pdf
           </Link>
@@ -285,7 +285,7 @@ export function SubmissionPage() {
           id="submission-form"
           className="border rounded-lg p-8 shadow-sm bg-white space-y-6"
         >
-          <h2 className="text-2xl font-medium text-gray-800">คำยื่นร้องขอ</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">คำยื่นร้องขอ</h2>
 
           {/* ชื่อหัวเรื่อง */}
           <div className="space-y-2">

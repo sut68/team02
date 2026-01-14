@@ -1,5 +1,3 @@
-// app/post/edit/page.tsx
-
 'use client';
 
 import { useState, useEffect, ChangeEvent, Suspense } from 'react';
@@ -31,7 +29,6 @@ function EditPostPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
-  // 1. รับ ID มาเช็คว่า "สร้างใหม่" หรือ "แก้ไข"
   const bookingFormIdFromQuery = searchParams.get('bookingFormId');
   const postId = searchParams.get('id'); 
   
@@ -52,9 +49,8 @@ function EditPostPageInner() {
   const [extraImageFiles, setExtraImageFiles] = useState<File[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false); // เพิ่ม loading state
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Effect 1: จัดการเรื่อง Booking Form
   useEffect(() => {
     if (bookingFormIdFromQuery) {
       setPostData((prev) => ({
@@ -65,7 +61,6 @@ function EditPostPageInner() {
     }
   }, [bookingFormIdFromQuery]);
 
-  // Effect 2: ดึงข้อมูลเก่ามาโชว์ (ถ้ามี postId)
   useEffect(() => {
     if (!postId) return;
 
@@ -78,12 +73,11 @@ function EditPostPageInner() {
         const data = await res.json();
         const content = data.content;
 
-        // แปลงข้อมูลจาก API เข้า State
         setPostData({
           title: content.TitleName || '',
           date: content.createdAt ? new Date(content.createdAt).toISOString().split('T')[0] : '', 
           body: content.Description || '',
-          coverImageUrl: content.pictures?.[0]?.Path || '', // สมมติรูปแรกเป็นปก
+          coverImageUrl: content.pictures?.[0]?.Path || '', 
           extraImages: content.pictures?.slice(1).map((p: any) => p.Path) || [],
           categories: (content.categories as ContentCategoryType) || 'NEWS',
           Booking: (content.Booking as Option) || 'NOT',
@@ -103,8 +97,6 @@ function EditPostPageInner() {
 
     fetchPost();
   }, [postId]);
-
-  // --- Handlers ---
 
   const handleFieldChange = (field: 'title' | 'date' | 'body', value: string) => {
     setPostData((prev) => ({
@@ -160,7 +152,6 @@ function EditPostPageInner() {
   };
 
   const handlePublish = async () => {
-    // Validation: เช็คว่ามีรูปไหม (ทั้งรูปเก่า หรือ รูปใหม่)
     const hasExistingImages = postData.coverImageUrl || postData.extraImages.length > 0;
     const hasNewImages = mainImageFile || extraImageFiles.length > 0;
 
@@ -179,11 +170,9 @@ function EditPostPageInner() {
     formData.append("userId", String(currentUserId));
 
     if (postData.Booking === "HAVE") {
-      // ถ้ามี ID ใหม่จาก query ก็ใช้, ถ้าไม่มีให้ดูว่าแก้ไขของเก่าไหม (ถ้าแก้ไข API อาจจะรู้เอง แต่ส่งกันเหนียวก็ได้ถ้าเก็บไว้)
       if (bookingFormIdFromQuery) {
         formData.append("bookingFormId", bookingFormIdFromQuery);
       } else if (!postId) {
-         // สร้างใหม่ แต่ไม่มี Form ID
          alert("ต้องกรอก/เลือก Booking Form ก่อน (ยังไม่มี bookingFormId)");
          return;
       }
@@ -195,9 +184,7 @@ function EditPostPageInner() {
     }
 
     try {
-      // ✅ สลับ method ตามสถานะ (มี id = แก้ไข, ไม่มี = สร้างใหม่)
       const url = postId ? `/api/content?id=${postId}` : "/api/content";
-      // หมายเหตุ: API คุณต้องรองรับ PUT นะครับ ถ้าไม่รองรับ (มีแต่ POST/DELETE) โค้ดนี้จะพังตอนแก้ไข
       const method = postId ? "PUT" : "POST"; 
 
       const res = await fetch(url, { method: method, body: formData });
@@ -209,7 +196,6 @@ function EditPostPageInner() {
       }
 
       alert(postId ? "🎉 แก้ไขโพสต์สำเร็จ!" : "🎉 เผยแพร่โพสต์สำเร็จ!");
-      // ✅ แก้ Path ตรงนี้ให้ถูกต้อง
       router.push("/user/news"); 
 
     } catch (e) {
@@ -224,7 +210,6 @@ function EditPostPageInner() {
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-10">
-      {/* HEADER */}
       <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-8">
         <h1 className="text-3xl font-bold text-gray-800">
           {postId ? 'แก้ไขโพสต์กิจกรรม' : 'สร้างโพสต์กิจกรรมใหม่'}
@@ -242,14 +227,11 @@ function EditPostPageInner() {
         </div>
       </header>
 
-      {/* GRID หลัก */}
       <div className="grid grid-cols-12 gap-6">
-        {/* ซ้าย: แผงควบคุม */}
         <div className="col-span-12 md:col-span-4 lg:col-span-3">
           <div className="sticky top-6 space-y-4">
             <Card>
               <CardContent className="p-6 space-y-6">
-                {/* หมวดหมู่ */}
                 <div className="space-y-1">
                     <p className="text-xs text-gray-400">หมวดหมู่</p>
                     <select
@@ -262,7 +244,6 @@ function EditPostPageInner() {
                     </select>
                   </div>
 
-                {/* วันที่เผยแพร่ */}
                 <div>
                   <p className="text-xs text-gray-400 mb-1">วันที่เผยแพร่</p>
                   <div className="flex items-center gap-2">
@@ -275,7 +256,6 @@ function EditPostPageInner() {
                   </div>
                 </div>
 
-                {/* ลงทะเบียนเข้างาน */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-gray-800">
@@ -286,7 +266,6 @@ function EditPostPageInner() {
                     )}
                   </div>
 
-                  {/* เลือก Booking = HAVE / NOT */}
                   <div className="flex flex-col gap-1 text-sm mb-3">
                     <label className="inline-flex items-center gap-2">
                       <input
@@ -311,7 +290,6 @@ function EditPostPageInner() {
                     </label>
                   </div>
 
-                  {/* ปุ่มไปหน้า booking แสดงเฉพาะตอนเลือก HAVE */}
                   {postData.Booking === 'HAVE' && (
                     <Link href="/admin/booking" passHref>
                       <button
@@ -319,24 +297,37 @@ function EditPostPageInner() {
                         className="w-full rounded-full text-sm appearance-none cursor-pointer bg-gray-100 text-gray-700 border border-gray-300 p-2 hover:bg-gray-200"
                         onClick={() => setIsBookingConfigured(true)}
                       >
-                         {/* เปลี่ยนข้อความปุ่มตามสถานะ */}
                         {(bookingFormIdFromQuery || (postId && isBookingConfigured)) ? 'เลือกฟอร์มแล้ว' : 'เลือก/สร้างฟอร์ม'}
                       </button>
                     </Link>
                   )}
                 </div>
 
-                {/* เพิ่มลงในโพสต์ของคุณ = รูปหลายรูป */}
                 <div className="pt-4 border-t border-gray-200">
                   <p className="text-xs text-gray-400 mb-2">
                     เพิ่มรูปภาพเพิ่มเติม
                   </p>
+                  {/* จุดที่ 1: ไอคอนอัปโหลดรูปเพิ่มเติม (Extra Images) */}
                   <label
                     htmlFor="extra-upload"
-                    className="w-full h-24 rounded-lg border border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-xs text-gray-500 cursor-pointer hover:border-orange-400"
+                    className="w-full h-32 rounded-lg border border-dashed border-gray-300 bg-white flex flex-col items-center justify-center cursor-pointer hover:border-orange-400 transition-colors"
                   >
-                    <ImageIcon className="w-5 h-5 mb-1" />
-                    เพิ่มรูปภาพเพิ่มเติม
+                    <div className="flex flex-col items-center">
+                      <svg
+                        className="w-8 h-8 text-gray-300"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2m-4-4l-4-4m0 0l-4 4m4-4v12"
+                        />
+                      </svg>
+                      <p className="text-xs text-gray-400 mt-2 font-medium">เพิ่มรูปภาพเพิ่มเติม</p>
+                    </div>
                     <input
                       id="extra-upload"
                       type="file"
@@ -382,9 +373,7 @@ function EditPostPageInner() {
           </div>
         </div>
 
-        {/* ขวา: เนื้อหาโพสต์ */}
         <div className="col-span-12 md:col-span-8 lg:col-span-9 space-y-6">
-          {/* หัวข้อหลัก */}
           <Card>
             <CardContent className="p-6 space-y-2">
               <input
@@ -397,12 +386,12 @@ function EditPostPageInner() {
             </CardContent>
           </Card>
 
-          {/* รูปหลักในกรอบเทาใหญ่ */}
           <Card>
             <CardContent className="p-6">
+              {/* จุดที่ 2: ไอคอนอัปโหลดรูปหลัก (Main Image) */}
               <label
                 htmlFor="main-upload"
-                className={`block w-full rounded-xl bg-gray-100 border border-dashed border-gray-300 overflow-hidden cursor-pointer ${
+                className={`block w-full rounded-xl bg-white border border-dashed border-gray-300 overflow-hidden cursor-pointer ${
                   postData.coverImageUrl ? 'p-0' : 'p-8'
                 }`}
               >
@@ -416,9 +405,24 @@ function EditPostPageInner() {
                     />
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center text-gray-500 text-sm">
-                    <ImageIcon className="w-6 h-6 mb-2" />
-                    ลากและวางรูปภาพ หรือคลิกเพื่ออัปโหลด (รูปหลัก)
+                  <div className="flex flex-col items-center justify-center py-10">
+                    <svg
+                      className="w-12 h-12 text-gray-300"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2m-4-4l-4-4m0 0l-4 4m4-4v12"
+                      />
+                    </svg>
+                    <div className="mt-4 text-center">
+                      <p className="text-sm text-gray-400 font-medium">อัปโหลดรูปภาพหลัก</p>
+                      <p className="text-xs text-gray-400 mt-1">ลากและวางรูปภาพ หรือคลิกเพื่อเลือกไฟล์</p>
+                    </div>
                   </div>
                 )}
                 <input
@@ -432,7 +436,6 @@ function EditPostPageInner() {
             </CardContent>
           </Card>
 
-          {/* เนื้อหาข้อความ */}
           <Card>
             <CardContent className="p-6">
               <textarea
