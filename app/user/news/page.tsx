@@ -144,7 +144,7 @@ export function News() {
               {/* Text Container */}
               <div className="absolute inset-0 flex flex-col justify-end items-start text-left p-8 md:p-16 font-sans">
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white/95 mb-4 drop-shadow-lg">
-                  AlumniConnext
+                  AlumniConnect
                 </h1>
                 <p className="text-lg md:text-xl text-white/75 max-w-2xl font-light leading-relaxed drop-shadow-md">
                   เชื่อมโยงศิษย์เก่าและมหาวิทยาลัย สร้างเครือข่ายที่เข้มแข็ง <br className="hidden md:block" />
