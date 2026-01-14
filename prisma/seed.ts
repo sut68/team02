@@ -16,6 +16,9 @@ import {
   DonationProjectType,
   ShipStatus,
   RedeemMethod,
+  RoundStatus,
+  ProjectProposalStatus,
+  SummarySubmissionStatus,
 } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
@@ -1148,6 +1151,197 @@ async function main() {
   }
 
   console.log(`✅ Marked ${allShipments.length} shipments as DELIVERED (others remain PENDING for testing)`);
+
+// =========================================================
+  // 7) BUDGET SYSTEM (Years 2568-2569 Only)
+  // =========================================================
+  console.log("💰 Seeding Budget System (2568-2569) - Lite Version...");
+
+  // 7.1 Create Project Manager
+  const projectManager = await prisma.projectManager.upsert({
+    where: { id: 1 },
+    update: {},
+    create: {
+      firstName: "Somchai",
+      lastName: "Manager",
+      position: "Head of Planning",
+      email: "manager@sut.ac.th",
+      department: "Planning Division"
+    }
+  });
+
+  // 7.2 Mock Images (ใช้รูปวนซ้ำได้เลยครับจะได้ไม่ต้องหาเยอะ)
+  const mockImages = [
+    "/budget/upload/03.jpg", 
+    "/budget/upload/04.jpg",
+    "/budget/upload/05.jpg"
+  ];
+
+  // 7.3 Data Sets (เก็บไว้ครบชุด แต่เดี๋ยวเราจะเลือกใช้แค่อันแรก)
+  const projectSetA = [
+    { name: "โครงการพัฒนาห้องปฏิบัติการคอมพิวเตอร์", amount: 500000, desc: "จัดซื้อเครื่องคอมพิวเตอร์ใหม่ประสิทธิภาพสูง", unit: "สาขาวิชาวิศวกรรมคอมพิวเตอร์" },
+    { name: "โครงการจัดซื้อรถไฟฟ้าสำหรับรับส่ง", amount: 400000, desc: "รถกอล์ฟไฟฟ้า 6 ที่นั่ง จำนวน 2 คัน", unit: "สำนักงานคณบดี" },
+    { name: "โครงการเปลี่ยนหลอดไฟ LED ทั้งอาคาร", amount: 100000, desc: "เพื่อการประหยัดพลังงานตามนโยบาย Green University", unit: "ฝ่ายกายภาพ" }
+  ];
+
+  const projectSetB = [
+    { name: "โครงการซ่อมบำรุงลิฟต์โดยสาร", amount: 450000, desc: "เปลี่ยนอะไหล่หลักและตรวจสอบความปลอดภัยประจำปี", unit: "ฝ่ายอาคารสถานที่" },
+    { name: "โครงการจัดซื้อโดรนเพื่อการเกษตร", amount: 250000, desc: "เพื่อใช้ในการวิจัย Smart Farm", unit: "สาขาวิชาวิศวกรรมเกษตร" },
+    { name: "โครงการประกวดนวัตกรรมวิศวกรรม", amount: 200000, desc: "ทุนสนับสนุนโครงงานนักศึกษาชั้นปีสุดท้าย", unit: "ฝ่ายวิชาการ" }
+  ];
+
+  const projectSetC = [
+    { name: "โครงการปรับปรุงภูมิทัศน์คณะ", amount: 300000, desc: "จัดสวนหย่อมและพื้นที่นั่งเล่น Co-working space", unit: "สำนักงานคณบดี" },
+    { name: "โครงการจัดซื้อครุภัณฑ์ห้องประชุม", amount: 300000, desc: "โต๊ะ เก้าอี้ และระบบเสียงห้องประชุมใหญ่", unit: "ฝ่ายบริหาร" },
+    { name: "โครงการอบรมภาษาอังกฤษเพื่อวิศวกร", amount: 200000, desc: "เตรียมความพร้อมก่อนสอบ TOEIC (รุ่นที่ 1-4)", unit: "ศูนย์ภาษา" }
+  ];
+
+  const projectSetRandom = [
+    { name: "โครงการพัฒนาระบบสหกิจศึกษา", amount: 120000, desc: "จ้างพัฒนาระบบเว็บแอปพลิเคชันสำหรับจัดการข้อมูล", unit: "ศูนย์สหกิจศึกษา" },
+    { name: "โครงการจัดงาน Job Fair 2025", amount: 80000, desc: "เชิญบริษัทชั้นนำกว่า 50 แห่งมารับสมัครงาน", unit: "ฝ่ายกิจการนักศึกษา" }
+  ];
+
+  // --- CONFIG: กำหนดปีและรอบตรงนี้ ---
+  const budgetConfig = [
+    { year: "2568", rounds: ["1", "2", "3"] }, // ปี 68 เอา 3 รอบ
+    { year: "2569", rounds: ["1"] }            // ปี 69 เอาแค่รอบ 1
+  ];
+
+  for (const config of budgetConfig) {
+    const { year, rounds } = config;
+    const yearInt = parseInt(year);
+    const christianYear = yearInt - 543;
+
+    for (const [roundIdx, roundName] of rounds.entries()) {
+        
+        // กำหนดเดือนเริ่มต้น (รอบ 1=ม.ค., รอบ 2=พ.ค., รอบ 3=ก.ย.)
+        let startMonth = 1;
+        if (roundName === "2") startMonth = 5;
+        if (roundName === "3") startMonth = 9;
+        
+        const startDate = new Date(`${christianYear}-${String(startMonth).padStart(2, '0')}-01`);
+        const endDate = new Date(`${christianYear}-${String(startMonth + 2).padStart(2, '0')}-28`);
+
+        // 1. Create/Update Budget Round
+        let budgetRound = await prisma.budgetRound.findFirst({
+            where: { fiscalYear: year, roundName: roundName }
+        });
+
+        if (!budgetRound) {
+            budgetRound = await prisma.budgetRound.create({
+                data: {
+                    roundName: roundName,
+                    fiscalYear: year,
+                    totalBudget: 1000000,
+                    startDate,
+                    endDate,
+                    status: RoundStatus.CLOSED, // ปิดรอบแล้วเพื่อให้เห็นผลการเบิกจ่าย
+                    isPublished: true,
+                    creatorId: adminId
+                }
+            });
+        } else {
+            await prisma.budgetRound.update({
+                where: { id: budgetRound.id },
+                data: { status: RoundStatus.CLOSED, isPublished: true, startDate, endDate }
+            });
+        }
+
+        // 2. Select Projects Logic (ตัดเอาแค่ 1 อัน)
+        let projectsInThisRound = [];
+
+        if (year === "2569") {
+            projectsInThisRound = projectSetRandom.slice(0, 1); // เอาตัวแรกตัวเดียว
+        } else {
+            // สลับชุดข้อมูลตามรอบ แต่เอาแค่รอบละ 1 อัน
+            if (roundName === "1") projectsInThisRound = projectSetA.slice(0, 1);
+            else if (roundName === "2") projectsInThisRound = projectSetB.slice(0, 1);
+            else projectsInThisRound = projectSetC.slice(0, 1);
+        }
+
+        // 3. Create Projects & Summary
+        for (const [idx, tmpl] of projectsInThisRound.entries()) {
+            
+            const pName = tmpl.name; 
+            
+            // เลือกรูป: ใช้รูปตามลำดับ หรือจะ fix รูปแรกรูปเดียวก็ได้
+            const coverImgPath = mockImages[idx % mockImages.length];
+
+            // 3.1 Proposal
+            let proposal = await prisma.projectProposal.findFirst({
+                where: { projectName: pName, budgetRoundId: budgetRound.id }
+            });
+
+            const proposalData = {
+                projectName: pName,
+                description: tmpl.desc,
+                requestedAmount: tmpl.amount,
+                responsibilityUnit: tmpl.unit,
+                status: ProjectProposalStatus.APPROVED,
+                budgetRoundId: budgetRound.id,
+                managerId: projectManager.id,
+                staffId: adminId, 
+                projectStartDate: new Date(startDate.getTime() + 86400000 * 5),
+                projectEndDate: new Date(endDate.getTime() - 86400000 * 5),
+                coverFilePath: coverImgPath
+            };
+
+            if (!proposal) {
+                proposal = await prisma.projectProposal.create({
+                    data: proposalData
+                });
+            } else {
+                proposal = await prisma.projectProposal.update({
+                    where: { id: proposal.id },
+                    data: {
+                        responsibilityUnit: tmpl.unit,
+                        staffId: adminId,
+                        requestedAmount: tmpl.amount,
+                        coverFilePath: coverImgPath
+                    }
+                });
+            }
+
+            // 3.2 Summary Submission (ผลการเบิกจ่าย)
+            const existingSummary = await prisma.summarySubmission.findUnique({
+                where: { proposalId: proposal.id }
+            });
+
+            if (!existingSummary) {
+                const summary = await prisma.summarySubmission.create({
+                    data: {
+                        proposalId: proposal.id,
+                        status: SummarySubmissionStatus.APPROVED,
+                        submitterId: adminId, 
+                        totalActualExpense: year === "2569" ? tmpl.amount * 0.8 : tmpl.amount, 
+                        submissionDate: new Date(endDate.getTime() + 86400000), 
+                        summaryFilePath: "/uploads/mock-report.pdf"
+                    }
+                });
+
+                // 3.3 Add Gallery Images (ใส่รูปประกอบในรายงานสัก 1-2 รูป)
+                await prisma.submissionImage.create({
+                    data: {
+                        submissionId: summary.id,
+                        imagePath: mockImages[0] // ใช้รูปรวมๆ
+                    }
+                });
+                
+            } else {
+                 await prisma.summarySubmission.update({
+                    where: { id: existingSummary.id },
+                    data: { 
+                        submitterId: adminId,
+                        totalActualExpense: year === "2569" ? tmpl.amount * 0.8 : tmpl.amount 
+                    }
+                });
+            }
+        }
+        
+        const totalUsed = projectsInThisRound.reduce((sum, p) => sum + p.amount, 0);
+        console.log(`   ✅ Seeded ${year} Round ${roundName} : 1 Project (Amount: ${totalUsed.toLocaleString()})`);
+    }
+  }
 
   console.log("\n🎉 All seed data inserted successfully.");
   console.log("\n📋 Login credentials (password: SUT@Seed2025!):");
