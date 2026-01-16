@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
         commentCount: topic.comments.length,
         createddate: topic.createddate,
       }))
+      .filter((topic) => topic.commentCount > 0) // <--- เพิ่มบรรทัดนี้: กรองเฉพาะที่มีคอมเมนต์
       .sort((a, b) => {
         // Primary: comment count (descending)
         if (b.commentCount !== a.commentCount) {

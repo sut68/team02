@@ -23,7 +23,7 @@ services:
       - app-network
 
   # ============================================
-  # Nginx Proxy (ประตูหน้าบ้าน)
+  # Nginx Proxy
   # ============================================
   nginx-proxy:
     image: jwilder/nginx-proxy:latest
@@ -32,9 +32,10 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx-data/certs:/etc/nginx/certs:ro
-      - ./nginx-data/vhost.d:/etc/nginx/vhost.d
-      - ./nginx-data/html:/usr/share/nginx/html
+      # เปลี่ยนมาใช้ Named Volume เพื่อความชัวร์ว่าไฟล์ไม่หาย
+      - certs:/etc/nginx/certs:ro
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
       - /var/run/docker.sock:/tmp/docker.sock:ro
       - ./config/client_max_body_size.conf:/etc/nginx/conf.d/client_max_body_size.conf
     restart: always
@@ -49,37 +50,39 @@ services:
     depends_on:
       - nginx-proxy
     volumes:
-      - ./nginx-data/certs:/etc/nginx/certs:rw
-      - ./nginx-data/vhost.d:/etc/nginx/vhost.d
-      - ./nginx-data/html:/usr/share/nginx/html
+      # ใช้ Volume ชุดเดียวกันกับตัวข้างบน
+      - certs:/etc/nginx/certs:rw
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       DEFAULT_EMAIL: sutalumniconnect@gmail.com
       NGINX_PROXY_CONTAINER: nginx-proxy
+      
+      # [TIPS] ถ้าช่วงนี้ Test บ่อย ให้เปิดบรรทัดนี้ เพื่อใช้ Staging (ไม่ติด Limit)
+      # พอชัวร์แล้วค่อยลบออกเพื่อเอาใบจริง
+      # ACME_CA_URI: https://acme-staging-v02.api.letsencrypt.org/directory
     restart: always
     networks:
       - app-network
 
   # ============================================
-  # Backend API (Node.js)
+  # Backend API
   # ============================================
   api:
     build:
       context: .
       dockerfile: Dockerfile.api
     container_name: api
+    # ตัด npx prisma migrate resolve ออก เพราะไม่ควร run ทุกครั้งที่ start (ใช้ deploy ก็พอ)
     command: >
-      sh -c "npx prisma migrate resolve --applied 20260102205624_update_donation_project_schema && 
-             npx prisma migrate deploy && 
-             npm run start"
+      sh -c "npx prisma migrate deploy && npm run start"
     expose:
       - "3000"
     environment:
-      # ให้ Nginx ส่งคนเข้า api.sut... มาที่นี่
       VIRTUAL_HOST: api.sut-alumniconnect.me
       LETSENCRYPT_HOST: api.sut-alumniconnect.me
       VIRTUAL_PORT: 3000
-      
       PORT: 3000
       DATABASE_URL: postgres://postgres:postgres@db:5432/mydb
       NODE_ENV: production
@@ -93,7 +96,7 @@ services:
       - .env
 
   # ============================================
-  # Frontend (Next.js)
+  # Frontend
   # ============================================
   web:
     build:
@@ -103,16 +106,13 @@ services:
     expose:
       - "3000"
     environment:
+      # ตรวจสอบชื่อ Domain ตรงนี้ให้ดี ถ้าชื่อผิด หรือเปลี่ยนไปมา มันจะขอใหม่ตลอด
+      # .me เฉยๆ เป็น TLD ใช้ไม่ได้ ต้องเป็น yourdomain.me
       VIRTUAL_HOST: www.sut-alumniconnect.me,sut-alumniconnect.me
       LETSENCRYPT_HOST: www.sut-alumniconnect.me,sut-alumniconnect.me
       VIRTUAL_PORT: 3000
-      
-      # บอก Frontend ว่า API อยู่ที่ไหน (URL จริง)
       NEXT_PUBLIC_API_URL: https://api.sut-alumniconnect.me
-      
-      # บอก Server Next.js ให้คุยกับ API ผ่าน Docker Network (Internal)
       API_URL: http://api:3000
-      
       NODE_ENV: production
     depends_on:
       - api
@@ -123,8 +123,14 @@ services:
     env_file:
       - .env
 
+# ============================================
+# ประกาศ Volume ให้เป็นแบบถาวร (Named Volumes)
+# ============================================
 volumes:
   db_data:
+  certs:  # เก็บ Certificate ไว้ที่นี่ (Docker จัดการให้)
+  vhost:  # เก็บ Config vhost
+  html:   # เก็บไฟล์ challenge สำหรับยืนยันตัวตน
 
 networks:
   app-network:
