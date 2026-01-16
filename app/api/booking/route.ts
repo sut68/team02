@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 2. Payment Record
+      // 2.Payment Record
       const payment = await tx.paymentRecord.create({
         data: {
           amount: price,
