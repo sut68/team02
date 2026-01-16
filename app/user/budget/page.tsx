@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import Link from "next/link"; // ✅ ใช้ Link สำหรับไปหน้ารายละเอียด
+import Link from "next/link";
 import { ChevronDown, AlertCircle, FolderOpen, PieChart as PieChartIcon } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -17,21 +17,16 @@ import { PrimaryButton } from "@/app/components/ui/Button";
 import { BudgetRound } from "@/app/types/budget_approval";
 import { BudgetReport } from "@/app/types/budget_report";
 
-// ✅ Placeholder แบบ SVG (Data URI)
 const PLACEHOLDER_SRC = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25' viewBox='0 0 800 400'%3E%3Crect fill='%23f1f5f9' width='800' height='400'/%3E%3Ctext fill='%2394a3b8' font-family='sans-serif' font-size='30' dy='10.5' font-weight='bold' x='50%25' y='50%25' text-anchor='middle'%3ENo Image%3C/text%3E%3C/svg%3E";
 
-/* =======================
-   Types
-======================= */
+// Types
 type ChartDataItem = {
   name: string;
   value: number;
   color: string;
 };
 
-/* =======================
-   Pie label
-======================= */
+// Pie Label
 const renderCustomizedLabel = (props: PieLabelRenderProps) => {
   const {
     cx = 0,
@@ -42,7 +37,6 @@ const renderCustomizedLabel = (props: PieLabelRenderProps) => {
     percent = 0,
   } = props;
 
-  // คำนวณตำแหน่ง Label
   const RADIAN = Math.PI / 180;
   const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -62,17 +56,22 @@ const renderCustomizedLabel = (props: PieLabelRenderProps) => {
   );
 };
 
-/* =======================
-   Page Component
-======================= */
+// Helper: คำนวณปีงบประมาณปัจจุบัน (ตาม Logic หน้า Admin)
+const getCurrentFiscalYear = () => {
+  const d = new Date();
+  // ถ้าเดือน >= 9 (ตุลาคม, index 9) ให้บวกปีเพิ่ม 1, แล้วแปลงเป็น พ.ศ. (+543)
+  return String((d.getMonth() >= 9 ? d.getFullYear() + 1 : d.getFullYear()) + 543);
+};
+
+// Page Component
 export default function BudgetReportPage() {
-  const currentThaiYear = (new Date().getFullYear() + 543).toString();
+  const currentThaiYear = getCurrentFiscalYear(); // แก้ไข: ใช้ function คำนวณปีงบประมาณ
   const [years, setYears] = useState<string[]>([]);
   const [year, setYear] = useState(currentThaiYear);
   const [loading, setLoading] = useState(true);
   const [budgetRounds, setBudgetRounds] = useState<BudgetRound[]>([]);
-  const [totalBudget, setTotalBudget] = useState<number>(0);
   
+  // State สำหรับเก็บข้อมูล Report และ Chart
   const [reports, setReports] = useState<(BudgetReport & { imageSrc?: string })[]>([]);
   const [chartData, setChartData] = useState<ChartDataItem[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -95,29 +94,15 @@ export default function BudgetReportPage() {
             ));
         }
 
-        const currentYearInt = parseInt(currentThaiYear);
-        const nextYear = (currentYearInt + 1).toString();
-
-        // จัดการ Fallback Years
-        if (availableYears.length === 0) {
-            availableYears = [
-                nextYear,
-                currentThaiYear,
-                (currentYearInt - 1).toString(),
-                (currentYearInt - 2).toString()
-            ];
-        } else {
-            if (!availableYears.includes(currentThaiYear)) {
-                availableYears.push(currentThaiYear);
-            }
-            if (!availableYears.includes(nextYear)) {
-                availableYears.push(nextYear);
-            }
+        // ตรวจสอบว่ามีปีปัจจุบันหรือไม่ ถ้าไม่มีให้เพิ่มเข้าไป
+        if (!availableYears.includes(currentThaiYear)) {
+            availableYears.push(currentThaiYear);
         }
 
         availableYears.sort((a, b) => b.localeCompare(a));
         setYears(availableYears);
 
+        // ถ้าปีที่เลือกอยู่ (year) ไม่อยู่ในลิสต์ ให้ดีดกลับมาปีปัจจุบันหรือปีแรกสุดที่มี
         if (!year || !availableYears.includes(year)) {
              if (availableYears.includes(currentThaiYear)) {
                  setYear(currentThaiYear);
@@ -130,7 +115,6 @@ export default function BudgetReportPage() {
         console.error("Failed to fetch years", err);
         const currentYearInt = parseInt(currentThaiYear);
         setYears([
-            (currentYearInt + 1).toString(),
             currentThaiYear,
             (currentYearInt - 1).toString()
         ]);
@@ -138,9 +122,9 @@ export default function BudgetReportPage() {
       }
     };
     fetchYears();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 2. Fetch Report Data
+  // 2. Fetch Report Data & Calculate Stats
   useEffect(() => {
     if (!year) return;
 
@@ -149,9 +133,10 @@ export default function BudgetReportPage() {
         setLoading(true);
         setError(null);
 
-        const currentRound = budgetRounds.find(r => r.fiscalYear === year);
-        const budgetLimit = currentRound?.totalBudget || 0; 
-        setTotalBudget(budgetLimit);
+        // แก้ไข Logic: รวมงบประมาณทุกรอบในปีนั้น (Sum all rounds for the selected year)
+        const budgetLimit = budgetRounds
+            .filter(r => r.fiscalYear === year)
+            .reduce((sum, r) => sum + (r.totalBudget || 0), 0);
 
         const res = await fetch(`/api/budget-report?year=${year}&status=APPROVED`, { cache: "no-store" });
         
@@ -162,7 +147,9 @@ export default function BudgetReportPage() {
         }
         setReports(fetchedReports);
 
+        // คำนวณยอดใช้จ่ายจริงรวมจากรายงานที่อนุมัติแล้ว
         const totalUsed = fetchedReports.reduce((sum, r) => sum + (r.totalActualExpense || 0), 0);
+        
         let remaining = budgetLimit - totalUsed;
         if (remaining < 0) remaining = 0;
 
@@ -179,6 +166,7 @@ export default function BudgetReportPage() {
             }
         ];
 
+        // ถ้าไม่มีงบและไม่มีการใช้จ่าย ไม่ต้องแสดงกราฟ
         if (budgetLimit === 0 && totalUsed === 0) {
             setChartData([]);
         } else {
@@ -197,39 +185,45 @@ export default function BudgetReportPage() {
   }, [year, budgetRounds]);
 
   const chartTotal = chartData.reduce((sum, item) => sum + item.value, 0);
+  const pieData = chartData.filter(item => item.value > 0);
+
+  // คำนวณตัวเลือกปี: รวมปีจาก state และปีปัจจุบัน, ตัดซ้ำ
+  const yearOptions = Array.from(new Set([...years.map(y => parseInt(y)), parseInt(currentThaiYear)]))
+    .filter(y => y <= parseInt(currentThaiYear)) // ห้ามแสดงเกินปีปัจจุบัน
+    .sort((a, b) => b - a);
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
       {/* ================= Hero ================= */}
-      <section className="relative h-[400px] w-full overflow-hidden bg-slate-200">
+      <section className="relative h-[400px] w-full bg-gray-800 mb-4">
         <div className="absolute inset-0">
              <Image
-                src="/budget/covers/22-01.jpg"
+                src="/budget/covers/29.jpg"
                 alt="Budget cover"
                 fill
                 priority
                 className="object-cover"
                 onError={(e) => {
-                    e.currentTarget.srcset = "";
-                    e.currentTarget.src = PLACEHOLDER_SRC;
+                    const target = e.currentTarget;
+                    target.srcset = "";
+                    target.src = PLACEHOLDER_SRC;
                 }}
              />
-             <div className="absolute inset-0 bg-linear-to-r from-orange-400 to-orange-600 opacity-20 -z-10" />
+             <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent" />
         </div>
 
-        <div className="absolute inset-0 bg-linear-to-r from-white/80 via-white/40 to-white/10" />
-        <div className="absolute inset-0 flex items-end justify-end px-6 md:px-20 py-8 md:py-16">
-          <h1 className="text-2xl md:text-5xl font-semibold text-orange-500 drop-shadow-sm">
-            รายงานผลงบประมาณ
-          </h1>
+        <div className="absolute inset-0 flex items-end justify-end p-8 md:p-16">
+            <h1 className="text-white text-3xl md:text-5xl font-bold text-right shadow-lg">
+              รายงานงบประมาณ
+            </h1>
         </div>
       </section>
 
       {/* ================= Content ================= */}
-      <main className="max-w-7xl mx-auto px-4 py-10">
+      <main className="container mx-auto mt-8 mb-16 px-4 py-0">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
-          <h2 className="text-3xl font-bold text-slate-700 mb-6 border-l-4 border-orange-500 pl-3">
+          <h2 className="text-3xl md:text-4xl font-semibold text-gray-800 mb-2 md:mb-4">
             สรุปผลการเบิกจ่ายงบประมาณประจำปี {year}
           </h2>
 
@@ -237,13 +231,12 @@ export default function BudgetReportPage() {
             <select
               value={year}
               onChange={(e) => setYear(e.target.value)}
-              disabled={years.length === 0}
-              className="appearance-none w-[140px] h-9 pl-4 pr-10 rounded-full border border-slate-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-slate-100"
+              disabled={yearOptions.length === 0}
+              className="appearance-none w-[140px] h-9 pl-4 pr-10 rounded-full border border-slate-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-slate-100 cursor-pointer"
             >
-              {years.map((y) => (
+              {yearOptions.map((y) => (
                 <option key={y} value={y}>พ.ศ. {y}</option>
               ))}
-              {years.length === 0 && <option value="2568">พ.ศ. 2568</option>}
             </select>
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
           </div>
@@ -261,7 +254,7 @@ export default function BudgetReportPage() {
                  <AlertCircle className="w-8 h-8 mb-2"/>
                  <span>{error}</span>
               </div>
-            ) : chartData.length === 0 ? (
+            ) : pieData.length === 0 ? (
               <div className="relative h-full w-full flex items-center justify-center">
                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -286,7 +279,7 @@ export default function BudgetReportPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={chartData}
+                    data={pieData}
                     dataKey="value"
                     cx="50%"
                     cy="50%"
@@ -296,16 +289,16 @@ export default function BudgetReportPage() {
                     stroke="white"
                     strokeWidth={3}
                   >
-                    {chartData.map((item, index) => (
-                      <Cell key={index} fill={item.color} />
+                    {pieData.map((item, index) => (
+                      <Cell key={`cell-${index}`} fill={item.color} />
                     ))}
                   </Pie>
                   <Tooltip 
-                     formatter={(value: number) => {
+                      formatter={(value: number) => {
                         const percent = chartTotal > 0 ? (value / chartTotal) * 100 : 0;
                         return [`${percent.toFixed(0)}%`, "สัดส่วน"];
-                     }}
-                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                      }}
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -313,10 +306,10 @@ export default function BudgetReportPage() {
           </div>
 
           <div className="text-slate-600">
-             <div className="bg-orange-50 p-6 rounded-2xl border border-orange-100">
+              <div className="bg-orange-50 p-6 rounded-2xl border border-orange-100">
                 <h3 className="font-semibold text-orange-800 mb-2 text-lg">ภาพรวมการใช้งบประมาณจริง</h3>
                 <p className="mb-4 text-sm text-slate-700">
-                    แสดงสัดส่วนงบประมาณที่เบิกจ่ายจริงตามรายงานผลโครงการประจำปี {year}
+                   แสดงสัดส่วนงบประมาณที่เบิกจ่ายจริงตามรายงานผลโครงการประจำปี {year}
                 </p>
                 {chartData.length > 0 ? (
                     <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">

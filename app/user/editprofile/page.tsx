@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import SuccessModal from "@/app/components/ui/SuccessModal"; // นำเข้า SuccessModal
 
 interface FormData {
   fullName: string;
@@ -32,6 +33,10 @@ export default function ProfileEditForm() {
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [originalData, setOriginalData] = useState<FormData | null>(null);
+
+  // ✅ States สำหรับ Modal
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [modalMsg, setModalMsg] = useState("");
 
   // ดึงข้อมูล profile ของผู้ใช้
   useEffect(() => {
@@ -109,7 +114,10 @@ export default function ProfileEditForm() {
         throw new Error(result.error || 'เกิดข้อผิดพลาด');
       }
       
-      alert('อัปเดตข้อมูลสำเร็จ');
+      // ✅ เปลี่ยนจาก alert เป็น SuccessModal
+      setModalMsg('อัปเดตข้อมูลส่วนตัวสำเร็จเรียบร้อยแล้ว');
+      setShowSuccessModal(true);
+      
       setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
       setIsEditing(false);
       await fetchUserProfile();
@@ -134,7 +142,14 @@ export default function ProfileEditForm() {
 
 
   return (
-    <div className="min-h-[92vh] px-8 pt-20 pb-1">
+    <div className="min-h-[92vh] px-8 pt-20 pb-1 relative">
+      {/* Success Modal */}
+      <SuccessModal 
+        show={showSuccessModal} 
+        message={modalMsg} 
+        onClose={() => setShowSuccessModal(false)} 
+      />
+
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">แก้ไขข้อมูลส่วนตัว</h2>

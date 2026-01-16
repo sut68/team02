@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Layers, RefreshCw, CheckCircle, XCircle, Search, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Layers, RefreshCw, CheckCircle, XCircle, Search, ChevronDown, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '@/app/components/ui/Card';
 import { Input } from '@/app/components/ui/Input';
+import SuccessModal from "@/app/components/ui/SuccessModal"; // นำเข้า SuccessModal
 
 type VerifyStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 type FilterStatus = 'all' | 'pending' | 'approved' | 'rejected';
@@ -44,6 +45,12 @@ export default function UserManagementClient({ initialUsers }: Props) {
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(undefined);
   const [previewType, setPreviewType] = useState<'image' | 'pdf' | 'other' | undefined>(undefined);
 
+  // ✅ States สำหรับระบบแจ้งเตือนใหม่
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [modalMsg, setModalMsg] = useState("");
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingUpdate, setPendingUpdate] = useState<{ userId: number, status: VerifyStatus } | null>(null);
+
   const openPreview = (url: string) => {
     const lower = url.toLowerCase();
     if (lower.endsWith('.pdf')) setPreviewType('pdf');
@@ -75,48 +82,52 @@ export default function UserManagementClient({ initialUsers }: Props) {
     }).length;
   };
 
-  const handleStatusChange = async (userId: number, newStatus: VerifyStatus) => {
-    const statusTextMap = {
-      'PENDING': 'รอดำเนินการ',
-      'APPROVED': 'อนุมัติแล้ว',
-      'REJECTED': 'ไม่อนุมัติ'
-    };
-    const statusText = statusTextMap[newStatus];
+  // ✅ 1. ฟังก์ชันเมื่อเลือกเปลี่ยนสถานะ (ถามยืนยันผ่าน Modal)
+  const handleStatusChange = (userId: number, newStatus: VerifyStatus) => {
+    setPendingUpdate({ userId, status: newStatus });
+    setShowConfirmModal(true);
+  };
+
+  // ✅ 2. ฟังก์ชันกดยืนยันจากใน Modal เพื่อทำงานจริง
+  const confirmStatusUpdate = async () => {
+    if (!pendingUpdate) return;
+    const { userId, status: newStatus } = pendingUpdate;
+    
+    setShowConfirmModal(false);
     
     let remark = '';
     if (newStatus === 'REJECTED') {
       remark = prompt('กรุณาระบุเหตุผลในการปฏิเสธ:') || '';
       if (!remark) {
-        alert('กรุณาระบุเหตุผลในการปฏิเสธ');
+        setModalMsg("กรุณาระบุเหตุผลในการปฏิเสธ");
+        setShowSuccessModal(true);
         return;
       }
     }
 
-    const confirmed = confirm(
-      `คุณต้องการเปลี่ยนสถานะเป็น "${statusText}" หรือไม่?\n\n${newStatus !== 'PENDING' ? 'ระบบจะส่งอีเมลแจ้งเตือนไปยังผู้ใช้' : ''}`
-    );
-    
-    if (confirmed) {
-      try {
-        const response = await fetch('/api/admin/update-status', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: userId.toString(),
-            status: newStatus,
-            remark
-          }),
-        });
+    try {
+      const response = await fetch('/api/admin/update-status', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: userId.toString(),
+          status: newStatus,
+          remark
+        }),
+      });
 
-        if (response.ok) {
-          window.location.reload();
-        } else {
-          const data = await response.json();
-          alert(`❌ เกิดข้อผิดพลาด: ${data.error}`);
-        }
-      } catch (error) {
-        alert('❌ เกิดข้อผิดพลาดในการเชื่อมต่อ');
+      if (response.ok) {
+        setModalMsg("อัปเดตสถานะและส่งอีเมลแจ้งเตือนเรียบร้อยแล้ว");
+        setShowSuccessModal(true);
+        // แทนการ reload ทันที ให้ไป reload เมื่อปิด SuccessModal
+      } else {
+        const data = await response.json();
+        setModalMsg(`เกิดข้อผิดพลาด: ${data.error}`);
+        setShowSuccessModal(true);
       }
+    } catch (error) {
+      setModalMsg("เกิดข้อผิดพลาดในการเชื่อมต่อ");
+      setShowSuccessModal(true);
     }
   };
 
@@ -141,6 +152,45 @@ export default function UserManagementClient({ initialUsers }: Props) {
   return (
     <>
     <div className="min-h-screen p-8">
+      {/* Success Modal */}
+      <SuccessModal 
+        show={showSuccessModal} 
+        message={modalMsg} 
+        onClose={() => {
+          setShowSuccessModal(false);
+          if (modalMsg.includes("เรียบร้อย")) window.location.reload();
+        }} 
+      />
+
+      {/* ✅ Custom Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-all">
+          <div className="bg-white rounded-[2rem] shadow-2xl max-w-sm w-full p-8 text-center animate-in zoom-in-95 duration-200">
+            <div className="w-20 h-20 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <AlertTriangle className="w-10 h-10 text-orange-500" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">ยืนยันการทำรายการ?</h3>
+            <p className="text-gray-500 mb-8 text-sm leading-relaxed">
+              คุณต้องการเปลี่ยนสถานะสมาชิกหรือไม่? <br/>ระบบจะส่งอีเมลแจ้งเตือนไปยังผู้ใช้โดยอัตโนมัติ
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowConfirmModal(false)} 
+                className="flex-1 py-3 px-4 rounded-2xl bg-gray-100 text-gray-600 font-semibold hover:bg-gray-200 transition-colors"
+              >
+                ยกเลิก
+              </button>
+              <button 
+                onClick={confirmStatusUpdate} 
+                className="flex-1 py-3 px-4 rounded-2xl bg-orange-500 text-white font-bold hover:bg-orange-600 shadow-lg shadow-orange-200 transition-all"
+              >
+                ยืนยัน
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">การจัดการสมาชิก</h1>
 
@@ -245,7 +295,7 @@ export default function UserManagementClient({ initialUsers }: Props) {
                 <tbody>
                   {filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
                         ไม่พบข้อมูลสมาชิก
                       </td>
                     </tr>
@@ -285,7 +335,6 @@ export default function UserManagementClient({ initialUsers }: Props) {
                                   onChange={(e) =>
                                     handleStatusChange(user.id, e.target.value as VerifyStatus)
                                   }
-                                  // แก้ไข: ลดความกว้างเป็น 110px และใส่ text-center
                                   className={`w-[110px] appearance-none px-3 py-1 pr-6 rounded-full text-xs font-medium border-0 outline-none transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300 cursor-pointer text-center`}
                                 >
                                   <option value="PENDING">รอดำเนินการ</option>
@@ -294,7 +343,6 @@ export default function UserManagementClient({ initialUsers }: Props) {
                                 </select>
                               ) : (
                                 <div
-                                  // แก้ไข: ใช้ div + flex เพื่อ justify-center อย่างสมบูรณ์ในกรอบ 110px
                                   className={`w-[110px] px-3 py-1 rounded-full text-xs font-medium border-0 flex items-center justify-center ${
                                     verifyStatus === 'APPROVED'
                                       ? 'bg-orange-100 text-orange-700'

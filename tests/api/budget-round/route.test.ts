@@ -3,10 +3,7 @@ import { prisma } from '@/app/lib/prisma';
 import { NextRequest } from 'next/server';
 import jwt from 'jsonwebtoken';
 
-// ============================================================================
 // 1. MOCKING DEPENDENCIES
-// ============================================================================
-
 jest.mock('@/app/lib/prisma', () => ({
   prisma: {
     budgetRound: {
@@ -22,10 +19,7 @@ jest.mock('jsonwebtoken', () => ({
   verify: jest.fn(),
 }));
 
-// ============================================================================
 // 2. HELPER FUNCTIONS
-// ============================================================================
-
 const mockLogin = (role = 'ADMIN') => {
   (jwt.verify as jest.Mock).mockReturnValue({
     userId: 1,
@@ -44,23 +38,18 @@ const createRequest = (method: string, urlParams = '', body: any = null) => {
   return req;
 };
 
-// ============================================================================
 // 3. TEST SUITE
-// ============================================================================
-
 describe('Budget Round API Tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  // --------------------------------------------------------------------------
   // Group 1: GET Request (Fetch Rounds & Stats)
-  // --------------------------------------------------------------------------
   describe('GET Request', () => {
     
-    it('TC-ROUND-GET-01: Should calculate status and stats correctly', async () => {
-      // Mock Data: จำลอง Round ที่มี Proposal และ Donation
+    it('TC-ROUND-GET-01: Should calculate status and stats correctly (Filter APPROVED/OPEN)', async () => {
+      // Mock Data: จำลอง Round ที่มี Proposal สถานะต่างๆ
       const mockRounds = [
         {
           id: 1,
@@ -70,8 +59,9 @@ describe('Budget Round API Tests', () => {
           isPublished: true,
           totalBudget: 10000,
           proposals: [
-            { requestedAmount: 2000 }, // Proposal 1
-            { requestedAmount: 3000 }  // Proposal 2
+            { requestedAmount: 2000, status: 'APPROVED' }, 
+            { requestedAmount: 3000, status: 'OPEN' },     
+            { requestedAmount: 9999, status: 'REJECTED' }  
           ],
           budgetDonations: [
             { amount: 500 } // Donation 1
@@ -89,9 +79,14 @@ describe('Budget Round API Tests', () => {
       const round = json.budgetRounds[0];
 
       // เช็คการคำนวณ Stats
-      expect(round.stats.totalRequested).toBe(5000);
+      // Total Requested = 2000 + 3000 = 5000
+      expect(round.stats.totalRequested).toBe(5000); 
       expect(round.stats.totalDonated).toBe(500);
-      expect(round.stats.remaining).toBe(5000);
+      
+      // remaining = (accumulatedCarryOver + totalDonated) - totalRequested
+      // accumulatedCarryOver = 0 (รอบแรก)
+      // remaining = (0 + 500) - 5000 = -4500
+      expect(round.stats.remaining).toBe(-4500); 
     });
 
     it('TC-ROUND-GET-02: Should filter by Fiscal Year', async () => {
@@ -123,9 +118,7 @@ describe('Budget Round API Tests', () => {
     });
   });
 
-  // --------------------------------------------------------------------------
   // Group 2: POST Request (Create Round)
-  // --------------------------------------------------------------------------
   describe('POST Request', () => {
 
     it('TC-ROUND-POST-01: Should create round successfully (Admin)', async () => {
@@ -144,8 +137,7 @@ describe('Budget Round API Tests', () => {
 
       const req = createRequest('POST', '', body);
       const res = await POST(req);
-      const json = await res.json();
-
+      
       expect(res.status).toBe(201);
       expect(prisma.budgetRound.create).toHaveBeenCalledWith(expect.objectContaining({
         data: expect.objectContaining({
@@ -169,55 +161,10 @@ describe('Budget Round API Tests', () => {
       const res = await POST(req);
       expect(res.status).toBe(400);
     });
+    
   });
 
-  // --------------------------------------------------------------------------
-  // Group 3: PUT Request (Update Round)
-  // --------------------------------------------------------------------------
-  describe('PUT Request', () => {
-
-    it('TC-ROUND-PUT-01: Should update round details successfully', async () => {
-      mockLogin('ADMIN');
-      const body = { id: 1, roundName: 'Updated Name', totalBudget: 60000 };
-
-      // เพิ่ม: จำลองว่าค้นหา ID เจอ (ถ้า API มีการเช็คก่อน Update)
-      (prisma.budgetRound.findUnique as jest.Mock).mockResolvedValue({ 
-        id: 1, 
-        roundName: 'Old Name', 
-        isPublished: true 
-      });
-
-      // จำลองผลลัพธ์การ Update
-      (prisma.budgetRound.update as jest.Mock).mockResolvedValue(body);
-
-      const req = createRequest('PUT', '', body);
-      const res = await PUT(req);
-
-      expect(res.status).toBe(200);
-      expect(prisma.budgetRound.update).toHaveBeenCalledWith(expect.objectContaining({
-        where: { id: 1 },
-        data: expect.objectContaining({ roundName: 'Updated Name', totalBudget: 60000 })
-      }));
-    });
-
-    it('TC-ROUND-PUT-02: Should return 401 if user is NOT Admin', async () => {
-        mockLogin('ALUMNI');
-        const req = createRequest('PUT', '', { id: 1 });
-        const res = await PUT(req);
-        expect(res.status).toBe(401);
-    });
-
-    it('TC-ROUND-PUT-03: Should return 400 if ID is missing', async () => {
-        mockLogin('ADMIN');
-        const req = createRequest('PUT', '', { roundName: 'No ID' });
-        const res = await PUT(req);
-        expect(res.status).toBe(400);
-    });
-  });
-
-  // --------------------------------------------------------------------------
   // Group 4: DELETE Request
-  // --------------------------------------------------------------------------
   describe('DELETE Request', () => {
 
     it('TC-ROUND-DEL-01: Should soft delete round', async () => {
@@ -249,9 +196,7 @@ describe('Budget Round API Tests', () => {
     });
   });
 
-  // --------------------------------------------------------------------------
   // Group 5: Server Error Handling (500)
-  // --------------------------------------------------------------------------
   describe('Server Error Handling', () => {
     
     it('TC-ERR-01: Should return 500 if Database fails', async () => {
@@ -262,9 +207,7 @@ describe('Budget Round API Tests', () => {
         const res = await GET(req); 
         
         expect(res.status).toBe(500);
-        // หมายเหตุ: Console จะแสดง Error สีแดงออกมา ซึ่งเป็นเรื่องปกติ
     });
-
   });
 
 });

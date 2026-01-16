@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-import { Activity, HandHeart, Plus } from "lucide-react";
+import { Ticket, HandHeart, Plus } from "lucide-react";
 import { AdminSouvenirCarousel } from "./AdminSouvenirCarousel";
 import { SouvenirDetailForm } from "./SouvenirDetailForm";
 
@@ -49,7 +49,7 @@ export default function SouvenirMenuPage() {
             </h1>
             <button
               onClick={handleCreateNew}
-              className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-all shadow-lg hover:shadow-xl font-semibold"
+              className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition text-sm"
             >
               <Plus className="w-5 h-5" />
               เพิ่มของที่ระลึก
@@ -66,7 +66,7 @@ export default function SouvenirMenuPage() {
               aria-pressed={showCarousel === "ACTIVITY"}
             >
               <div className="flex flex-col items-center mb-4">
-                <Activity className="w-28 h-28 text-orange-500 group-hover:drop-shadow-lg mb-2" strokeWidth={1.5} />
+                <Ticket className="w-28 h-28 text-orange-500 group-hover:drop-shadow-lg mb-2" strokeWidth={1.5} />
               </div>
               <div className="text-xl font-semibold text-gray-700">กิจกรรม</div>
             </div>
@@ -80,7 +80,7 @@ export default function SouvenirMenuPage() {
               aria-pressed={showCarousel === "DONATION"}
             >
               <div className="flex flex-col items-center mb-4">
-                <HandHeart className="w-28 h-28 text-orange-400 group-hover:text-orange-500 group-hover:drop-shadow-lg mb-2" strokeWidth={1.5} />
+                <HandHeart className="w-28 h-28 text-orange-500 group-hover:drop-shadow-lg mb-2" strokeWidth={1.5} />
               </div>
               <div className="text-xl font-semibold text-gray-700">บริจาค</div>
             </div>
