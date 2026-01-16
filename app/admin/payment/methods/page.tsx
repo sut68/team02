@@ -18,6 +18,8 @@ import Link from 'next/link';
 
 // ใช้ Card Component เหมือนหน้าอื่น
 import { Card, CardContent } from '@/app/components/ui/Card';
+import AlertModal from '@/app/components/ui/AlertModal';
+import SuccessModal from '@/app/components/ui/SuccessModal';
 
 // Type Definitions
 type PaymentMethod = {
@@ -65,6 +67,10 @@ export default function PaymentMethodsPage() {
   }) => setConfirm({ open: true, loading: false, ...opts });
 
   const closeConfirm = () => setConfirm({ open: false });
+
+  // Alert and Success states
+  const [alert, setAlert] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
+  const [success, setSuccess] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
 
   // --- Data Fetching ---
   const fetchMethods = async () => {
@@ -123,7 +129,7 @@ export default function PaymentMethodsPage() {
         } catch (err) {
           console.error(err);
           setMethods(originalMethods);
-          alert('เกิดข้อผิดพลาดในการเปลี่ยนสถานะ');
+          setAlert({ show: true, message: 'เกิดข้อผิดพลาดในการเปลี่ยนสถานะ' });
           closeConfirm();
         }
       },
@@ -144,10 +150,11 @@ export default function PaymentMethodsPage() {
 
       if (!res.ok) throw new Error('Save failed');
       setIsModalOpen(false);
+      setSuccess({ show: true, message: 'บันทึกข้อมูลสำเร็จ' });
       fetchMethods(); 
     } catch (err) {
       console.error(err);
-      alert('บันทึกข้อมูลไม่สำเร็จ');
+      setAlert({ show: true, message: 'บันทึกข้อมูลไม่สำเร็จ' });
     } finally {
       setIsSubmitting(false);
     }
@@ -164,10 +171,11 @@ export default function PaymentMethodsPage() {
           const res = await fetch(`/api/payment-method?id=${id}`, { method: 'DELETE' });
           if (!res.ok) throw new Error('Delete failed');
           setMethods(prev => prev.filter(m => m.id !== id));
+          setSuccess({ show: true, message: 'ลบข้อมูลสำเร็จ' });
           closeConfirm();
         } catch (err) {
           console.error(err);
-          alert('ลบข้อมูลไม่สำเร็จ');
+          setAlert({ show: true, message: 'ลบข้อมูลไม่สำเร็จ' });
           closeConfirm();
         }
       },
@@ -429,6 +437,18 @@ export default function PaymentMethodsPage() {
             </div>
           </div>
         )}
+
+        {/* Alert and Success Modals */}
+        <AlertModal
+          isOpen={alert.show}
+          message={alert.message}
+          onClose={() => setAlert({ show: false, message: '' })}
+        />
+        <SuccessModal
+          show={success.show}
+          message={success.message}
+          onClose={() => setSuccess({ show: false, message: '' })}
+        />
       </div>
     </div>
   );

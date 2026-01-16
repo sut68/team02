@@ -699,7 +699,7 @@ async function main() {
       description: "กองทุนหลักเพื่อบริหารจัดการและสนับสนุนกิจกรรมต่างๆ ของคณะ",
       goalAmount: 1000000, 
       startDate: new Date("2025-01-01T00:00:00Z"),
-      endDate: new Date("2030-12-31T23:59:59Z"),
+      endDate: new Date("2026-12-31T23:59:59Z"),
       projectType: DonationProjectType.CENTRAL,
       ownerName: "สมาคมศิษย์เก่า",
       contact: "044-223-344",
@@ -722,24 +722,72 @@ async function main() {
       title: "CPE Flood Relief 2026",
       description: "ระดมทุนช่วยเหลือพี่น้องชาว CPE ที่ประสบภัยน้ำท่วมเร่งด่วน",
       goalAmount: 200000,
-      startDate: new Date("2026-08-01T00:00:00Z"),
+      startDate: new Date("2026-01-01T00:00:00Z"),
       endDate: new Date("2026-09-30T23:59:59Z"),
       projectType: DonationProjectType.EMERGENCY,
       ownerName: "สโมสรนักศึกษา",
       contact: "089-999-9999",
-      posterUrl: "/donation_poster/flood.jpg",
+      posterUrl: "/uploads/posters/1768239338817-07fd64bd724d.jpg",
       skuToLink: "UMBRELLA-NEW-2025" // ✅ เปลี่ยนจาก BAG เป็น UMBRELLA (Donation Item)
     },
     {
       title: "ทุนวิจัย AI เพื่อการเกษตร Smart Farm",
       description: "สนับสนุนอุปกรณ์ IoT และ Server สำหรับงานวิจัย Smart Farm",
       goalAmount: 800000,
-      startDate: new Date("2026-03-01T00:00:00Z"),
+      startDate: new Date("2026-01-01T00:00:00Z"),
       endDate: new Date("2027-02-28T23:59:59Z"),
       projectType: DonationProjectType.RESEARCH,
       ownerName: "ศูนย์วิจัย AI Center",
       contact: "044-223-366",
-      posterUrl: "/donation_poster/research.jpg",
+      posterUrl: "/uploads/posters/aismartframseed.jpg",
+      skuToLink: "BOOK-NEW-2025"
+    },
+    {
+      title: "โครงการบริจาคโลหิต ต่อชีวิตเพื่อนมนุษย์", // จากรูป World Blood Donor Day (14 June)
+      description: "ร่วมบริจาคโลหิตเพื่อสำรองคลังเลือดให้กับโรงพยาบาลในเครือข่าย และช่วยเหลือผู้ป่วยวิกฤต",
+      goalAmount: 500000, 
+      startDate: new Date("2025-06-01T00:00:00Z"),
+      endDate: new Date("2026-06-30T23:59:59Z"),
+      projectType: DonationProjectType.CENTRAL,
+      ownerName: "สภากาชาดไทย ร่วมกับ สมาคมศิษย์เก่า",
+      contact: "044-223-344",
+      posterUrl: "/uploads/posters/blood.png", // รูปหลอดเก็บเลือดและหัวใจ
+      skuToLink: "BOTTLE-ENGI-2025" 
+    },
+    {
+      title: "โครงการวันการกุศลสากล (International Day of Charity)", // จากรูป 5th September
+      description: "ร่วมแบ่งปันความสุขผ่านการบริจาคทุนการศึกษาและทุนสนับสนุนกิจกรรมสาธารณประโยชน์",
+      goalAmount: 300000,
+      startDate: new Date("2025-08-20T00:00:00Z"),
+      endDate: new Date("2026-09-15T23:59:59Z"),
+      projectType: DonationProjectType.SCHOLARSHIP,
+      ownerName: "สมาคมศิษย์เก่าวิศวกรรมศาสตร์",
+      contact: "044-223-355",
+      posterUrl: "/uploads/posters/Brown Illustration International Day Of Charity Poster.png", // รูปคนถือกล่อง Donation สองคน
+      skuToLink: "BOOK-NEW-2025"
+    },
+    {
+      title: "บรรเทาทุกข์จากอุทกภัย (CPE & SUT Flood Relief)", // จากรูปกล่องบรรเทาทุกข์สีส้ม
+      description: "เปิดรับบริจาคเงินและสิ่งของเครื่องใช้ต่างๆ เพื่อช่วยเหลือผู้ประสบภัยน้ำท่วมในพื้นที่จังหวัดนครราชสีมาและใกล้เคียง",
+      goalAmount: 250000,
+      startDate: new Date("2025-10-01T00:00:00Z"),
+      endDate: new Date("2026-11-30T23:59:59Z"),
+      projectType: DonationProjectType.EMERGENCY,
+      ownerName: "มูลนิธิสุวรรณนคร ร่วมกับสมาคมศิษย์เก่า",
+      contact: "012-345-6789",
+      posterUrl: "/uploads/posters/banthotuck.png", // รูปกล่องบรรจุขวดน้ำและอาหารกระป๋อง
+      skuToLink: "UMBRELLA-NEW-2025" 
+    },
+    {
+      title: "ร่วมปั่นน้ำใจช่วยเหลือผู้ยากไร้และขาดแคลน", // จากรูปโลโก้ Alumni SUT ที่มีรูปมือจับกัน
+      description: "โครงการระดมทุนเพื่อจัดซื้ออุปกรณ์การแพทย์และสิ่งของจำเป็นให้กับผู้ยากไร้ในชุมชนรอบมหาวิทยาลัย",
+      goalAmount: 400000,
+      startDate: new Date("2025-01-01T00:00:00Z"),
+      endDate: new Date("2026-12-31T23:59:59Z"),
+      projectType: DonationProjectType.RESEARCH, // หรือเปลี่ยนเป็นประเภทอื่นที่เหมาะสม
+      ownerName: "Alumni SUT",
+      contact: "094-397-6007",
+      posterUrl: "/uploads/posters/alumni-sut.png",
       skuToLink: "BOOK-NEW-2025"
     }
   ];

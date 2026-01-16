@@ -7,6 +7,8 @@ import { useForm, SubmitHandler } from 'react-hook-form';
 import { Card } from './../../../components/ui/Card'; 
 import { PrimaryButton, CancelButton } from './../../../components/ui/Button'; 
 import { UploadCloud } from 'lucide-react'; 
+import AlertModal from './../../../components/ui/AlertModal';
+import SuccessModal from './../../../components/ui/SuccessModal';
 
 interface FormData {
   projectName: string;
@@ -37,6 +39,8 @@ export default function CreateProjectPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const watchedImage = watch("posterImage");
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
+  const [alert, setAlert] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
+  const [success, setSuccess] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
   React.useEffect(() => {
     let objectUrl: string | null = null;
@@ -93,16 +97,15 @@ export default function CreateProjectPage() {
         projectType: data.projectType,
       };
       
-       const response = await fetch('/api/donation-project', { 
+      const response = await fetch('/api/donation-project', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(apiData), 
       });
 
       if (response.ok) {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        alert('โครงการถูกสร้างสำเร็จแล้ว!');
-        router.push('/admin/donation'); 
+        setSuccess({ open: true, message: 'โครงการถูกสร้างสำเร็จแล้ว!' });
+        setTimeout(() => router.push('/admin/donation'), 1200);
       } else {
         const contentType = response.headers.get('content-type');
         let errorText = `ข้อผิดพลาดสถานะ ${response.status}`;
@@ -114,7 +117,7 @@ export default function CreateProjectPage() {
       }
     } catch (error: any) {
       console.error('Error submitting form:', error);
-      alert(`เกิดข้อผิดพลาด: ${error.message}`);
+      setAlert({ open: true, message: `เกิดข้อผิดพลาด: ${error.message}` });
     } finally {
       setLoading(false);
     }
@@ -267,40 +270,62 @@ export default function CreateProjectPage() {
           </div>
 
           <div>
-            <label htmlFor="posterImage" className="block text-gray-700 text-sm font-semibold mb-2">
-              อัปโหลดโปสเตอร์
-            </label>
-            <div
-              className="w-full p-6 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-[#F26522] transition-colors duration-200"
-              onClick={() => document.getElementById('posterImage')?.click()}
-            >
-              {imagePreview ? (
-                <div className="relative w-48 h-48">
-                  <Image src={imagePreview} alt="Image Preview" fill className="object-contain" />
-                </div>
-              ) : (
-                <>
-                  <UploadCloud className="w-12 h-12 text-gray-400 mb-2" />
-                  <p className="text-gray-500 text-sm">คลิกเพื่ออัปโหลด หรือลากและวางรูปภาพที่นี่</p>
-                </>
-              )}
-              <input
-                type="file"
-                id="posterImage"
-                {...register('posterImage', {
-                  validate: (value) => {
-                    if (value && value.length > 0) {
-                      const file = value[0];
-                      if (!['image/jpeg', 'image/png', 'image/gif'].includes(file.type)) {
-                        return 'กรุณาอัปโหลดไฟล์รูปภาพ (JPEG, PNG, GIF) เท่านั้น';
+            <div className="space-y-2">
+              <label className="block text-sm text-gray-500">
+                รายละเอียด <span className="text-red-500">*</span>
+              </label>
+
+              <div
+                className="border border-gray-300 rounded-md p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-orange-400"
+              >
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={e => {
+                      const files = e.target.files;
+                      if (files && files.length > 0) {
+                        const file = files[0];
+                        setFileToUpload(file);
+                        const objectUrl = URL.createObjectURL(file);
+                        setImagePreview(objectUrl);
                       }
-                    }
-                    return true;
-                  },
-                })}
-                accept="image/jpeg,image/png,image/gif"
-                className="hidden" 
-              />
+                    }}
+                    accept="image/jpeg,image/png,image/gif"
+                  />
+
+                  <div className="flex flex-col items-center">
+                    {imagePreview ? (
+                      <div className="relative w-48 h-48">
+                        <Image src={imagePreview} alt="Image Preview" fill className="object-contain" />
+                      </div>
+                    ) : (
+                      <>
+                        <svg
+                          className="w-10 h-10 text-gray-300"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeWidth="2"
+                            d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2m-4-4l-4-4m0 0l-4 4m4-4v12"
+                          />
+                        </svg>
+
+                        <p className="text-sm text-gray-400 mt-2">อัปโหลดไฟล์</p>
+                        <p className="text-xs text-gray-400">
+                          รองรับไฟล์เอกสาร JPEG / PNG / GIF
+                        </p>
+                      </>
+                    )}
+
+                    {fileToUpload && (
+                      <p className="text-xs text-gray-600 mt-1">{fileToUpload.name}</p>
+                    )}
+                  </div>
+                </label>
+              </div>
             </div>
             {errors.posterImage && <p className="text-red-500 text-xs mt-1">{errors.posterImage.message}</p>}
           </div>
@@ -315,6 +340,17 @@ export default function CreateProjectPage() {
           </div>
         </form>
       </Card>
+
+      <AlertModal
+        isOpen={alert.open}
+        message={alert.message}
+        onClose={() => setAlert({ open: false, message: '' })}
+      />
+      <SuccessModal
+        show={success.open}
+        message={success.message}
+        onClose={() => setSuccess({ open: false, message: '' })}
+      />
     </div>
   );
 }

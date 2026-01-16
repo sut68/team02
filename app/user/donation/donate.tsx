@@ -95,15 +95,17 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
   const detailUrl = `/user/donation/${project.id}`;
 
   return (
-    <Card className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl md:flex mb-6 border border-gray-100">
+    <Card className="bg-white rounded-xl shadow-md overflow-hidden transition-all duration-300 hover:shadow-xl md:flex mb-5  py-5 border border-gray-100 h-[520px] min-h-[520px] max-w-7xl mx-auto">
       {/* รูปภาพ */}
-      <div className="md:w-1/3 bg-gray-50 flex items-center justify-center relative min-h-[400px]">
-        <Image
-          src={project.posterUrl || "/donation_poster/default-poster.png"}
-          alt={project.title}
-          className="object-cover w-full h-full"
-          fill
-        />
+      <div className="md:w-1/3 flex items-center justify-center relative h-full mb-5 min-h-[450px]">
+        <div className="w-full h-full rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center">
+          <Image
+            src={project.posterUrl || "/donation_poster/default-poster.png"}
+            alt={project.title}
+            className="rounded-lg shadow-lg object-cover w-full"
+            fill
+          />
+        </div>
       </div>
 
       {/* เนื้อหา */}
@@ -141,7 +143,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
           </div>
         </div>
 
-        <div className="flex justify-between items-center text-sm text-gray-500 mt-6 pt-4 border-t border-gray-100">
+        <div className="flex justify-between items-center text-sm text-gray-500 mt-6 pt-4 border-t border-gray-100 mb-4">
           <span className="flex items-center gap-1">
             <span className="hidden md:inline">สิ้นสุดโครงการ:</span> 
             {new Date(project.endDate).toLocaleDateString('th-TH', { dateStyle: 'medium' })}
@@ -223,7 +225,7 @@ export default function DonationPage() {
     }
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 w-full max-w-7xl mx-auto">
         {projects.map((project) => (
           <ProjectCard key={project.id} project={project} />
         ))}
@@ -241,8 +243,8 @@ export default function DonationPage() {
   };
 
   return (
-    <div className="min-h-screen py-4">
-      <div className="container mx-auto mb-2 px-4 py-0 ">
+    <div className="py-4">
+      <div className="container mx-auto mb-2 px-4 py-0">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-8">
             <div>
                 <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">

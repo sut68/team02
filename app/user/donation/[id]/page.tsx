@@ -320,12 +320,14 @@ export default function DonationDetailPage() {
               <FaClock className="w-5 h-5 mr-1" />
               {new Date(project.createdAt || project.startDate).toLocaleDateString('th-TH', { dateStyle: 'medium' })}
             </span>
-            <button
-              className="flex items-center hover:text-[#F26522] transition-colors"
-              onClick={() => navigator.clipboard.writeText(window.location.href)}
+            <a
+              className="flex items-center hover:text-[#F26522] transition-colors cursor-pointer"
+              href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
             >
               <FaShareAlt className="w-5 h-5 mr-1" /> แชร์
-            </button>
+            </a>
           </div>
           <div className="mt-4 md:mt-0">
             <span className="flex items-center">

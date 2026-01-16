@@ -55,6 +55,8 @@ function DonationForm() {
   const [userId, setUserId] = useState<number | null>(null); 
 
   const { register, reset, handleSubmit, formState: { errors } } = useForm<FormData>();
+  const [fileToUpload, setFileToUpload] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const currentDate = new Date();
   const todayInThai = formatThaiDate(currentDate);
@@ -206,39 +208,124 @@ function DonationForm() {
           <div className="md:col-span-5">
             <h2 className="text-2xl font-medium text-gray-800 mb-6">ข้อมูลผู้บริจาค</h2>
             <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+              {/* FullName */}
               <div>
-                <label className="block text-sm text-gray-500 mb-2">ชื่อ-สกุล <span className="text-red-500">*</span></label>
-                <Input type='text' {...register('fullName', { required: 'กรุณาระบุชื่อผู้บริจาค' })} />
+                <label className="block text-sm text-gray-500 mb-2">ชื่อ-สกุล (Fullname) <span className="text-red-500">*</span></label>
+                <Input type='text' id="fullName" placeholder="ชื่อ นามสกุล"
+                  {...register('fullName', { required: 'กรุณาระบุชื่อผู้บริจาค' })}
+                />
                 {errors.fullName && <span className="text-xs text-red-500">{errors.fullName.message}</span>}
               </div>
 
+              {/* Email */}
+              <div>
+                <label className="block text-sm text-gray-500 mb-2">อีเมล (Email) <span className="text-red-500">*</span></label>
+                <Input type='email' id="email" placeholder="email@example.com"
+                  {...register('email', { required: 'กรุณาระบุ email', pattern: { value: /^\S+@\S+$/i, message: "รูปแบบอีเมลไม่ถูกต้อง" } })}
+                />
+                {errors.email && <span className="text-xs text-red-500">{errors.email.message}</span>}
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-sm text-gray-500 mb-2">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label>
+                <Input type='text' id="phone" placeholder="08x xxxx xxxx"
+                  {...register('phone', { required: 'กรุณาระบุ เบอร์โทรศัพท์' })}
+                />
+                {errors.phone && <span className="text-xs text-red-500">{errors.phone.message}</span>}
+              </div>
+
+              {/* Address Fields */}
+              <div className="pt-4 border-t border-gray-200">
+                <label className="block text-sm text-gray-500 mb-2">ที่อยู่ (เลขที่, หมู่, ซอย, ถนน) <span className="text-red-500">*</span></label>
+                <Input id="address" placeholder="ที่อยู่"
+                  {...register('address', { required: 'กรุณาระบุ ที่อยู่' })}
+                />
+                {errors.address && <span className="text-xs text-red-500">{errors.address.message}</span>}
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-500 mb-2">อีเมล <span className="text-red-500">*</span></label>
-                  <Input type='email' {...register('email', { required: 'กรุณาระบุ email' })} />
+                  <label className="block text-sm text-gray-500 mb-2">ตำบล/แขวง <span className="text-red-500">*</span></label>
+                  <Input type="text" id="subdistrict" placeholder="ตำบล"
+                    {...register('subdistrict', { required: 'กรุณาระบุ ตำบล' })}
+                  />
+                  {errors.subdistrict && <span className="text-xs text-red-500">{errors.subdistrict.message}</span>}
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-500 mb-2">เบอร์โทรศัพท์ <span className="text-red-500">*</span></label>
-                  <Input type='text' {...register('phone', { required: 'กรุณาระบุเบอร์โทรศัพท์' })} />
+                  <label className="block text-sm text-gray-500 mb-2">อำเภอ/เขต <span className="text-red-500">*</span></label>
+                  <Input type="text" id="district" placeholder="อำเภอ"
+                    {...register('district', { required: 'กรุณาระบุ อำเภอ' })}
+                  />
+                  {errors.district && <span className="text-xs text-red-500">{errors.district.message}</span>}
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-500 mb-2">จังหวัด <span className="text-red-500">*</span></label>
+                  <Input type="text" id="province" placeholder="จังหวัด"
+                    {...register('province', { required: 'กรุณาระบุ จังหวัด' })}
+                  />
+                  {errors.province && <span className="text-xs text-red-500">{errors.province.message}</span>}
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-500 mb-2">รหัสไปรษณีย์ <span className="text-red-500">*</span></label>
+                  <Input type="text" id="postalCode" placeholder="รหัสไปรษณีย์"
+                    {...register('postalCode', { required: 'กรุณาระบุ รหัสไปรษณีย์' })}
+                  />
+                  {errors.postalCode && <span className="text-xs text-red-500">{errors.postalCode.message}</span>}
+                </div>
+              </div>
+
+              {/* Disclosure (isPublic) */}
+              <div className="pt-4 flex items-start space-x-3 text-sm">
+                <p className="text-gray-700">ความประสงค์การเปิดเผยข้อมูล</p>
+                <div className="flex space-x-6">
+                  <label className="flex items-center text-gray-500 cursor-pointer">
+                    <input type="radio" value="allow" {...register('disclosure')} className="w-4 h-4 mr-2 text-orange-600 focus:ring-orange-500" />
+                    เปิดเผยชื่อผู้บริจาค
+                  </label>
+                  <label className="flex items-center text-gray-500 cursor-pointer">
+                    <input type="radio" value="anonymous" {...register('disclosure')} className="w-4 h-4 mr-2 text-orange-600 focus:ring-orange-500" />
+                    ไม่ประสงค์เปิดเผยชื่อ
+                  </label>
+                </div>
+              </div>
+
+              {/* Donation Data */}
+              <h2 className="text-2xl font-medium text-gray-800 pt-6 border-t border-gray-200 mb-6">ข้อมูลบริจาค</h2>
 
               <div>
-                <label className="block text-sm text-gray-500 mb-2">ที่อยู่ <span className="text-red-500">*</span></label>
-                <Input {...register('address', { required: 'กรุณาระบุที่อยู่' })} />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <Input placeholder="ตำบล" {...register('subdistrict', { required: true })} />
-                <Input placeholder="อำเภอ" {...register('district', { required: true })} />
+                <label className="block text-sm text-gray-500 mb-2">ชื่อโครงการ</label>
+                <Input name="projectName" defaultValue={project.title} disabled />
               </div>
 
               <div>
                 <label className="block text-sm text-gray-500 mb-2">จำนวนเงินที่บริจาค (บาท) <span className="text-red-500">*</span></label>
-                <Input type="number" step="0.01" {...register('amount', { required: true, min: 1 })} />
+                <Input type="number" id="amount" step="0.01" min="1"
+                  {...register('amount', { required: 'กรุณาระบุ จำนวนเงิน', min: { value: 1, message: "จำนวนเงินต้องมากกว่า 0" } })}
+                />
+                {errors.amount && <span className="text-xs text-red-500">{errors.amount.message}</span>}
               </div>
 
-              <div className="flex justify-end space-x-4 pt-6">
+              <div>
+                <label className="block text-sm text-gray-500 mb-2">ข้อความที่ท่านฝากถึง (Optional)</label>
+                <textarea
+                  rows={3}
+                  id="message"
+                  placeholder="ข้อความให้กำลังใจ..."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-md text-sm placeholder-gray-400 focus:border-orange-400 focus:outline-none"
+                  {...register('message')}
+                ></textarea>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-500 mb-2">วันที่ทำรายการ</label>
+                <Input name="donationDate" defaultValue={todayInThai} disabled />
+              </div>
+
+              <div className="flex justify-end space-x-4 pt-6 border-gray-200">
                 <CancelButton type="button" onClick={() => router.back()}>ยกเลิก</CancelButton>
                 <PrimaryButton type="submit" disabled={isProjectClosed}>
                   {isProjectClosed ? 'โครงการปิดรับบริจาค' : 'ถัดไป'}

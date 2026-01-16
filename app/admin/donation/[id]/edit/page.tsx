@@ -7,6 +7,9 @@ import { useForm, SubmitHandler } from 'react-hook-form';
 import { UploadCloud, Trash2 } from 'lucide-react';
 import { Card } from '@/app/components/ui/Card';
 import { PrimaryButton, CancelButton } from '@/app/components/ui/Button';
+import ConfirmModal from '@/app/components/ui/ConfirmModal';
+import AlertModal from '@/app/components/ui/AlertModal';
+import SuccessModal from '@/app/components/ui/SuccessModal';
 
 interface ProjectData {
   id: number;
@@ -36,6 +39,9 @@ export default function EditProjectPage({ params }: { params: any }) {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [alert, setAlert] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
+  const [success, setSuccess] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
   
   const { register, handleSubmit, reset, formState: { errors }, watch } = useForm<EditFormData>();
   
@@ -169,38 +175,43 @@ export default function EditProjectPage({ params }: { params: any }) {
       });
 
       if (response.ok) {
-        alert('การแก้ไขโครงการสำเร็จแล้ว!');
-        router.push('/admin/donation');
+        setSuccess({ open: true, message: 'การแก้ไขโครงการสำเร็จแล้ว!' });
+        setTimeout(() => router.push('/admin/donation'), 1000);
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || `ไม่สามารถแก้ไขโครงการได้`);
       }
     } catch (err: any) {
       setError(err.message);
+      setAlert({ open: true, message: err.message });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!projectId) return;
-    if (!confirm('คุณแน่ใจหรือไม่ว่าต้องการลบโครงการนี้?')) return;
+    setConfirmModalOpen(true);
+  };
 
+  const handleDeleteConfirmed = async () => {
+    if (!projectId) return;
     setIsSubmitting(true);
+    setConfirmModalOpen(false);
     try {
       const response = await fetch(`/api/donation-project/${projectId}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
-        alert('โครงการถูกลบเรียบร้อยแล้ว');
-        router.push('/admin/donation');
+        setSuccess({ open: true, message: 'โครงการถูกลบเรียบร้อยแล้ว' });
+        setTimeout(() => router.push('/admin/donation'), 1000);
       } else {
         const errorData = await response.json();
         throw new Error(errorData.error || 'ไม่สามารถลบโครงการได้');
       }
     } catch (err: any) {
       setError(err.message);
+      setAlert({ open: true, message: err.message });
     } finally {
       setIsSubmitting(false);
     }
@@ -373,41 +384,20 @@ export default function EditProjectPage({ params }: { params: any }) {
           </div>
 
           {/* อัปโหลดโปสเตอร์ */}
-          <div className="border border-gray-200 p-4 rounded-lg bg-gray-50">
-            <h3 className="text-base font-semibold mb-3 text-gray-800">โปสเตอร์โครงการ</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-start">
-
-              {/* 1. รูปภาพปัจจุบัน / Preview */}
-              <div className="sm:col-span-1">
-                {currentPosterUrl || imagePreview ? (
-                  <div className="relative w-full h-48 border rounded-lg overflow-hidden shadow-sm">
-                    <Image
-                      key={imagePreview || currentPosterUrl || 'default'}
-                      src={imagePreview || currentPosterUrl || '#'}
-                      alt="Poster Preview"
-                      fill
-                      sizes="(max-width: 768px) 100vw, 50vw"
-                      style={{ objectFit: "cover" }}
-                      loading="eager"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full h-48 bg-gray-100 border border-dashed rounded-lg flex items-center justify-center text-gray-400 text-sm">
-                    ไม่มีโปสเตอร์
-                  </div>
-                )}
-              </div>
-
-              {/* 2. ปุ่มอัปโหลด */}
-              <div className="sm:col-span-2">
-                <p className="text-sm text-gray-700 mb-2">อัปโหลดรูปภาพใหม่เพื่อแทนที่</p>
-                <div
-                  className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-[#F26522] transition-colors duration-200"
-                  onClick={() => document.getElementById('posterImage')?.click()}
-                >
-                  <UploadCloud className="w-10 h-10 text-gray-400 mb-2" />
-                  <p className="text-gray-500 text-sm">คลิกเพื่ออัปโหลด (JPEG, PNG, GIF)</p>
-
+          <div className="mb-6">
+            <label className="block text-gray-700 text-sm font-semibold mb-2">
+              โปสเตอร์โครงการ
+            </label>
+            <div
+              className="flex flex-col items-center"
+              onClick={() => !imagePreview && document.getElementById('posterImage')?.click()}
+              style={{ cursor: !imagePreview ? 'pointer' : 'default' }}
+            >
+              <div
+                className="w-full border border-gray-300 rounded-md p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-orange-400"
+                onClick={() => document.getElementById('posterImage')?.click()}
+              >
+                <label className="cursor-pointer">
                   <input
                     type="file"
                     id="posterImage"
@@ -425,20 +415,57 @@ export default function EditProjectPage({ params }: { params: any }) {
                     accept="image/jpeg,image/png,image/gif"
                     className="hidden"
                   />
-                </div>
-                {errors.posterImage && <p className="text-red-500 text-xs mt-1">{errors.posterImage.message}</p>}
-
-                {/* ปุ่มลบรูปภาพ */}
-                {currentPosterUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPosterUrl(null)}
-                    className="mt-2 text-red-500 text-xs hover:underline"
-                  >
-                    ลบโปสเตอร์ปัจจุบัน
-                  </button>
-                )}
+                  <div className="flex flex-col items-center">
+                    {imagePreview ? (
+                      <div className="relative w-48 h-48">
+                        {/* ใช้ <img> แทน <Image> ของ next/image เพื่อความเข้ากันได้ */}
+                        <img src={imagePreview} alt="Image Preview" className="object-contain w-full h-full rounded-md border" />
+                      </div>
+                    ) : currentPosterUrl ? (
+                      <div className="relative w-48 h-48">
+                        <img src={currentPosterUrl} alt="Current Poster" className="object-contain w-full h-full rounded-md border" />
+                      </div>
+                    ) : (
+                      <>
+                        <svg
+                          className="w-10 h-10 text-gray-300"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeWidth="2"
+                            stroke="currentColor"
+                            d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2m-4-4l-4-4m0 0l-4 4m4-4v12"
+                          />
+                        </svg>
+                        <p className="text-sm text-gray-400 mt-2">อัปโหลดไฟล์</p>
+                        <p className="text-xs text-gray-400">
+                          รองรับไฟล์เอกสาร JPEG / PNG / GIF
+                        </p>
+                      </>
+                    )}
+                    {watchedImage && watchedImage.length > 0 && (
+                      <p className="text-xs text-gray-600 mt-1">{watchedImage[0].name}</p>
+                    )}
+                  </div>
+                </label>
               </div>
+              {/* ปุ่มลบรูปภาพ */}
+              {(currentPosterUrl || imagePreview) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentPosterUrl(null);
+                    setImagePreview(null);
+                    reset({ ...watch(), posterImage: null });
+                  }}
+                  className="mt-2 text-red-500 text-xs hover:underline"
+                >
+                  ลบโปสเตอร์ปัจจุบัน
+                </button>
+              )}
+              {errors.posterImage && <p className="text-red-500 text-xs mt-1">{errors.posterImage.message}</p>}
             </div>
           </div>
 
@@ -454,6 +481,26 @@ export default function EditProjectPage({ params }: { params: any }) {
           </div>
         </form>
       </Card>
+      <ConfirmModal
+        isOpen={confirmModalOpen}
+        onClose={() => setConfirmModalOpen(false)}
+        onConfirm={handleDeleteConfirmed}
+        title="ยืนยันการลบโครงการ"
+        message="คุณแน่ใจหรือไม่ว่าต้องการลบโครงการนี้? การกระทำนี้ไม่สามารถย้อนกลับได้"
+        confirmLabel="ลบโครงการ"
+        isDanger
+        isLoading={isSubmitting}
+      />
+      <AlertModal
+        isOpen={alert.open}
+        message={alert.message}
+        onClose={() => setAlert({ open: false, message: '' })}
+      />
+      <SuccessModal
+        show={success.open}
+        message={success.message}
+        onClose={() => setSuccess({ open: false, message: '' })}
+      />
     </div>
   );
 }
