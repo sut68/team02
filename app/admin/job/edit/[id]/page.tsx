@@ -1,7 +1,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
+import ConfirmModal from '@/app/components/ui/ConfirmModal';
 
 interface Job {
   id: number;
@@ -44,6 +45,18 @@ export default function JobDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [modalConfig, setModalConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => { },
+    isDanger: false,
+    showCancelButton: true, // Helper for cancelLabel
+  });
+
+  const closeModal = () => {
+    setModalConfig(prev => ({ ...prev, isOpen: false }));
+  };
 
   useEffect(() => {
     if (jobId) {
@@ -97,11 +110,28 @@ export default function JobDetailPage() {
         throw new Error(data.error || 'เกิดข้อผิดพลาดในการบันทึก');
       }
 
-      alert('บันทึกข้อมูลสำเร็จ');
-      router.push('/admin/job');
+      setModalConfig({
+        isOpen: true,
+        title: 'สำเร็จ',
+        message: 'บันทึกข้อมูลสำเร็จ',
+        isDanger: false,
+        showCancelButton: false, // Alert style
+        onConfirm: () => {
+          closeModal();
+          router.push('/admin/job');
+        },
+      });
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการบันทึก';
-      alert(errorMessage);
+      setModalConfig({
+        isOpen: true,
+        title: 'เกิดข้อผิดพลาด',
+        message: errorMessage,
+        isDanger: true,
+        showCancelButton: false,
+        onConfirm: closeModal,
+      });
       console.error('Error saving job:', err);
     } finally {
       setIsSaving(false);
@@ -109,9 +139,17 @@ export default function JobDetailPage() {
   };
 
   const handleCancel = () => {
-    if (confirm('คุณต้องการยกเลิกการแก้ไขหรือไม่?')) {
-      router.push('/admin/job');
-    }
+    setModalConfig({
+      isOpen: true,
+      title: 'ยืนยันการยกเลิก',
+      message: 'คุณต้องการยกเลิกการแก้ไขใช่หรือไม่?',
+      isDanger: false,
+      showCancelButton: true,
+      onConfirm: () => {
+        closeModal();
+        router.push('/admin/job');
+      },
+    });
   };
 
   const handleUpdateStatus = (newStatus: string) => {
@@ -364,8 +402,8 @@ export default function JobDetailPage() {
                 <button
                   onClick={() => handleUpdateStatus('APPROVED')}
                   className={`px-6 py-3 rounded-lg font-medium transition-all ${job.status === 'APPROVED'
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-orange-100 text-orange-600 hover:bg-orange-200'
+                    ? 'bg-orange-500 text-white'
+                    : 'bg-orange-100 text-orange-600 hover:bg-orange-200'
                     }`}
                 >
                   อนุมัติ
@@ -373,8 +411,8 @@ export default function JobDetailPage() {
                 <button
                   onClick={() => handleUpdateStatus('REJECTED')}
                   className={`px-6 py-3 rounded-lg font-medium transition-all ${job.status === 'REJECTED'
-                      ? 'bg-red-500 text-white'
-                      : 'bg-red-100 text-red-600 hover:bg-red-200'
+                    ? 'bg-red-500 text-white'
+                    : 'bg-red-100 text-red-600 hover:bg-red-200'
                     }`}
                 >
                   ไม่อนุมัติ
@@ -382,8 +420,8 @@ export default function JobDetailPage() {
                 <button
                   onClick={() => handleUpdateStatus('PENDING')}
                   className={`px-6 py-3 rounded-lg font-medium transition-all ${job.status === 'PENDING'
-                      ? 'bg-yellow-500 text-white'
-                      : 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
+                    ? 'bg-yellow-500 text-white'
+                    : 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
                     }`}
                 >
                   รออนุมัติ
@@ -395,22 +433,67 @@ export default function JobDetailPage() {
             <div className="flex justify-end gap-4 pt-6 border-t border-gray-200">
               <button
                 onClick={handleCancel}
-                className="px-8 py-3 border border-gray-300 text-gray-700 text-sm font-medium rounded-full hover:bg-gray-50 transition-colors"
+                className="px-8 py-3 bg-[#6D6E70] text-white text-sm font-medium rounded-lg hover:bg-[#4A4B4C] transition-colors"
               >
                 ยกเลิก
               </button>
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="px-8 py-3 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-8 py-3 bg-[#F97316] hover:bg-[#EA580C] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
               </button>
             </div>
           </div>
         </div>
+
+
       </div>
-    </div>
+      {modalConfig.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 p-6 text-center">
+
+            {/* Icon */}
+            <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-full mb-4 bg-gray-50">
+              <div className={`p-3 rounded-full ${modalConfig.isDanger ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-[#F26522]'}`}>
+                <AlertTriangle size={32} strokeWidth={2.5} />
+              </div>
+            </div>
+
+            {/* Text */}
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              {modalConfig.title}
+            </h3>
+            <p className="text-gray-500 text-sm leading-relaxed mb-6">
+              {modalConfig.message}
+            </p>
+
+            {/* Buttons */}
+            <div className="flex gap-3 justify-center">
+              {modalConfig.showCancelButton && (
+                <button
+                  onClick={closeModal}
+                  className="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all"
+                >
+                  {modalConfig.showCancelButton ? 'ยกเลิก' : ''}
+                </button>
+              )}
+
+              <button
+                onClick={modalConfig.onConfirm}
+                className={`flex-1 px-4 py-2.5 text-sm font-semibold text-white rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${modalConfig.isDanger
+                  ? 'bg-red-600 hover:bg-red-700 shadow-red-500/20 hover:shadow-red-500/30'
+                  : 'bg-[#F26522] hover:bg-[#d65a1f] shadow-orange-500/20 hover:shadow-orange-500/30'
+                  }`}
+              >
+                ตกลง
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div >
   );
 }
 

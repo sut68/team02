@@ -1,14 +1,14 @@
 // Azure Blob Storage upload utility
 import { BlobServiceClient } from '@azure/storage-blob';
 
-const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING!;
-const AZURE_STORAGE_CONTAINER_NAME = process.env.AZURE_STORAGE_CONTAINER_NAME!;
-
-if (!AZURE_STORAGE_CONNECTION_STRING || !AZURE_STORAGE_CONTAINER_NAME) {
-  throw new Error('Azure Storage connection string or container name is not set in environment variables.');
-}
-
 export async function uploadToAzureBlob(fileBuffer: Buffer, blobName: string, mimetype?: string): Promise<string> {
+  const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING;
+  const AZURE_STORAGE_CONTAINER_NAME = process.env.AZURE_STORAGE_CONTAINER_NAME;
+
+  if (!AZURE_STORAGE_CONNECTION_STRING || !AZURE_STORAGE_CONTAINER_NAME) {
+    throw new Error('Azure Storage connection string or container name is not set in environment variables.');
+  }
+
   const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
   const containerClient = blobServiceClient.getContainerClient(AZURE_STORAGE_CONTAINER_NAME);
   const blockBlobClient = containerClient.getBlockBlobClient(blobName);
@@ -35,14 +35,14 @@ export async function deleteFromAzureBlob(fileUrlOrPath: string | null) {
     // เราต้องการแค่: budget/evidence/file.pdf
     let blobName = fileUrlOrPath;
     if (fileUrlOrPath.startsWith("http")) {
-       const urlParts = fileUrlOrPath.split(`/${CONTAINER_NAME}/`);
-       if (urlParts.length > 1) {
-          blobName = decodeURIComponent(urlParts[1]);
-       }
+      const urlParts = fileUrlOrPath.split(`/${CONTAINER_NAME}/`);
+      if (urlParts.length > 1) {
+        blobName = decodeURIComponent(urlParts[1]);
+      }
     }
 
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
-    
+
     // สั่งลบ
     await blockBlobClient.deleteIfExists();
     console.log(`Deleted blob: ${blobName}`);

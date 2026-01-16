@@ -1,10 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { uploadToAzureBlob } from '@/lib/azureBlob';
 import { validateFileUpload, logSecurityEvent, createSafeErrorResponse } from '@/app/lib/security';
+import { writeFile, mkdir } from 'fs/promises';
+import path from 'path';
+
+// Check if Azure is configured
+const isAzureConfigured = () => {
+  return !!(process.env.AZURE_STORAGE_CONNECTION_STRING && process.env.AZURE_STORAGE_CONTAINER_NAME);
+};
+
+// Local storage upload function
+async function uploadToLocalStorage(buffer: Buffer, filename: string): Promise<string> {
+  const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+
+  // Extract folder from filename if present
+  const parts = filename.split('/');
+  let targetDir = uploadDir;
+  let targetFilename = filename;
+
+  if (parts.length > 1) {
+    targetDir = path.join(uploadDir, ...parts.slice(0, -1));
+    targetFilename = parts[parts.length - 1];
+  }
+
+  // Create directory if it doesn't exist
+  await mkdir(targetDir, { recursive: true });
+
+  const filePath = path.join(targetDir, targetFilename);
+  await writeFile(filePath, buffer);
+
+  // Return public URL path
+  const urlPath = `/uploads/${filename}`;
+  return urlPath;
+}
 
 export async function POST(request: NextRequest) {
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
-  
+
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -35,8 +67,8 @@ export async function POST(request: NextRequest) {
       return createSafeErrorResponse(400, 'ขนาดไฟล์ต้องน้อยกว่า 5MB');
     }
 
-    // Sanitize folder name
-    const sanitizedFolder = folder.replace(/[^a-zA-Z0-9_-]/g, '');
+    // Sanitize folder name - allow slashes for subfolders
+    const sanitizedFolder = folder.replace(/[^a-zA-Z0-9_\-\/]/g, '').replace(/\/+/g, '/');
     if (!sanitizedFolder) {
       logSecurityEvent('UPLOAD_INVALID_FOLDER', 'Invalid folder name', ip);
       return createSafeErrorResponse(400, 'ชื่อโฟลเดอร์ไม่ถูกต้อง');
@@ -55,8 +87,23 @@ export async function POST(request: NextRequest) {
 
     const filename = `${sanitizedFolder}/${timestamp}.${fileExt}`;
 
-    // Upload to Azure Blob Storage
-    const url = await uploadToAzureBlob(buffer, filename, file.type);
+    let url: string;
+
+    // Try Azure first, fallback to local storage
+    if (isAzureConfigured()) {
+      try {
+        url = await uploadToAzureBlob(buffer, filename, file.type);
+        console.log('📤 File uploaded to Azure:', filename);
+      } catch (azureError) {
+        console.error('Azure upload failed, falling back to local storage:', azureError);
+        url = await uploadToLocalStorage(buffer, filename);
+        console.log('📤 File uploaded to local storage (Azure failed):', filename);
+      }
+    } else {
+      // Use local storage when Azure is not configured
+      url = await uploadToLocalStorage(buffer, filename);
+      console.log('📤 File uploaded to local storage (Azure not configured):', filename);
+    }
 
     logSecurityEvent('UPLOAD_SUCCESS', `File uploaded: ${filename}`, ip);
 
@@ -64,21 +111,21 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Upload error:', error);
     logSecurityEvent('UPLOAD_EXCEPTION', 'Unexpected error during upload', ip);
-    
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
-    if (error instanceof Error && process.env.NODE_ENV === 'development') {
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
-      });
-    }
 
-    return createSafeErrorResponse(
-      500,
-      'ไม่สามารถอัปโหลดไฟล์ได้',
-      process.env.NODE_ENV === 'development' ? errorMessage : undefined
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    console.error('Error details:', {
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
+    return NextResponse.json(
+      {
+        error: 'ไม่สามารถอัปโหลดไฟล์ได้',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      },
+      { status: 500 }
     );
   }
 }
+

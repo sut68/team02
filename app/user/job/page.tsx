@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Calendar, User, Plus, Edit, Trash2 } from 'lucide-react'; // 1. เพิ่ม Edit, Trash2
+import { Calendar, User, Plus, Edit, Trash2, Search, AlertTriangle, Clock } from 'lucide-react'; // 1. เพิ่ม Edit, Trash2, Search, AlertTriangle
 import Image from 'next/image';
 import Link from 'next/link'; // 2. เพิ่ม Link
 
@@ -43,6 +43,20 @@ export default function JobListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<{ id: number; email: string } | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  // Modal State
+  const [modalConfig, setModalConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => { },
+    isDanger: false,
+    showCancelButton: false,
+  });
+
+  const closeModal = () => {
+    setModalConfig(prev => ({ ...prev, isOpen: false }));
+  };
   const itemsPerPage = 3;
 
   useEffect(() => {
@@ -51,8 +65,18 @@ export default function JobListPage() {
   }, []);
 
   useEffect(() => {
-    setDisplayedJobs(jobs.slice(0, page * itemsPerPage));
-  }, [jobs, page]);
+    // Filter jobs by search term
+    const filteredJobs = jobs.filter((job) => {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        job.title?.toLowerCase().includes(searchLower) ||
+        job.namejob?.toLowerCase().includes(searchLower) ||
+        job.company?.companyname?.toLowerCase().includes(searchLower) ||
+        job.position?.toLowerCase().includes(searchLower)
+      );
+    });
+    setDisplayedJobs(filteredJobs.slice(0, page * itemsPerPage));
+  }, [jobs, page, searchTerm]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -121,10 +145,23 @@ export default function JobListPage() {
   };
 
   // ฟังก์ชันสำหรับการลบ
-  const handleDelete = async (jobId: number) => {
-    if (!confirm('ยืนยันที่จะลบประกาศนี้? การลบจะไม่สามารถกู้คืนได้')) return;
+  const handleDelete = (jobId: number) => {
+    setModalConfig({
+      isOpen: true,
+      title: 'ยืนยันการลบ',
+      message: 'คุณแน่ใจหรือไม่ที่จะลบประกาศงานนี้? การลบจะไม่สามารถกู้คืนได้',
+      isDanger: true,
+      showCancelButton: true,
+      onConfirm: () => executeDelete(jobId),
+    });
+  };
 
+  const executeDelete = async (jobId: number) => {
     try {
+      // Close confirm modal first (or keep loading state)
+      // For simplicity, close and show loading or new modal
+      closeModal();
+
       console.log('🗑️ Deleting job:', jobId);
 
       const response = await fetch(`/api/job/${jobId}`, {
@@ -136,42 +173,96 @@ export default function JobListPage() {
         throw new Error(error.error || 'เกิดข้อผิดพลาดในการลบ');
       }
 
-      const result = await response.json();
-      console.log('✅ Delete successful:', result);
+      setModalConfig({
+        isOpen: true,
+        title: 'สำเร็จ',
+        message: 'ลบประกาศงานสำเร็จ',
+        isDanger: false,
+        showCancelButton: false,
+        onConfirm: () => {
+          closeModal();
+          loadJobs(); // Reload checks
+        },
+      });
 
-      alert('ลบประกาศงานสำเร็จ');
-
-      // Reload jobs list
-      await loadJobs();
     } catch (error: any) {
       console.error('❌ Delete error:', error);
-      alert(error.message || 'ไม่สามารถลบประกาศงานได้');
+      setModalConfig({
+        isOpen: true,
+        title: 'เกิดข้อผิดพลาด',
+        message: error.message || 'ไม่สามารถลบประกาศงานได้',
+        isDanger: true,
+        showCancelButton: false,
+        onConfirm: closeModal,
+      });
     }
   }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('th-TH', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return 'เมื่อสักครู่';
+
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) return `${diffInMinutes} นาทีที่แล้ว`;
+
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours} ชั่วโมงที่แล้ว`;
+
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 30) return `${diffInDays} วันที่แล้ว`;
+
+    const diffInMonths = Math.floor(diffInDays / 30);
+    if (diffInMonths < 12) return `${diffInMonths} เดือนที่แล้ว`;
+
+    const diffInYears = Math.floor(diffInDays / 365);
+    return `${diffInYears} ปีที่แล้ว`;
   };
 
   return (
     <div className="min-h-screen bg-[#FFFFFF]">
       {/* Hero Banner */}
-      <div className="relative w-screen h-[600px]">
+      <div className="relative w-full h-[400px] bg-gray-800 mb-4">
         <Image
           src="/17.jpg"
           alt="Hero Banner"
           fill
           className="object-cover"
+          style={{ objectPosition: 'center 60%' }}
           priority
         />
       </div>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
+        {/* Header Section - หัวข้อและปุ่มสร้างประกาศงาน */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-semibold text-gray-800">ประกาศรับสมัครงาน</h1>
+            <p className="text-sm text-gray-500 mt-1">ค้นหาโอกาสงานที่เหมาะกับคุณ</p>
+          </div>
+          <button
+            onClick={handleCreateJob}
+            className="flex items-center gap-2 px-8 py-2 bg-[#F26522] text-white rounded-lg font-medium hover:bg-[#FB793C] transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Plus className="w-5 h-5" />
+            <span>สร้างประกาศ</span>
+          </button>
+        </div>
+
+        {/* Search Box */}
+        <div className="relative mb-8">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="ค้นหาตำแหน่งงาน, ชื่อบริษัท..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-lg text-sm focus:border-orange-400 focus:ring-2 focus:ring-orange-100 focus:outline-none transition-all hover:border-orange-300"
+          />
+        </div>
+
         {loading ? (
           <div className="text-center py-16">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-orange-500 border-t-transparent"></div>
@@ -203,7 +294,7 @@ export default function JobListPage() {
               <div
                 key={job.id}
                 // 3. เพิ่ม relative ที่นี่ เพื่อให้ปุ่ม Edit วางตำแหน่งได้
-                className="relative bg-[#F5F5F5] rounded-none shadow-sm hover:shadow-md transition-shadow p-6 group"
+                className="relative bg-white rounded-xl shadow-sm hover:shadow-lg transition-all duration-200 p-6 group border border-gray-100 hover:border-orange-200"
               >
 
                 {/* 4. ส่วนปุ่มจัดการ (แก้ไข/ลบ) มุมขวาบน - แสดงเฉพาะเจ้าของงาน */}
@@ -242,20 +333,16 @@ export default function JobListPage() {
                 })()}
 
                 <div className="flex flex-col md:flex-row gap-6">
-                  {/* Image Section */}
-                  <div className="w-full md:w-56 h-64 bg-[#FFFFFF] rounded-lg flex-shrink-0 overflow-hidden relative">
-                    {job.JobPosterPath && !job.JobPosterPath.includes('placehold.co') ? (
+                  {/* Image Section - แสดงเฉพาะเมื่อมีรูป */}
+                  {job.JobPosterPath && !job.JobPosterPath.includes('placehold.co') && (
+                    <div className="w-full md:w-56 h-64 bg-[#FFFFFF] rounded-lg flex-shrink-0 overflow-hidden relative">
                       <img
                         src={job.JobPosterPath}
                         alt={job.title || job.namejob}
                         className="w-full h-full object-cover"
                       />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-orange-400">
-                        <span className="text-white text-4xl font-bold">PDF Attachment</span>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   {/* Content Section */}
                   <div className="flex-1 flex flex-col justify-between py-2">
@@ -274,12 +361,12 @@ export default function JobListPage() {
                     <div className="flex items-center justify-between mt-6">
                       <div className="flex items-center gap-4 text-sm text-[#4B5563]">
                         <div className="flex items-center gap-1.5">
-                          <Calendar className="w-4 h-4" />
+                          <Clock className="w-4 h-4" />
                           <span>{formatDate(job.createdAt)}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <User className="w-4 h-4" />
-                          <span>{job.user?.fullName || 'ไม่ระบุผู้โพสต์'}</span>
+                          <span>โดย {job.user?.fullName || 'ไม่ระบุผู้โพสต์'}</span>
                         </div>
                       </div>
 
@@ -314,28 +401,38 @@ export default function JobListPage() {
         )}
       </main>
 
-      {/* Floating Action Button */}
-      <button
-        onClick={handleCreateJob}
-        className="fixed bottom-8 right-8 rounded-full z-50"
-      >
-        <div
-          className={
-            "relative flex items-center gap-2 px-6 py-3 rounded-full overflow-hidden " +
-            "backdrop-blur-md bg-white/10 border border-white/20 shadow-lg " +
-            "hover:scale-[1.03] transition-transform duration-200"
-          }
-          style={{
-            WebkitBackdropFilter: "blur(8px) saturate(120%)",
-            backdropFilter: "blur(8px) saturate(120%)",
-          }}
-        >
-          <span className="absolute inset-0 pointer-events-none bg-gradient-to-r from-white/6 via-white/12 to-white/4 mix-blend-screen" />
-          <span className="absolute -left-6 -top-6 w-20 h-20 rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(249,115,22,0.18),transparent_30%)] blur-xl opacity-80 pointer-events-none" />
-          <Plus className="w-5 h-5 text-[#F97316] z-10" />
-          <span className="text-[#F97316] font-medium z-10">สร้างประกาศ</span>
+      {modalConfig.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 p-6 text-center">
+            <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-full mb-4 bg-gray-50">
+              <div className={`p-3 rounded-full ${modalConfig.isDanger ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-[#F26522]'}`}>
+                <AlertTriangle size={32} strokeWidth={2.5} />
+              </div>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">{modalConfig.title}</h3>
+            <p className="text-gray-500 text-sm leading-relaxed mb-6">{modalConfig.message}</p>
+            <div className="flex gap-3 justify-center">
+              {modalConfig.showCancelButton && (
+                <button
+                  onClick={closeModal}
+                  className="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all"
+                >
+                  ยกเลิก
+                </button>
+              )}
+              <button
+                onClick={modalConfig.onConfirm}
+                className={`flex-1 px-4 py-2.5 text-sm font-semibold text-white rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${modalConfig.isDanger
+                  ? 'bg-red-600 hover:bg-red-700 shadow-red-500/20 hover:shadow-red-500/30'
+                  : 'bg-[#F26522] hover:bg-[#d65a1f] shadow-orange-500/20 hover:shadow-orange-500/30'
+                  }`}
+              >
+                ตกลง
+              </button>
+            </div>
+          </div>
         </div>
-      </button>
+      )}
     </div>
   );
 }

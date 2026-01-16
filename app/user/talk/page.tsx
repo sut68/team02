@@ -40,16 +40,16 @@ export default function SUTNewsUI() {
 
   return (
     // แก้ไข 1: bg-linear -> bg-gradient
-    <div className='min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50'>
+    <div className='min-h-screen bg-white'>
       {/* Hero Image */}
-      <div className='relative w-screen h-[700px]'>
+      <div className='relative w-full h-[400px] bg-gray-800 mb-4'>
         <img
-          src='/36.jpg'
+          src='/14.jpg'
           alt='Students studying'
           className='w-full h-full object-cover'
         />
         {/* แก้ไข 2: bg-linear -> bg-gradient */}
-        <div className='absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black/60'></div>
+        <div className='absolute inset-0 bg-gradient-to-b from-transparent via-black/10 to-black/30'></div>
       </div>
 
       {/* Content */}
@@ -61,13 +61,20 @@ export default function SUTNewsUI() {
               <div className='w-1 h-8 bg-orange-500 rounded-full'></div>
               {/* แก้ไข 3: bg-linear -> bg-gradient */}
               <h1 className='text-3xl font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent'>
-                Topic คอมเม้นยอะสุด
+                Topic คอมเม้นยอดฮิต
               </h1>
             </div>
             <div className='flex gap-3'>
               <button
+                onClick={() => router.push('/user/talk/create')}
+                className='flex items-center gap-2 px-4 py-2 bg-[#F26522] text-white rounded-lg font-medium hover:bg-[#FB793C] transition disabled:opacity-50 disabled:cursor-not-allowed text-sm'
+              >
+                <Plus className='w-4 h-4' />
+                <span>ตั้งกระทู้ใหม่</span>
+              </button>
+              <button
                 onClick={() => router.push('/user/talk/all')}
-                className='px-6 py-3 rounded-full border-2 border-orange-500 bg-white text-orange-500 font-medium hover:bg-orange-50 transition-all duration-200 hover:scale-105 shadow-sm'
+                className='px-4 py-2 rounded-lg border-2 border-orange-500 bg-white text-orange-500 font-medium hover:bg-orange-50 transition-all duration-200 shadow-sm text-sm'
               >
                 ดูทั้งหมด
               </button>
@@ -108,7 +115,7 @@ export default function SUTNewsUI() {
                           className='w-full h-full object-cover group-hover:scale-110 transition-transform duration-300'
                         />
                         <div className='absolute top-4 left-4 bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg'>
-                          TOP 
+                          TOP
                         </div>
                       </div>
                     )}
@@ -195,30 +202,7 @@ export default function SUTNewsUI() {
         </div>
       </div>
 
-      {/* Floating Action Button */}
-      <button
-        onClick={() => router.push('/user/talk/create')}
-        className='fixed bottom-8 right-8 rounded-full z-50 group'
-      >
-        <div
-          className={
-            'relative flex items-center gap-2 px-6 py-4 rounded-full overflow-hidden ' +
-            // แก้ไข 8: bg-linear -> bg-gradient
-            'backdrop-blur-md bg-gradient-to-r from-orange-500 to-orange-600 border-2 border-orange-400 shadow-2xl ' +
-            'hover:scale-110 transition-all duration-300 hover:shadow-orange-300/50'
-          }
-          style={{
-            WebkitBackdropFilter: 'blur(8px) saturate(120%)',
-            backdropFilter: 'blur(8px) saturate(120%)',
-          }}
-        >
-          <span className='absolute inset-0 pointer-events-none bg-gradient-to-r from-white/20 via-white/10 to-transparent mix-blend-overlay' />
-          <Plus className='w-6 h-6 text-white z-10 group-hover:rotate-90 transition-transform duration-300' />
-          <span className='text-white font-bold z-10 text-lg'>
-            ตั้งกระทู้ใหม่
-          </span>
-        </div>
-      </button>
+
     </div>
   );
 }
