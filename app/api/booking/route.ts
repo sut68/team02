@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       const payment = await tx.paymentRecord.create({
         data: {
           amount: price,
-          paymentStatus: BOOKING_API_CONFIG.PAYMENT_STATUS.CONFIRMED,
+          paymentStatus: BOOKING_API_CONFIG.PAYMENT_STATUS.PENDING,
         },
       });
 
