@@ -14,6 +14,7 @@ import {
 import { Input } from "../../components/ui/Input";
 import { InputIcon } from "../../components/ui/InputIcon";
 import { PrimaryButton,CancelButton } from "../../components/ui/Button";
+import SuccessModal from "../../components/ui/SuccessModal";
 
 type EventType = "REUNION" | "CAMP" | "SEMINAR" | "WORKSHOP" | "OTHER";
 type PriceMode = "SINGLE" | "BY_BATCH" | "FREE";
@@ -28,6 +29,7 @@ type BatchPriceRow = {
 
 export default function BookingFormPage() {
   // ----- state mapping กับ BookingForm -----
+  
   const [type, setType] = useState<EventType | "">("REUNION");
   const [batchNumber, setBatchNumber] = useState<number | "">("");
   const [totalSeats, setTotalSeats] = useState<number | "">("");
@@ -39,6 +41,9 @@ export default function BookingFormPage() {
   const [batchPrices, setBatchPrices] = useState<BatchPriceRow[]>([
     { id: 1, startBatch: "", endBatch: "", price: "" },
   ]);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [bookingFormId, setBookingFormId] = useState<number | null>(null);
+  const today = new Date().toISOString().split('T')[0];
   const router = useRouter();
   // ----- helper สำหรับ BY_BATCH -----
   const handleBatchChange = (
@@ -111,10 +116,11 @@ export default function BookingFormPage() {
       return;
     }
 
-    alert("🎉 ฟอร์มถูกสร้างแล้ว ไปสร้างโพสต์ต่อได้เลย!");
-
-    // ส่ง bookingFormId ไปหน้า Create Content
-    router.push(`/admin/news/create?bookingFormId=${data.bookingForm.id}`);
+    setBookingFormId(data.bookingForm.id);
+    setShowSuccessModal(true);
+    setTimeout(() => {
+      router.push(`/admin/news/create?bookingFormId=${data.bookingForm.id}`);
+    }, 1500);
 
   } catch (err) {
     console.error(err);
@@ -122,9 +128,20 @@ export default function BookingFormPage() {
   }
 };
 
+const handleModalClose = () => {
+    setShowSuccessModal(false);
+    if (bookingFormId) {
+      router.push(`/admin/news/create?bookingFormId=${bookingFormId}`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f7f7fb] flex items-start justify-center py-10 px-4">
+      <SuccessModal
+        show={showSuccessModal}
+        message="ฟอร์มถูกสร้างแล้ว ไปสร้างโพสต์ต่อได้เลย!"
+        onClose={handleModalClose}
+      />
       <Card className="w-full max-w-5xl p-8 rounded-3xl">
         <CardHeader className="mb-6 text-2xl font-bold text-gray-900">
           รายละเอียดการลงทะเบียน
@@ -204,6 +221,7 @@ export default function BookingFormPage() {
                 <InputIcon
                   type="date"
                   value={startDate}
+                  min={today}
                   onChange={(e) => setStartDate(e.target.value)}
                   className="w-full md:w-[260px]"
                 />
@@ -216,6 +234,7 @@ export default function BookingFormPage() {
                 <InputIcon
                   type="date"
                   value={endDate}
+                  min={today}
                   onChange={(e) => setEndDate(e.target.value)}
                   className="w-full md:w-[260px]"
                 />
