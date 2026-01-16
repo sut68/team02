@@ -6,8 +6,14 @@ import { prisma } from '@/app/lib/prisma';
 // GET /api/admin/souvenir/link-options
 export async function GET() {
   try {
+    // ดึงแค่ ACTIVITY ที่มีการลงทะเบียน (มี Booking)
     const allEvents = await prisma.content.findMany({
-      where: { categories: { in: ['ACTIVITY', 'NEWS'] } },
+      where: {
+        categories: 'ACTIVITY',
+        bookings: {
+          some: {}, // มี booking อย่างน้อย 1 รายการ
+        },
+      },
       select: {
         id: true,
         TitleName: true,

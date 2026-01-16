@@ -15,13 +15,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "กรุณากรอกอีเมล" }, { status: 400 });
     }
 
+    // Normalize email
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return NextResponse.json({ error: "กรุณากรอกที่อยู่อีเมลให้ถูกต้อง" }, { status: 400 });
+    }
+
     // ✅ กัน enumeration: ตอบ success เหมือนกันเสมอ
     const genericResponse = NextResponse.json({
       success: true,
       message: "หากอีเมลนี้มีในระบบ เราได้ส่งลิงก์รีเซ็ตรหัสผ่านไปแล้ว",
     });
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (!user) return genericResponse;
 
     // 1) สร้าง token (ส่งให้ user) และเก็บ hash ใน DB
@@ -32,7 +41,7 @@ export async function POST(request: NextRequest) {
     // 2) ทำความสะอาด token เก่า (optional แต่ดี)
     await prisma.passwordResetToken.deleteMany({
       where: {
-        email,
+        email: normalizedEmail,
         OR: [{ expiresAt: { lt: new Date() } }, { usedAt: { not: null } }],
       },
     });
@@ -40,7 +49,7 @@ export async function POST(request: NextRequest) {
     // 3) บันทึก token ใหม่
     await prisma.passwordResetToken.create({
       data: {
-        email,
+        email: normalizedEmail,
         tokenHash,
         expiresAt,
       },
@@ -50,7 +59,7 @@ export async function POST(request: NextRequest) {
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "https://www.sut-alumniconnect.me";
 
-    const resetUrl = `${baseUrl}/reset-password?token=${rawToken}&email=${encodeURIComponent(email)}`;
+    const resetUrl = `${baseUrl}/auth/reset-password?token=${rawToken}&email=${encodeURIComponent(normalizedEmail)}`;
 
     // 5) ทำ emailHtml ให้เป็น string ทั้งก้อน (ห้ามมี </div> ลอยๆ)
     const emailHtml = `

@@ -18,6 +18,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Normalize email
+    const normalizedEmail = email.trim().toLowerCase();
+
     // ตรวจสอบความยาวรหัสผ่าน
     if (newPassword.length < 6) {
       return NextResponse.json(
@@ -32,7 +35,7 @@ export async function POST(request: NextRequest) {
       where: { tokenHash },
     });
 
-    if (!resetRecord || resetRecord.email !== email) {
+    if (!resetRecord || resetRecord.email !== normalizedEmail) {
       return NextResponse.json(
         { error: 'ลิงก์รีเซ็ตรหัสผ่านไม่ถูกต้อง' },
         { status: 400 }
@@ -58,7 +61,7 @@ export async function POST(request: NextRequest) {
 
     // อัพเดทรหัสผ่าน (by email)
     await prisma.user.update({
-      where: { email },
+      where: { email: normalizedEmail },
       data: { password: hashedPassword },
     });
 
@@ -68,7 +71,7 @@ export async function POST(request: NextRequest) {
       data: { usedAt: new Date() },
     });
 
-    console.log(`✅ รีเซ็ตรหัสผ่านสำเร็จสำหรับ user: ${email}`);
+    console.log(`✅ รีเซ็ตรหัสผ่านสำเร็จสำหรับ user: ${normalizedEmail}`);
 
     return NextResponse.json({
       success: true,
