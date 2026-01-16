@@ -232,7 +232,14 @@ export default function JobListPage() {
           className="object-cover"
           style={{ objectPosition: 'center 60%' }}
           priority
-        />
+        />             
+        <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent" />
+        {/* Text Overlay */}
+        <div className="absolute inset-0 flex items-end justify-end p-8 md:p-16">
+          <h1 className="text-white text-3xl md:text-5xl font-bold text-right">
+            ประกาศรับสมัครงาน
+          </h1>
+        </div>
       </div>
 
       <main className="max-w-5xl mx-auto px-4 py-8">

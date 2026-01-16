@@ -1,6 +1,8 @@
 'use client';
 import React, { useState } from 'react';
 import { Upload, ChevronDown, AlertTriangle } from 'lucide-react';
+import { CancelButton } from '@/app/components/ui/Button';
+import SuccessModal from '@/app/components/ui/SuccessModal';
 
 export default function JobPostPage() {
   // 1. กำหนด State เริ่มต้น
@@ -54,6 +56,10 @@ export default function JobPostPage() {
   const closeModal = () => {
     setModalConfig(prev => ({ ...prev, isOpen: false }));
   };
+
+  // Success Modal State
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // ✅ เช็คความถูกต้องของฟอร์มแบบ Real-time
   const isFormValid =
@@ -175,17 +181,9 @@ export default function JobPostPage() {
         throw new Error(data.error || 'เกิดข้อผิดพลาดในการสร้างประกาศงาน');
       }
 
-      setModalConfig({
-        isOpen: true,
-        title: 'สำเร็จ',
-        message: 'บันทึกประกาศงานสำเร็จ!',
-        isDanger: false,
-        showCancelButton: false,
-        onConfirm: () => {
-          closeModal();
-          window.location.href = '/user/job';
-        },
-      });
+      // Show Success Modal
+      setSuccessMessage('บันทึกประกาศงานสำเร็จ!');
+      setShowSuccess(true);
 
     } catch (error) {
       const errorMessage =
@@ -565,12 +563,12 @@ export default function JobPostPage() {
 
             {/* Buttons */}
             <div className='flex justify-end gap-4 pt-6'>
-              <button
+              <CancelButton
                 onClick={handleCancel}
-                className='px-8 py-3 bg-[#6D6E70] text-white text-sm font-medium rounded-lg hover:bg-[#4A4B4C] transition-colors'
+                className='px-8 py-3 text-sm'
               >
                 ยกเลิก
-              </button>
+              </CancelButton>
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting || !isFormValid}
@@ -615,6 +613,16 @@ export default function JobPostPage() {
           </div>
         </div>
       )}
+
+      {/* Success Modal */}
+      <SuccessModal
+        show={showSuccess}
+        message={successMessage}
+        onClose={() => {
+          setShowSuccess(false);
+          window.location.href = '/user/job';
+        }}
+      />
     </div>
   );
 }

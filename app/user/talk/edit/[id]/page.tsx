@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, Upload, AlertTriangle } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
+import { CancelButton } from '@/app/components/ui/Button';
+import SuccessModal from '@/app/components/ui/SuccessModal';
 
 export default function EditTopicForm() {
   const router = useRouter();
@@ -30,6 +32,10 @@ export default function EditTopicForm() {
   const closeModal = () => {
     setModalConfig(prev => ({ ...prev, isOpen: false }));
   };
+
+  // Success Modal State
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const [categories, setCategories] = useState<
     Array<{ id: number; categoryname: string }>
   >([]);
@@ -261,18 +267,9 @@ export default function EditTopicForm() {
         throw new Error(errorMessage);
       }
 
-      // Success - navigate to topic detail page
-      setModalConfig({
-        isOpen: true,
-        title: 'สำเร็จ',
-        message: 'แก้ไขกระทู้สำเร็จ',
-        isDanger: false,
-        showCancelButton: false,
-        onConfirm: () => {
-          closeModal();
-          router.push(`/user/talk/detail/${params.id}`);
-        },
-      });
+      // Success - show SuccessModal
+      setSuccessMessage('แก้ไขกระทู้สำเร็จ');
+      setShowSuccess(true);
     } catch (err: any) {
       console.error('Error updating topic:', err);
       setModalConfig({
@@ -436,14 +433,14 @@ export default function EditTopicForm() {
 
             {/* Buttons */}
             <div className='flex justify-end gap-4 pt-6'>
-              <button
+              <CancelButton
                 type='button'
                 onClick={handleCancel}
                 disabled={loading}
-                className='px-8 py-3 bg-[#6D6E70] text-white font-medium rounded-lg hover:bg-[#4A4B4C] transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                className='px-8 py-3'
               >
                 ยกเลิก
-              </button>
+              </CancelButton>
               <button
                 type='button'
                 onClick={(e) => {
@@ -492,6 +489,16 @@ export default function EditTopicForm() {
           </div>
         </div>
       )}
+
+      {/* Success Modal */}
+      <SuccessModal
+        show={showSuccess}
+        message={successMessage}
+        onClose={() => {
+          setShowSuccess(false);
+          router.push(`/user/talk/detail/${params.id}`);
+        }}
+      />
     </div>
   );
 }

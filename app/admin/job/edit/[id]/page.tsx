@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import ConfirmModal from '@/app/components/ui/ConfirmModal';
+import { CancelButton } from '@/app/components/ui/Button';
+import SuccessModal from '@/app/components/ui/SuccessModal';
 
 interface Job {
   id: number;
@@ -58,6 +60,10 @@ export default function JobDetailPage() {
     setModalConfig(prev => ({ ...prev, isOpen: false }));
   };
 
+  // Success Modal State
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
   useEffect(() => {
     if (jobId) {
       loadJob();
@@ -110,17 +116,9 @@ export default function JobDetailPage() {
         throw new Error(data.error || 'เกิดข้อผิดพลาดในการบันทึก');
       }
 
-      setModalConfig({
-        isOpen: true,
-        title: 'สำเร็จ',
-        message: 'บันทึกข้อมูลสำเร็จ',
-        isDanger: false,
-        showCancelButton: false, // Alert style
-        onConfirm: () => {
-          closeModal();
-          router.push('/admin/job');
-        },
-      });
+      // Show Success Modal
+      setSuccessMessage('บันทึกข้อมูลสำเร็จ');
+      setShowSuccess(true);
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการบันทึก';
@@ -431,12 +429,12 @@ export default function JobDetailPage() {
 
             {/* ปุ่มบันทึกและยกเลิก */}
             <div className="flex justify-end gap-4 pt-6 border-t border-gray-200">
-              <button
+              <CancelButton
                 onClick={handleCancel}
-                className="px-8 py-3 bg-[#6D6E70] text-white text-sm font-medium rounded-lg hover:bg-[#4A4B4C] transition-colors"
+                className='px-8 py-3 text-sm'
               >
                 ยกเลิก
-              </button>
+              </CancelButton>
               <button
                 onClick={handleSave}
                 disabled={isSaving}
@@ -493,6 +491,16 @@ export default function JobDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Success Modal */}
+      <SuccessModal
+        show={showSuccess}
+        message={successMessage}
+        onClose={() => {
+          setShowSuccess(false);
+          router.push('/admin/job');
+        }}
+      />
     </div >
   );
 }
