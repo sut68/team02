@@ -15,13 +15,26 @@ export default function ForgotPasswordClient() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Email validation
+    if (!email.trim()) {
+      setError('กรุณากรอกที่อยู่อีเมล');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('กรุณากรอกที่อยู่อีเมลให้ถูกต้อง');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
 
       const data = await response.json();
@@ -32,6 +45,7 @@ export default function ForgotPasswordClient() {
         setError(data.error || 'เกิดข้อผิดพลาด');
       }
     } catch (error) {
+      console.error('Forgot password error:', error);
       setError('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
     } finally {
       setLoading(false);
@@ -65,7 +79,7 @@ export default function ForgotPasswordClient() {
                   <strong>กรุณาตรวจสอบ:</strong>
                   <br />• กล่องจดหมาย Inbox
                   <br />• โฟลเดอร์ Spam/Junk
-                  <br />• ลิงก์จะหมดอายุใน 1 ชั่วโมง
+                  <br />• ลิงก์จะหมดอายุใน 30 นาที
                 </p>
               </div>
               <Link
@@ -114,8 +128,10 @@ export default function ForgotPasswordClient() {
                     id="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="justin.alumni@gmail.com"
-                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="alumni.engi@gmail.com"
+                    required
+                    disabled={loading}
+                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                   />
                 </div>
               </div>
