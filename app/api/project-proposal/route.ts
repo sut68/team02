@@ -1,6 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import { transporter, mailOptions } from '@/app/lib/nodemailer';
+import { ProjectStatus, ProjectManager } from '@/app/types/budget_approval';
+
+// ✅ ฟังก์ชันช่วยตรวจสอบงบประมาณ (Helper Function)
+async function validateBudgetAvailability(roundId: number, requestingAmount: number): Promise<boolean> {
+    const round = await prisma.budgetRound.findUnique({
+        where: { id: roundId },
+        include: {
+            budgetDonations: { where: { status: 'SUCCESS' } },
+            proposals: { 
+                where: { status: 'APPROVED' }, // นับเฉพาะที่อนุมัติไปแล้ว
+                select: { requestedAmount: true } 
+            }
+        }
+    });
+
+    if (!round) return false;
+
+    // 1. เงินกองกลาง (Total Budget) + เงินบริจาค (Donations)
+    const totalDonations = round.budgetDonations.reduce((sum, d) => sum + d.amount, 0);
+    const totalFund = (round.totalBudget || 0) + totalDonations;
+
+    // 2. เงินที่ถูกใช้ไปแล้ว (Approved Projects)
+    const usedBudget = round.proposals.reduce((sum, p) => sum + (p.requestedAmount || 0), 0);
+
+    // 3. เงินคงเหลือ
+    const remainingBudget = totalFund - usedBudget;
+
+    // 4. ตรวจสอบว่าพอจ่ายให้โครงการนี้ไหม
+    return remainingBudget >= requestingAmount;
+}
 
 // GET: ดึงข้อมูล
 export async function GET(request: NextRequest) {
@@ -20,6 +50,10 @@ export async function GET(request: NextRequest) {
       if (!proposal) return NextResponse.json({ error: 'ไม่พบข้อมูลโครงการ' }, { status: 404 });
       return NextResponse.json({ proposal }, { status: 200 });
     }
+
+    const totalVoters = await prisma.user.count({
+        where: { role: { not: 'ADMIN' } },
+    });
 
     const where: any = { budgetRoundId: { not: null } };
     
@@ -48,7 +82,7 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    return NextResponse.json({ proposals }, { status: 200 });
+    return NextResponse.json({ proposals, totalVoters }, { status: 200 });
 
   } catch (error) {
     console.error('Error:', error);
@@ -142,7 +176,7 @@ export async function POST(request: NextRequest) {
           }
       }
 
-      // ✅ 9. ตรวจสอบข้อมูลผู้รับผิดชอบโครงการ (Manager Validation)
+      // 9. ตรวจสอบข้อมูลผู้รับผิดชอบโครงการ (Manager Validation)
       if (manager && !manager.id) {
           const managerFirstName = manager.firstName?.trim();
           const managerLastName = manager.lastName?.trim();
@@ -236,47 +270,51 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
     
+    // Logic การกู้คืน (Restore)
     if (body.restore === true && body.id) {
         const restoredProposal = await prisma.projectProposal.update({
             where: { id: Number(body.id) },
             data: { 
                 deletedAt: null,
-                status: 'PENDING'  // รีเซ็ตสถานะเป็น รอดำเนินการ (PENDING)
+                status: 'PENDING' 
             },
         });
         return NextResponse.json({ message: 'กู้คืนสำเร็จ', proposal: restoredProposal }, { status: 200 });
     }
 
     const { id, status, manager, ...data } = body;
+    
     if (!id) return NextResponse.json({ error: 'ไม่พบ ID' }, { status: 400 });
+
+    // [1] ดึงข้อมูลเดิมเพื่อใช้ validate
+    const existingProposal = await prisma.projectProposal.findUnique({
+        where: { id: Number(id) }
+    });
+
+    if (!existingProposal) {
+        return NextResponse.json({ error: 'ไม่พบข้อมูลโครงการ' }, { status: 404 });
+    }
 
     // --- 1. Validation ชื่อโครงการ ---
     if (data.projectName !== undefined) {
-       data.projectName = data.projectName.trim(); // Trim ช่องว่างหน้าหลัง
+       data.projectName = (data.projectName as string).trim();
        const cleanName = data.projectName;
 
-       if (!cleanName) {
-           return NextResponse.json({ error: 'ชื่อโครงการห้ามว่าง' }, { status: 400 });
-       }
-       if (cleanName.length < 3) {
-           return NextResponse.json({ error: 'ชื่อโครงการสั้นเกินไป (ต้องมีอย่างน้อย 3 ตัวอักษร)' }, { status: 400 });
-       }
-       if (cleanName.length > 200) {
-           return NextResponse.json({ error: 'ชื่อโครงการยาวเกินไป (ไม่เกิน 200 ตัวอักษร)' }, { status: 400 });
-       }
+       if (!cleanName) return NextResponse.json({ error: 'ชื่อโครงการห้ามว่าง' }, { status: 400 });
+       if (cleanName.length < 3) return NextResponse.json({ error: 'ชื่อโครงการสั้นเกินไป (ต้องมีอย่างน้อย 3 ตัวอักษร)' }, { status: 400 });
+       if (cleanName.length > 200) return NextResponse.json({ error: 'ชื่อโครงการยาวเกินไป (ไม่เกิน 200 ตัวอักษร)' }, { status: 400 });
     }
 
     // --- 2. Validation คำอธิบาย ---
-    if (data.description && data.description.length > 500) {
+    if (data.description && (data.description as string).length > 500) {
        return NextResponse.json({ error: 'รายละเอียดโครงการต้องไม่เกิน 500 ตัวอักษร' }, { status: 400 });
     }
 
     // --- 3. Validation งบประมาณ ---
     if (data.requestedAmount !== undefined && data.requestedAmount !== null) {
       const amount = Number(data.requestedAmount);
-      if (isNaN(amount) || amount <= 0) {
-        return NextResponse.json({ error: 'งบประมาณที่ขอต้องมากกว่า 0' }, { status: 400 });
-      }
+      if (isNaN(amount) || amount <= 0) return NextResponse.json({ error: 'งบประมาณที่ขอต้องมากกว่า 0' }, { status: 400 });
+      // ตรวจทศนิยม
       const amountStr = amount.toString();
       if (amountStr.includes('.') && amountStr.split('.')[1].length > 2) {
          return NextResponse.json({ error: 'งบประมาณต้องมีทศนิยมไม่เกิน 2 ตำแหน่ง' }, { status: 400 });
@@ -284,34 +322,30 @@ export async function PUT(request: NextRequest) {
     }
 
     // --- 4. Validation วันที่ ---
-    let newStartDate: Date | undefined;
-    let newEndDate: Date | undefined;
+    const finalStartDateVal = data.projectStartDate ? new Date(data.projectStartDate as string) : existingProposal.projectStartDate;
+    const finalEndDateVal = data.projectEndDate ? new Date(data.projectEndDate as string) : existingProposal.projectEndDate;
 
     if (data.projectStartDate) {
-        newStartDate = new Date(data.projectStartDate);
-        if (isNaN(newStartDate.getTime())) {
+        if (isNaN(new Date(data.projectStartDate as string).getTime())) {
              return NextResponse.json({ error: 'รูปแบบวันเริ่มต้นไม่ถูกต้อง' }, { status: 400 });
         }
     }
     if (data.projectEndDate) {
-        newEndDate = new Date(data.projectEndDate);
-        if (isNaN(newEndDate.getTime())) {
+        if (isNaN(new Date(data.projectEndDate as string).getTime())) {
              return NextResponse.json({ error: 'รูปแบบวันสิ้นสุดไม่ถูกต้อง' }, { status: 400 });
         }
     }
-    // เช็คกรณีวันจบมาก่อนวันเริ่ม (Logic นี้จะเช็คเมื่อมีข้อมูลวันที่ส่งมา)
-    if (newStartDate && newEndDate) {
-        if (newEndDate < newStartDate) {
+    
+    if (finalStartDateVal && finalEndDateVal) {
+        if (finalEndDateVal < finalStartDateVal) {
             return NextResponse.json({ error: 'วันสิ้นสุดโครงการต้องไม่อยู่ก่อนวันเริ่มต้น' }, { status: 400 });
         }
     } 
-    // หมายเหตุ: กรณีแก้แค่วันเดียว (เช่นแก้แต่วันจบ) แล้ววันเริ่มใช้อันเดิมใน DB ปกติจะต้อง query ของเก่ามาเทียบ
-    // แต่ในที่นี้เราจะเช็คเฉพาะคู่ที่ส่งมาใหม่ หรือถ้า Frontend ส่งมาครบทั้งคู่เสมอ
 
     // --- 5. Validation รูปภาพ ---
     if (data.coverFilePath) {
        const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
-       const lowerCasePath = data.coverFilePath.toLowerCase();
+       const lowerCasePath = (data.coverFilePath as string).toLowerCase();
        const isValidImage = validExtensions.some(ext => lowerCasePath.endsWith(ext));
 
        if (!isValidImage) {
@@ -319,14 +353,30 @@ export async function PUT(request: NextRequest) {
        }
     }
 
-    // --- 6. Validation ผู้จัดการ (Manager) ---
-    // ตรวจสอบเฉพาะเมื่อมีการส่งข้อมูล Manager มาแก้ไข
-    if (manager) {
-         const managerFirstName = manager.firstName?.trim();
-         const managerLastName = manager.lastName?.trim();
-         const managerEmail = manager.email?.trim();
+    // ✅ เพิ่ม: Business Logic ตรวจสอบงบประมาณก่อนอนุมัติ
+    if (status === 'APPROVED' && existingProposal.status !== 'APPROVED') {
+        // ใช้ยอดเงินใหม่ถ้ามีการส่งมาแก้ไข, ถ้าไม่มีให้ใช้ยอดเดิม
+        const amountToCheck = data.requestedAmount ? Number(data.requestedAmount) : (existingProposal.requestedAmount || 0);
+        
+        if (existingProposal.budgetRoundId) {
+            const isBudgetSufficient = await validateBudgetAvailability(existingProposal.budgetRoundId, amountToCheck);
+            
+            if (!isBudgetSufficient) {
+                return NextResponse.json({ 
+                    error: 'ไม่สามารถอนุมัติได้: งบประมาณคงเหลือในรอบนี้ไม่เพียงพอสำหรับโครงการนี้' 
+                }, { status: 400 });
+            }
+        }
+    }
 
-         // ถ้าส่งชื่อมาแก้ไข ต้องไม่เป็นค่าว่าง
+    // --- 6. Validation ผู้จัดการ (Manager) ---
+    const mgr = manager as Partial<ProjectManager> | undefined;
+
+    if (mgr) {
+         const managerFirstName = mgr.firstName?.trim();
+         const managerLastName = mgr.lastName?.trim();
+         const managerEmail = mgr.email?.trim();
+
          if (managerFirstName !== undefined && !managerFirstName) {
              return NextResponse.json({ error: 'ชื่อผู้รับผิดชอบโครงการห้ามว่าง' }, { status: 400 });
          }
@@ -334,31 +384,29 @@ export async function PUT(request: NextRequest) {
              return NextResponse.json({ error: 'นามสกุลผู้รับผิดชอบโครงการห้ามว่าง' }, { status: 400 });
          }
          
-         // ถ้าส่งอีเมลมาแก้ไข ต้องถูก format
          if (managerEmail) {
              const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
              if (!emailRegex.test(managerEmail)) {
                   return NextResponse.json({ error: 'รูปแบบอีเมลผู้รับผิดชอบโครงการไม่ถูกต้อง' }, { status: 400 });
              }
          }
-         // ถ้าส่งเบอร์โทรมาแก้ไข ต้อง 10 หลัก
-         if (manager.phoneNumber) {
-              if (manager.phoneNumber.length !== 10) {
+         if (mgr.phoneNumber) {
+              if (mgr.phoneNumber.length !== 10) {
                  return NextResponse.json({ error: 'เบอร์โทรศัพท์มือถือต้องมี 10 หลัก' }, { status: 400 });
               }
          }
     }
 
     let managerUpdate = undefined;
-    if (manager && manager.id) {
+    if (mgr && mgr.id) {
         managerUpdate = {
             update: {
-                firstName: manager.firstName,
-                lastName: manager.lastName,
-                department: manager.department,
-                position: manager.position,
-                phoneNumber: manager.phoneNumber,
-                email: manager.email
+                firstName: mgr.firstName,
+                lastName: mgr.lastName,
+                department: mgr.department,
+                position: mgr.position,
+                phoneNumber: mgr.phoneNumber,
+                email: mgr.email
             }
         };
     }
@@ -367,15 +415,15 @@ export async function PUT(request: NextRequest) {
     const updatedProposal = await prisma.projectProposal.update({
       where: { id: Number(id) },
       data: {
-        projectName: data.projectName, 
-        objective: data.objective,
-        description: data.description,
+        projectName: data.projectName as string, 
+        objective: data.objective as string,
+        description: data.description as string,
         requestedAmount: data.requestedAmount ? Number(data.requestedAmount) : undefined, 
-        responsibilityUnit: data.responsibilityUnit,
-        coverFilePath: data.coverFilePath,
-        projectStartDate: data.projectStartDate ? new Date(data.projectStartDate) : undefined,
-        projectEndDate: data.projectEndDate ? new Date(data.projectEndDate) : undefined,
-        status: status, 
+        responsibilityUnit: data.responsibilityUnit as string,
+        coverFilePath: data.coverFilePath as string,
+        projectStartDate: data.projectStartDate ? new Date(data.projectStartDate as string) : undefined,
+        projectEndDate: data.projectEndDate ? new Date(data.projectEndDate as string) : undefined,
+        status: status as ProjectStatus,
         ...(managerUpdate && { manager: managerUpdate })
       },
       include: { budgetRound: true }
@@ -414,7 +462,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ message: 'แก้ไขสำเร็จ', proposal: updatedProposal }, { status: 200 });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error:', error);
     return NextResponse.json({ error: 'แก้ไขไม่สำเร็จ' }, { status: 500 });
   }

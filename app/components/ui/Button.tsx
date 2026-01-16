@@ -29,7 +29,7 @@ export function CancelButton  ({
   return (
     <button
       // ✅ แก้ไข: นำ className ที่รับมาจากภายนอกมาต่อท้าย
-      className={`${base} px-8 py-1 bg-[#6D6E70] text-white hover:bg-[#4A4B4C] ${className}`}
+      className={`${base} px-8 py-1 bg-white border border-gray-300 text-black hover:bg-gray-200 ${className}`}
       {...props}
     >
       {children}

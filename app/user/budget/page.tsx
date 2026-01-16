@@ -56,15 +56,22 @@ const renderCustomizedLabel = (props: PieLabelRenderProps) => {
   );
 };
 
+// Helper: คำนวณปีงบประมาณปัจจุบัน (ตาม Logic หน้า Admin)
+const getCurrentFiscalYear = () => {
+  const d = new Date();
+  // ถ้าเดือน >= 9 (ตุลาคม, index 9) ให้บวกปีเพิ่ม 1, แล้วแปลงเป็น พ.ศ. (+543)
+  return String((d.getMonth() >= 9 ? d.getFullYear() + 1 : d.getFullYear()) + 543);
+};
+
 // Page Component
 export default function BudgetReportPage() {
-  const currentThaiYear = (new Date().getFullYear() + 543).toString();
+  const currentThaiYear = getCurrentFiscalYear(); // แก้ไข: ใช้ function คำนวณปีงบประมาณ
   const [years, setYears] = useState<string[]>([]);
   const [year, setYear] = useState(currentThaiYear);
   const [loading, setLoading] = useState(true);
   const [budgetRounds, setBudgetRounds] = useState<BudgetRound[]>([]);
-  const [totalBudget, setTotalBudget] = useState<number>(0);
   
+  // State สำหรับเก็บข้อมูล Report และ Chart
   const [reports, setReports] = useState<(BudgetReport & { imageSrc?: string })[]>([]);
   const [chartData, setChartData] = useState<ChartDataItem[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -87,8 +94,7 @@ export default function BudgetReportPage() {
             ));
         }
 
-        // --- แก้ไข: ลบ logic การเพิ่ม nextYear ออก ---
-        // ตรวจสอบแค่ currentThaiYear ว่ามีหรือยัง ถ้าไม่มีให้เพิ่มเข้าไป
+        // ตรวจสอบว่ามีปีปัจจุบันหรือไม่ ถ้าไม่มีให้เพิ่มเข้าไป
         if (!availableYears.includes(currentThaiYear)) {
             availableYears.push(currentThaiYear);
         }
@@ -116,9 +122,9 @@ export default function BudgetReportPage() {
       }
     };
     fetchYears();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 2. Fetch Report Data
+  // 2. Fetch Report Data & Calculate Stats
   useEffect(() => {
     if (!year) return;
 
@@ -127,9 +133,10 @@ export default function BudgetReportPage() {
         setLoading(true);
         setError(null);
 
-        const currentRound = budgetRounds.find(r => r.fiscalYear === year);
-        const budgetLimit = currentRound?.totalBudget || 0; 
-        setTotalBudget(budgetLimit);
+        // แก้ไข Logic: รวมงบประมาณทุกรอบในปีนั้น (Sum all rounds for the selected year)
+        const budgetLimit = budgetRounds
+            .filter(r => r.fiscalYear === year)
+            .reduce((sum, r) => sum + (r.totalBudget || 0), 0);
 
         const res = await fetch(`/api/budget-report?year=${year}&status=APPROVED`, { cache: "no-store" });
         
@@ -140,7 +147,9 @@ export default function BudgetReportPage() {
         }
         setReports(fetchedReports);
 
+        // คำนวณยอดใช้จ่ายจริงรวมจากรายงานที่อนุมัติแล้ว
         const totalUsed = fetchedReports.reduce((sum, r) => sum + (r.totalActualExpense || 0), 0);
+        
         let remaining = budgetLimit - totalUsed;
         if (remaining < 0) remaining = 0;
 
@@ -157,6 +166,7 @@ export default function BudgetReportPage() {
             }
         ];
 
+        // ถ้าไม่มีงบและไม่มีการใช้จ่าย ไม่ต้องแสดงกราฟ
         if (budgetLimit === 0 && totalUsed === 0) {
             setChartData([]);
         } else {
@@ -188,10 +198,9 @@ export default function BudgetReportPage() {
       <section className="relative h-[400px] w-full bg-gray-800 mb-4">
         <div className="absolute inset-0">
              <Image
-                src="/budget/covers/08.jpg"
+                src="/budget/covers/29.jpg"
                 alt="Budget cover"
                 fill
-                objectFit="cover"
                 priority
                 className="object-cover"
                 onError={(e) => {
@@ -223,7 +232,7 @@ export default function BudgetReportPage() {
               value={year}
               onChange={(e) => setYear(e.target.value)}
               disabled={yearOptions.length === 0}
-              className="appearance-none w-[140px] h-9 pl-4 pr-10 rounded-full border border-slate-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-slate-100"
+              className="appearance-none w-[140px] h-9 pl-4 pr-10 rounded-full border border-slate-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-slate-100 cursor-pointer"
             >
               {yearOptions.map((y) => (
                 <option key={y} value={y}>พ.ศ. {y}</option>
