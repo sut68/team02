@@ -55,8 +55,8 @@ export default function SuccessModal({
         isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
       }`}>
         <div className="mb-4 flex justify-center">
-          <div className="bg-green-100 rounded-full p-3 ring-8 ring-green-50 animate-pulse">
-            <CheckCircle className="w-12 h-12 text-green-600" strokeWidth={2.5} />
+          <div className="bg-orange-100 rounded-full p-5 animate-pulse">
+            <CheckCircle className="w-12 h-12 text-orange-600" strokeWidth={2.5} />
           </div>
         </div>
         
@@ -72,7 +72,7 @@ export default function SuccessModal({
         {autoClose && (
             <div className="mt-6 h-1 w-full bg-gray-100 rounded-full overflow-hidden">
                 <div 
-                    className="h-full bg-green-500 rounded-full transition-all ease-linear" 
+                    className="h-full bg-orange-500 rounded-full transition-all ease-linear" 
                     style={{ 
                         width: isVisible ? '100%' : '0%', 
                         transitionDuration: `${duration}ms` 

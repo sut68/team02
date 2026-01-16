@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Layers, CheckCircle, Clock, Search, ChevronDown, PlusCircle, Landmark, Star, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/app/components/ui/Card';
 import Link from 'next/link';
+import ConfirmModal from '@/app/components/ui/ConfirmModal';
 
 type ProjectStatus = 'OPEN' | 'CLOSED' | 'COMPLETED' ;
 type FilterStatus = 'all' | 'open' | 'closed' | 'completed' | 'central';
@@ -49,6 +50,12 @@ export default function ProjectManagementUI() {
   const [activeStatus, setActiveStatus] = useState<FilterStatus>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean;
+    projectId: number | null;
+    newStatus: ProjectStatus | null;
+    isLoading: boolean;
+  }>({ open: false, projectId: null, newStatus: null, isLoading: false });
 
   // --- Fetch Data ---
   useEffect(() => {
@@ -113,37 +120,45 @@ export default function ProjectManagementUI() {
   // --- Action Handlers ---
   const handleStatusUpdate = async (projectId: number, newStatus: ProjectStatus) => {
     const statusTextMap: Record<ProjectStatus, string> = {
-        'OPEN': 'เปิดรับ',
-        'CLOSED': 'ปิดรับ',
-        'COMPLETED': 'สำเร็จ'
+      'OPEN': 'เปิดรับ',
+      'CLOSED': 'ปิดรับ',
+      'COMPLETED': 'สำเร็จ'
     };
-    const statusText = statusTextMap[newStatus];
-    const confirmed = confirm(`คุณต้องการเปลี่ยนสถานะโครงการ ID ${projectId} เป็น "${statusText}" หรือไม่?`);
+    setConfirmModal({
+      open: true,
+      projectId,
+      newStatus,
+      isLoading: false
+    });
+  };
 
-    if (confirmed) {
-      try {
-        const response = await fetch(`/api/donation-project`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ id: projectId, status: newStatus }),
-        });
+  const handleConfirmStatusUpdate = async () => {
+    if (!confirmModal.projectId || !confirmModal.newStatus) return;
+    setConfirmModal((prev) => ({ ...prev, isLoading: true }));
+    try {
+      const response = await fetch(`/api/donation-project`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id: confirmModal.projectId, status: confirmModal.newStatus }),
+      });
 
-        if (!response.ok) {
-          const err = await response.json();
-          throw new Error(err.error || "เกิดข้อผิดพลาดในการอัปเดตสถานะ");
-        }
-
-        setProjects(prev =>
-          prev.map(p =>
-            p.id === projectId ? { ...p, status: newStatus } : p
-          )
-        );
-      } catch (error) {
-        console.error('Update failed', error);
-        alert('❌ การอัปเดตสถานะล้มเหลว กรุณาตรวจสอบการเชื่อมต่อ');
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || "เกิดข้อผิดพลาดในการอัปเดตสถานะ");
       }
+
+      setProjects(prev =>
+        prev.map(p =>
+          p.id === confirmModal.projectId ? { ...p, status: confirmModal.newStatus! } : p
+        )
+      );
+      setConfirmModal({ open: false, projectId: null, newStatus: null, isLoading: false });
+    } catch (error) {
+      console.error('Update failed', error);
+      alert('❌ การอัปเดตสถานะล้มเหลว กรุณาตรวจสอบการเชื่อมต่อ');
+      setConfirmModal({ open: false, projectId: null, newStatus: null, isLoading: false });
     }
   };
 
@@ -272,12 +287,9 @@ export default function ProjectManagementUI() {
                     filteredProjects.map((project) => (
                       <tr key={project.id} className="hover:bg-gray-50 transition">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          <Link href={`/admin/donation/${project.id}/edit`} className="text-indigo-600 hover:text-indigo-900 hover:underline flex items-center">
+                          <Link href={`/admin/donation/${project.id}/edit`} className="text-gray-600 hover:text-orange-600 hover:underline flex items-center">
                             {project.projectType === 'CENTRAL' && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mr-2">
-                                    <Star className="w-3 h-3 mr-1 fill-current" />
-                                    กองทุนกลาง
-                                </span>
+                              <Star className="w-4 h-4 text-yellow-500 mr-1" />
                             )}
                             {project.title}
                           </Link>
@@ -322,6 +334,27 @@ export default function ProjectManagementUI() {
           </CardContent>
         </Card>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmModal.open}
+        onClose={() => !confirmModal.isLoading && setConfirmModal({ open: false, projectId: null, newStatus: null, isLoading: false })}
+        onConfirm={handleConfirmStatusUpdate}
+        title="ยืนยันการเปลี่ยนสถานะ"
+        message={
+          confirmModal.newStatus
+            ? `คุณต้องการเปลี่ยนสถานะโครงการเป็น "${
+                confirmModal.newStatus === 'OPEN'
+                  ? 'เปิดรับ'
+                  : confirmModal.newStatus === 'CLOSED'
+                  ? 'ปิดรับ'
+                  : 'สำเร็จ'
+              }" หรือไม่?`
+            : ''
+        }
+        confirmLabel="ยืนยัน"
+        isDanger={confirmModal.newStatus === 'CLOSED'}
+        isLoading={confirmModal.isLoading}
+      />
     </div>
   );
 }

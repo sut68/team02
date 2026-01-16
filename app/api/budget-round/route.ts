@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 import jwt from 'jsonwebtoken';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+// --- Config Day.js ---
+dayjs.extend(utc);
+dayjs.extend(timezone);
+const TIMEZONE = 'Asia/Bangkok';
 
 // ใช้ Secret ตัวเดียวกับ Login
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
@@ -16,15 +24,17 @@ function getUserFromToken(req: NextRequest) {
   }
 }
 
-// Logic คำนวณสถานะ
+// Logic คำนวณสถานะ (แก้ไขให้ใช้ dayjs)
 function calculateStatus(round: any) {
-  const now = new Date();
-  const start = new Date(round.startDate);
-  const end = new Date(round.endDate);
-
   if (!round.isPublished) return 'PREPARING';
-  if (now < start) return 'PREPARING'; 
-  if (now > end) return 'CLOSED';
+  if (!round.startDate || !round.endDate) return 'PREPARING';
+
+  const now = dayjs().tz(TIMEZONE);
+  const start = dayjs(round.startDate).tz(TIMEZONE);
+  const end = dayjs(round.endDate).tz(TIMEZONE);
+
+  if (now.isBefore(start)) return 'PREPARING'; 
+  if (now.isAfter(end)) return 'CLOSED';
   return 'OPEN';
 }
 
@@ -50,14 +60,32 @@ export async function GET(request: NextRequest) {
           select: { amount: true } 
         },
       },
-      orderBy: [{ startDate: 'desc' }]
+      // เรียงจาก "เก่า -> ใหม่" เพื่อคำนวณการส่งต่อยอดเงิน
+      orderBy: [{ startDate: 'asc' }] 
     });
 
+    // ตัวแปรสำหรับเก็บยอดเงินคงเหลือที่จะส่งต่อไปรอบถัดไป
+    let accumulatedCarryOver = 0;
+
     const roundsWithStats = budgetRounds.map(round => {
-      // แปลงเป็น Number เพื่อความชัวร์ในการคำนวณ
-      const totalRequested = round.proposals.reduce((sum, p) => sum + (Number(p.requestedAmount) || 0), 0);
+      // 1. คำนวณยอดขอใช้ (Requested) และยอดบริจาค (Donated)
+      const totalRequested = round.proposals
+            .filter(p => p.status === 'APPROVED' || p.status === 'OPEN') // เช็คสถานะก่อน
+            .reduce((sum, p) => sum + (Number(p.requestedAmount) || 0), 0);
       const totalDonated = round.budgetDonations.reduce((sum, d) => sum + (Number(d.amount) || 0), 0);
       const realStatus = calculateStatus(round);
+      
+      // A. เงินตั้งต้นของรอบนี้ = เงินที่เหลือจากรอบที่ผ่านมา
+      const startingBudget = accumulatedCarryOver;
+
+      // B. เงินรวมทั้งหมดที่มีให้ใช้ = เงินตั้งต้น (จากรอบก่อน) + เงินบริจาค (ของรอบนี้)
+      const totalAvailable = startingBudget + totalDonated;
+
+      // C. คำนวณคงเหลือสุทธิ (เงินที่มี - เงินที่ขอใช้)
+      const remaining = totalAvailable - totalRequested;
+
+      // D. เก็บยอดคงเหลือไว้ส่งต่อไปเป็น "เงินตั้งต้น" ของรอบถัดไป (ถ้าเหลือ > 0)
+      accumulatedCarryOver = remaining > 0 ? remaining : 0; 
 
       return {
         ...round,
@@ -66,12 +94,17 @@ export async function GET(request: NextRequest) {
           totalProposals: round.proposals.length,
           totalRequested,
           totalDonated,
-          remaining: (Number(round.totalBudget) || 0) - totalRequested,
+          startingBudget: startingBudget, // เงินตั้งต้น (มาจากรอบก่อน)
+          totalAvailable: totalAvailable, // เงินรวมทั้งหมดที่มีให้ใช้
+          remaining: remaining,           // เงินคงเหลือ (จะถูกส่งต่อไปรอบหน้า)
         },
       };
     });
 
-    return NextResponse.json({ budgetRounds: roundsWithStats }, { status: 200 });
+    // เรียงข้อมูลกลับเป็น "ใหม่ -> เก่า" เพื่อให้หน้าเว็บแสดงรอบล่าสุดก่อน
+    const sortedRounds = roundsWithStats.reverse();
+
+    return NextResponse.json({ budgetRounds: sortedRounds }, { status: 200 });
   } catch (error) {
     console.error('Error fetching budget rounds:', error);
     return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
@@ -90,13 +123,18 @@ export async function POST(request: NextRequest) {
     if (!roundName) return NextResponse.json({ error: 'Missing roundName' }, { status: 400 });
     const totalBudgetFloat = totalBudget ? parseFloat(totalBudget.toString()) : 0;
 
+    // แปลงวันที่โดยอิง Timezone (ถ้าจำเป็น) หรือใช้ Date object ปกติแล้วให้ calculateStatus จัดการตอน display
+    // แต่เพื่อความชัวร์ในการบันทึก แนะนำให้ parse ด้วย dayjs แล้ว .toDate()
+    const start = startDate ? dayjs.tz(startDate, TIMEZONE).startOf('day').toDate() : new Date();
+    const end = endDate ? dayjs.tz(endDate, TIMEZONE).endOf('day').toDate() : new Date();
+
     const budgetRound = await prisma.budgetRound.create({
       data: {
         roundName,
         fiscalYear: fiscalYear.toString(),
-        totalBudget: totalBudgetFloat, // ส่งค่าที่เป็นตัวเลขไป
-        startDate: startDate ? new Date(startDate) : new Date(),
-        endDate: endDate ? new Date(endDate) : new Date(),
+        totalBudget: totalBudgetFloat,
+        startDate: start,
+        endDate: end,
         creatorId: Number(user.userId),
         isPublished: isPublished || false, 
         status: 'PREPARING' 
@@ -105,9 +143,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ message: 'Success', budgetRound }, { status: 201 });
   } catch (error) {
-    // Log Error เพื่อให้เห็นปัญหาชัดเจนใน Terminal
     console.error('Create BudgetRound Error:', error);
-    // ส่ง Error Message กลับไปให้ Frontend รู้ด้วย (cast error as any เพื่อดึง message)
     return NextResponse.json({ error: (error as any).message || 'Creation failed' }, { status: 500 });
   }
 }
@@ -134,7 +170,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Budget round not found' }, { status: 404 });
     }
 
-    // 2. กำหนด Type ของ dataToUpdate ให้ชัดเจน เพื่อป้องกันการส่งค่าผิดประเภท
+    // 2. กำหนด Type ของ dataToUpdate
     const dataToUpdate: {
       roundName?: string;
       fiscalYear?: string;
@@ -153,20 +189,26 @@ export async function PUT(request: NextRequest) {
         dataToUpdate.totalBudget = parseFloat(updateData.totalBudget.toString());
     }
 
-    // 3. เตรียมข้อมูลสำหรับคำนวณ Status (ใช้ค่าใหม่ถ้ามี ถ้าไม่มีใช้ค่าเดิม)
-    // ใช้ existingRound.startDate (Date | null) ถ้าไม่มีการส่งค่าใหม่มา
-    const newStartDate = updateData.startDate ? new Date(updateData.startDate) : existingRound.startDate;
-    const newEndDate = updateData.endDate ? new Date(updateData.endDate) : existingRound.endDate;
-    const newIsPublished = (typeof isPublished === 'boolean') ? isPublished : existingRound.isPublished;
+    // 3. เตรียมข้อมูลสำหรับคำนวณ Status
+    // ใช้ dayjs ในการจัดการวันที่รับเข้ามาเพื่อให้ได้ Timezone ที่ถูกต้อง
+    let newStartDate = existingRound.startDate;
+    let newEndDate = existingRound.endDate;
 
-    // ใส่ข้อมูลวันที่และ isPublished ลงใน dataToUpdate
-    if (updateData.startDate) dataToUpdate.startDate = newStartDate || undefined;
-    if (updateData.endDate) dataToUpdate.endDate = newEndDate || undefined;
+    if (updateData.startDate) {
+        newStartDate = dayjs.tz(updateData.startDate, TIMEZONE).startOf('day').toDate();
+        dataToUpdate.startDate = newStartDate;
+    }
+    if (updateData.endDate) {
+        newEndDate = dayjs.tz(updateData.endDate, TIMEZONE).endOf('day').toDate();
+        dataToUpdate.endDate = newEndDate;
+    }
+
+    const newIsPublished = (typeof isPublished === 'boolean') ? isPublished : existingRound.isPublished;
     if (typeof isPublished === 'boolean') dataToUpdate.isPublished = newIsPublished;
 
-    // 4. คำนวณ Status ตาม Logic
+    // 4. คำนวณ Status ตาม Logic (ใช้ Dayjs เปรียบเทียบ)
     let newStatus: 'PREPARING' | 'OPEN' | 'CLOSED' = 'PREPARING';
-    const now = new Date();
+    const now = dayjs().tz(TIMEZONE); // เวลาปัจจุบันในไทย
 
     if (!newIsPublished) {
       // ถ้ายังไม่ Publish -> PREPARING เสมอ
@@ -174,19 +216,22 @@ export async function PUT(request: NextRequest) {
     } else {
       // ถ้า Publish แล้ว ต้องเช็คว่ามีวันที่ครบหรือไม่
       if (newStartDate && newEndDate) {
-        if (now < newStartDate) {
+        const start = dayjs(newStartDate).tz(TIMEZONE);
+        const end = dayjs(newEndDate).tz(TIMEZONE);
+
+        if (now.isBefore(start)) {
           newStatus = 'PREPARING';
-        } else if (now > newEndDate) {
+        } else if (now.isAfter(end)) {
           newStatus = 'CLOSED';
         } else {
           newStatus = 'OPEN';
         }
       } else {
-        // กรณี Publish แต่ไม่มีวันที่ (Data inconsistency) ให้ fallback เป็น PREPARING
         newStatus = 'PREPARING';
       }
     }
     dataToUpdate.status = newStatus;
+    
     const budgetRound = await prisma.budgetRound.update({
       where: { id: roundId },
       data: dataToUpdate,
@@ -195,7 +240,6 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ message: 'Update success', budgetRound }, { status: 200 });
   } catch (error) {
     console.error('Update BudgetRound Error:', error);
-    // จัดการ Error type ให้ปลอดภัย (Safe error handling)
     const errorMessage = error instanceof Error ? error.message : 'Update failed';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }

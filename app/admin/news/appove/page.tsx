@@ -173,7 +173,7 @@ export function AdminSubmissionPage() {
     <div className="space-y-6">
       <Card className="shadow-sm rounded-xl">
         <CardHeader className="flex items-center justify-between">
-          <h2 className="text-2xl font-medium text-gray-800">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
             คำขอยื่นเรื่อง
           </h2>
         </CardHeader>

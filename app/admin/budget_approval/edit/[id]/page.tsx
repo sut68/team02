@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Search as SearchIcon, CloudUpload, X } from "lucide-react";
+import { Search as SearchIcon, Upload, X } from "lucide-react";
 import { ProjectManager } from "@/app/types/budget_approval";
 
 // เรียกใช้ Components
@@ -74,7 +74,7 @@ export default function EditBudgetProjectPage() {
     return errors[fieldName] ? errorClass : baseClass;
   };
 
-  // ✅ Fetch Existing Data
+  // Fetch Existing Data
   useEffect(() => {
     if (!id) return;
 
@@ -145,7 +145,7 @@ export default function EditBudgetProjectPage() {
     }
   };
 
-  // ✅ New Upload Logic
+  // New Upload Logic
   const processFile = async (file: File) => {
     if (!file.type.startsWith("image/")) {
       alert("กรุณาอัปโหลดไฟล์รูปภาพเท่านั้น");
@@ -506,7 +506,7 @@ export default function EditBudgetProjectPage() {
                 </div>
               </div>
 
-              {/* ✅ Upload Image Section (Updated UI) */}
+              {/* Upload Image Section (Updated UI) */}
               <div>
                 <label className={labelStyle}>
                   ภาพปก/ภาพโปสเตอร์กิจกรรม <span className="text-red-500">*</span>
@@ -517,7 +517,7 @@ export default function EditBudgetProjectPage() {
                     onDragLeave={(e) => { e.preventDefault(); setIsDragging(false); }}
                     onDrop={handleDrop}
                     onClick={() => !coverFilePreview && fileInputRef.current?.click()}
-                    className={`mt-2 border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all h-64 relative overflow-hidden bg-white
+                    className={`mt-2 border rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all h-64 relative overflow-hidden bg-white
                     ${isDragging ? 'border-orange-500 bg-orange-50/50' : 'border-gray-200 hover:border-gray-300'} 
                     ${errors.coverFilePath ? 'border-red-300 bg-red-50/10' : ''}
                     ${!coverFilePreview ? 'cursor-pointer' : ''}
@@ -541,12 +541,9 @@ export default function EditBudgetProjectPage() {
                         </>
                     ) : (
                         <>
-                            <CloudUpload className={`w-12 h-12 mb-3 ${errors.coverFilePath ? 'text-red-300' : 'text-gray-300'}`} />
+                            <Upload className={`w-12 h-12 mb-3 ${errors.coverFilePath ? 'text-red-300' : 'text-gray-300'}`} />
                             <p className="text-gray-700 font-medium mb-1">คลิกเพื่อเลือกรูปภาพ หรือลากไฟล์มาวางที่นี่</p>
                             <p className="text-gray-400 text-xs mb-4">รองรับไฟล์ภาพ JPEG, PNG ขนาดไม่เกิน 5 MB</p>
-                            <button type="button" className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 shadow-sm pointer-events-none">
-                              เลือกภาพ
-                            </button>
                         </>
                     )}
                     <input 

@@ -4,6 +4,7 @@ import path from "path";
 import { promises as fs } from "fs";
 import { ContentCategoryType, Option } from "@prisma/client";
 import { CONTENT_CONFIG, ERROR_MESSAGES } from "@/lib/models/validation";
+import { uploadToAzureBlob, deleteFromAzureBlob } from "@/lib/azureBlob";
 
 // Helper (เอาไว้เหมือนเดิม หรือจะย้ายไป utils ก็ได้)
 function isNonEmptyString(s: unknown) {
@@ -141,23 +142,19 @@ export async function POST(req: NextRequest) {
       bookingFormId = parsed;
     }
 
-    // --- Save Files ---
-    // ใช้ Path จาก Config
-    const uploadDir = path.join(process.cwd(), "public", ...CONTENT_CONFIG.UPLOAD_DIR.split("/"));
-    await fs.mkdir(uploadDir, { recursive: true });
-
+    // --- Save Files (upload to Azure Blob) ---
+    // Upload each picture to Azure and collect returned URLs
     const picturePaths: string[] = [];
+    const uploadedUrls: string[] = [];
     for (const file of validPictureFiles) {
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
       const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
       const fileNameOnDisk = `${Date.now()}_${Math.random().toString(36).slice(2)}_${safeName}`;
-      
-      const filePathOnDisk = path.join(uploadDir, fileNameOnDisk);
-      const publicPath = `/${CONTENT_CONFIG.UPLOAD_DIR}/${fileNameOnDisk}`;
-
-      await fs.writeFile(filePathOnDisk, buffer);
-      picturePaths.push(publicPath);
+      const blobName = `${CONTENT_CONFIG.UPLOAD_DIR}/${fileNameOnDisk}`;
+      const url = await uploadToAzureBlob(buffer, blobName, (file as any).type);
+      picturePaths.push(url);
+      uploadedUrls.push(url);
     }
 
     // --- DB Transaction ---
@@ -192,6 +189,15 @@ export async function POST(req: NextRequest) {
 
   } catch (err) {
     console.error("POST content error:", err);
+    // Cleanup any uploaded blobs to avoid orphaned files
+    try {
+      if (typeof uploadedUrls !== "undefined" && uploadedUrls.length > 0) {
+        await Promise.all(uploadedUrls.map((u) => deleteFromAzureBlob(u)));
+      }
+    } catch (cleanupErr) {
+      console.warn("Failed to cleanup uploaded blobs:", cleanupErr);
+    }
+
     return NextResponse.json({ error: ERROR_MESSAGES.DB_ERROR }, { status: 500 });
   }
 }

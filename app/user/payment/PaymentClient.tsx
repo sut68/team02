@@ -1,13 +1,17 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Wallet, Check, Store, Landmark, UploadCloud, X, Loader2, Clock, AlertCircle } from 'lucide-react';
+// แก้ไขการนำเข้า Icon บางตัวที่อาจมีปัญหา HMR และเพิ่ม CheckCircle เข้ามา
+import { 
+  Wallet, Check, Store, Landmark, CloudUpload, X, 
+  Loader2, Clock, AlertCircle, FileText, CheckCircle2 
+} from 'lucide-react';
 import generatePayload from 'promptpay-qr';
 import qrcode from 'qrcode';
 import { PaymentMethodRecord, PaymentMethodType } from '@prisma/client';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
-// Helper: Format Time mm:ss
 const formatTime = (seconds: number) => {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -15,9 +19,18 @@ const formatTime = (seconds: number) => {
 };
 
 const METHOD_DISPLAY_MAP: Record<string, { name: string; icon: React.ReactNode }> = {
-  [PaymentMethodType.PROMPTPAY]: { name: "Prompt Pay", icon: <div className="w-10 h-10 bg-blue-900 text-white flex items-center justify-center rounded-md font-bold text-lg">P</div> },
-  [PaymentMethodType.CASH]: { name: "เงินสด (Cash)", icon: <Store className="w-10 h-10 text-gray-600" /> },
-  [PaymentMethodType.BANKTRANSFER]: { name: "โอนบัญชีธนาคาร", icon: <Landmark className="w-10 h-10 text-purple-600" /> },
+  [PaymentMethodType.PROMPTPAY]: { 
+    name: "Prompt Pay", 
+    icon: <div className="w-10 h-10 bg-orange-500 text-white flex items-center justify-center rounded-md font-bold text-lg">P</div> 
+  },
+  [PaymentMethodType.CASH]: { 
+    name: "เงินสด (Cash)", 
+    icon: <Store className="w-10 h-10 text-orange-500" /> 
+  },
+  [PaymentMethodType.BANKTRANSFER]: { 
+    name: "โอนบัญชีธนาคาร", 
+    icon: <Landmark className="w-10 h-10 text-orange-500" /> 
+  },
 };
 
 interface PaymentClientProps {
@@ -27,162 +40,137 @@ interface PaymentClientProps {
     projectTitle: string;
     refNo: string;
     status: string;
-    createdAt: Date; // ✅ ต้องมี field นี้เพื่อคำนวณเวลา
+    createdAt: Date;
   };
   paymentMethods: PaymentMethodRecord[];
 }
 
 export default function PaymentClient({ transaction, paymentMethods }: PaymentClientProps) {
   const router = useRouter();
-  
-  // State
+
   const [selectedMethodId, setSelectedMethodId] = useState<number | null>(
     paymentMethods.length > 0 ? paymentMethods[0].id : null
   );
-  
-  // viewState: null = summary, 'QR' = promptpay qr, 'DETAILS' = bank details, 'CASH' = cash instruction
   const [viewState, setViewState] = useState<'QR' | 'DETAILS' | 'CASH' | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
-  
   const [slipFile, setSlipFile] = useState<File | null>(null);
   const [slipPreview, setSlipPreview] = useState<string | null>(null);
-  
-  // Loading & Status
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isExpired, setIsExpired] = useState(transaction.status === 'EXPIRED');
-  
-  // Timer State
   const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [confirmModal, setConfirmModal] = useState<{ open: boolean; onConfirm: (() => void) | null; message: string; isLoading?: boolean }>({ open: false, onConfirm: null, message: '', isLoading: false });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const currentMethod = paymentMethods.find((m) => m.id === selectedMethodId);
 
-  // --- 1. Countdown Logic (15 Minutes) ---
   useEffect(() => {
     if (isSuccess || isExpired) return;
-
     const createdTime = new Date(transaction.createdAt).getTime();
-    const expireTime = createdTime + (15 * 60 * 1000); // 15 นาที
+    const expireTime = createdTime + (15 * 60 * 1000);
 
     const interval = setInterval(() => {
       const now = Date.now();
       const diff = Math.floor((expireTime - now) / 1000);
-
       if (diff <= 0) {
         setTimeLeft(0);
         clearInterval(interval);
-        handleExpire(); // เรียกฟังก์ชันหมดเวลา
+        handleExpire();
       } else {
         setTimeLeft(diff);
       }
     }, 1000);
 
-    // Set initial time
     const initialDiff = Math.floor((expireTime - Date.now()) / 1000);
     setTimeLeft(initialDiff > 0 ? initialDiff : 0);
-
     return () => clearInterval(interval);
   }, [transaction.createdAt, isSuccess, isExpired]);
 
-  // Handle Expiration
   const handleExpire = async () => {
     if (isExpired) return;
     setIsExpired(true);
-    
     try {
-        await fetch('/api/payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                paymentId: transaction.paymentId,
-                status: 'EXPIRED'
-            })
-        });
-    } catch (error) {
-        console.error("Error updating expired status:", error);
-    }
+      await fetch('/api/payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentId: transaction.paymentId, status: 'EXPIRED' })
+      });
+    } catch (error) { console.error("Error updating expired status:", error); }
   };
 
-  // --- 2. Handle Proceed Button ---
   const handleProceed = async () => {
     if (!currentMethod) return;
+    setQrCodeUrl(null); setSlipFile(null); setSlipPreview(null);
 
-    // Reset old states
-    setQrCodeUrl(null);
-    setSlipFile(null);
-    setSlipPreview(null);
-
-    // Logic ตามประเภทการชำระเงิน
     if (currentMethod.methodName === PaymentMethodType.PROMPTPAY) {
       try {
         const recipient = currentMethod.accountNumber || '';
-        if (!recipient) {
-          alert('ไม่พบเบอร์ PromptPay ในระบบ');
-          return;
-        }
+        if (!recipient) { alert('ไม่พบเบอร์ PromptPay'); return; }
         const payload = generatePayload(recipient, { amount: transaction.amount });
         const url = await qrcode.toDataURL(payload);
         setQrCodeUrl(url);
         setViewState('QR');
-      } catch (error) {
-        console.error('Error QR:', error);
-      }
+      } catch (error) { console.error('Error QR:', error); }
     } else if (currentMethod.methodName === PaymentMethodType.CASH) {
-        // จ่ายเงินสด -> แสดงคำแนะนำ
-        setViewState('CASH');
+      setViewState('CASH');
     } else {
-        // โอนบัญชีธนาคาร หรืออื่นๆ -> แสดงรายละเอียด + อัปโหลดสลิป
-        setViewState('DETAILS');
+      setViewState('DETAILS');
     }
   };
 
-  // --- 3. Handle Confirm Payment (Upload Slip) ---
   const handleConfirmPayment = async () => {
-    if (!slipFile) {
-        alert("กรุณาแนบสลิปการโอนเงิน");
-        return;
-    }
-
+    if (!slipFile) { alert("กรุณาแนบสลิปการโอนเงิน"); return; }
     setIsSubmitting(true);
-
     try {
-        // Upload File
-        const formData = new FormData();
-        formData.append("file", slipFile); 
+      const formData = new FormData();
+      formData.append("file", slipFile);
+      const uploadResponse = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!uploadResponse.ok) throw new Error("อัปโหลดสลิปไม่สำเร็จ");
+      const uploadResult = await uploadResponse.json();
 
-        const uploadResponse = await fetch("/api/upload", {
-            method: "POST",
-            body: formData,
-        });
-
-        if (!uploadResponse.ok) throw new Error("อัปโหลดสลิปไม่สำเร็จ");
-
-        const uploadResult = await uploadResponse.json();
-        const uploadedUrl = uploadResult.url;
-        
-        // Update Status
-        const response = await fetch('/api/payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                paymentId: transaction.paymentId,
-                status: 'CONFIRMED',
-                slipUrl: uploadedUrl
-            })
-        });
-
-        if (!response.ok) {
-            const result = await response.json();
-            throw new Error(result.error || 'เกิดข้อผิดพลาดในการยืนยัน');
-        }
-
-        setIsSuccess(true);
-        setTimeout(() => router.push('/user/donation'), 3000);
-
+      const response = await fetch('/api/payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentId: transaction.paymentId,
+          status: 'CONFIRMED',
+          slipUrl: uploadResult.url
+        })
+      });
+      if (!response.ok) throw new Error('เกิดข้อผิดพลาดในการยืนยัน');
+      setIsSuccess(true);
+      setTimeout(() => router.push('/user/donation'), 3000);
     } catch (error: any) {
-        alert(error.message);
-        setIsSubmitting(false);
+      alert(error.message);
+      setIsSubmitting(false);
+    }
+  };
+
+  // --- ฟังก์ชันใหม่สำหรับยืนยันการจ่ายเงินสด ---
+  const handleConfirmCash = async () => {
+    setConfirmModal({ open: true, onConfirm: doConfirmCash, message: 'คุณต้องการยืนยันการจองชำระเงินสดหรือไม่?', isLoading: false });
+  };
+
+  const doConfirmCash = async () => {
+    setConfirmModal((prev) => ({ ...prev, isLoading: true }));
+    try {
+      const response = await fetch('/api/payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentId: transaction.paymentId,
+          status: 'PENDING',
+          note: 'ชำระเงินสดที่สมาคม'
+        })
+      });
+      if (!response.ok) throw new Error('ไม่สามารถบันทึกข้อมูลได้');
+      setIsSuccess(true);
+      setConfirmModal({ open: false, onConfirm: null, message: '', isLoading: false });
+      setTimeout(() => router.push('/user/donation'), 3000);
+    } catch (error: any) {
+      alert(error.message);
+      setConfirmModal({ open: false, onConfirm: null, message: '', isLoading: false });
+      setIsSubmitting(false);
     }
   };
 
@@ -195,241 +183,240 @@ export default function PaymentClient({ transaction, paymentMethods }: PaymentCl
   };
 
   const handleReset = () => {
-    setViewState(null);
-    setQrCodeUrl(null);
-    setSlipFile(null);
-    setSlipPreview(null);
+    setViewState(null); setQrCodeUrl(null); setSlipFile(null); setSlipPreview(null);
   };
 
-  // --- RENDER STATES ---
+  if (isExpired) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="bg-white p-10 rounded-2xl shadow-xl text-center"><X className="w-10 h-10 text-red-600 mx-auto mb-4" /><h2 className="text-2xl font-bold mb-2">รายการหมดอายุ</h2><button onClick={() => router.push('/user/donation')} className="mt-4 px-6 py-2 bg-gray-800 text-white rounded-lg">กลับสู่หน้าแรก</button></div></div>;
+  if (isSuccess) return <div className="min-h-screen flex items-center justify-center bg-green-50"><div className="bg-white p-10 rounded-2xl shadow-xl text-center"><CheckCircle2 className="w-10 h-10 text-green-600 mx-auto mb-4" /><h2 className="text-2xl font-bold">บันทึกข้อมูลสำเร็จ!</h2><p className="text-gray-500">กำลังกลับสู่หน้ารายการ...</p></div></div>;
 
-  // 1. Expired Screen
-  if (isExpired) {
-    return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
-            <div className="bg-white p-10 rounded-2xl shadow-xl text-center max-w-md w-full">
-                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <X className="w-10 h-10 text-red-600" />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">รายการหมดอายุ</h2>
-                <p className="text-gray-600 mb-6">หมดเวลาในการชำระเงิน กรุณาทำรายการใหม่อีกครั้ง</p>
-                <button 
-                    onClick={() => router.push('/user/booking')}
-                    className="w-full py-3 bg-gray-800 text-white rounded-xl hover:bg-gray-900"
-                >
-                    กลับสู่หน้าแรก
-                </button>
-            </div>
-        </div>
-    );
-  }
-
-  // 2. Success Screen
-  if (isSuccess) {
-      return (
-          <div className="min-h-screen flex flex-col items-center justify-center bg-green-50">
-              <div className="bg-white p-10 rounded-2xl shadow-xl text-center animate-in zoom-in duration-300">
-                  <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Check className="w-10 h-10 text-green-600" />
-                  </div>
-                  <h2 className="text-2xl font-bold text-gray-800 mb-2">ชำระเงินสำเร็จ!</h2>
-                  <p className="text-gray-600">ขอบคุณสำหรับการบริจาค</p>
-                  <p className="text-sm text-gray-400 mt-4">กำลังกลับสู่หน้ารายการ...</p>
-              </div>
-          </div>
-      );
-  }
-
-  // 3. Main Payment Screen
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-700 pb-10">
-      <main className="container mx-auto px-4 max-w-5xl pt-10">
+    <div className="min-h-screen bg-white font-sans text-gray-700 pb-10">
+      <main className="w-full max-w-none px-0 pt-10">
         
-        {/* Header with Timer */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-2">
-                <Wallet className="w-6 h-6 text-amber-800" />
-                <h2 className="text-xl font-bold text-orange-600">ชำระเงินบริจาค</h2>
-            </div>
-            
-            {/* Countdown Timer Display */}
-            <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border shadow-sm ${timeLeft < 60 ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white border-gray-200 text-gray-700'}`}>
-                <Clock className="w-5 h-5" />
-                <span className="text-sm font-medium">เวลาที่เหลือ:</span>
-                <span className="text-xl font-mono font-bold">{formatTime(timeLeft)}</span>
-            </div>
+        {/* Header & Timer */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 px-4 xl:px-24">
+          <div className="flex items-center gap-2">
+            <Wallet className="w-8 h-8 text-orange-600" />
+            <h2 className="text-3xl font-bold text-gray-900">ชำระเงิน</h2>
+          </div>
+          <div className={`flex items-center gap-2 px-6 py-3 rounded-xl border-2 shadow-sm text-lg font-semibold ${timeLeft < 60 ? 'bg-red-50 border-red-200 text-red-600' : 'bg-white border-gray-200 text-gray-700'}`}>
+            <Clock className="w-6 h-6" />
+            <span>เวลาที่เหลือ: <span className="text-2xl font-mono font-bold ml-2">{formatTime(timeLeft)}</span></span>
+          </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
-          
-          {/* LEFT: Payment Methods Selection */}
-          <div className="flex-1">
-            <h3 className="mb-4 font-semibold text-gray-700">เลือกช่องทางการชำระเงิน</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10">
-              {paymentMethods.map((method) => {
-                const isSelected = selectedMethodId === method.id;
-                const displayInfo = METHOD_DISPLAY_MAP[method.methodName] || { name: method.provider || method.methodName, icon: <Wallet /> };
-
-                return (
-                  <button
-                    key={method.id}
-                    disabled={isSubmitting || !!viewState} 
-                    onClick={() => { setSelectedMethodId(method.id); handleReset(); }}
-                    className={`relative flex flex-col items-center justify-center p-4 bg-white rounded-xl border transition-all duration-200 shadow-sm h-32
-                      ${isSelected ? "border-orange-500 bg-orange-50 ring-2 ring-orange-500 ring-offset-2" : "hover:border-orange-300 hover:shadow-md"}
-                      ${(isSubmitting || !!viewState) ? "opacity-50 cursor-not-allowed" : ""}
-                    `}
-                  >
-                    {isSelected && <div className="absolute top-2 right-2 bg-orange-500 text-white rounded-full p-0.5"><Check className="w-3 h-3" /></div>}
-                    <div className="mb-3 transform scale-110">{displayInfo.icon}</div>
-                    <span className="text-sm font-medium text-gray-800 text-center leading-tight">{displayInfo.name}</span>
-                  </button>
-                );
-              })}
-            </div>
-            
-            {/* Instruction Box */}
-            <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
-                <h4 className="font-semibold text-gray-800 mb-2">เงื่อนไขการชำระเงิน</h4>
-                <p className="text-sm text-gray-500">กรุณาชำระเงินภายในเวลาที่กำหนด หากเกินกำหนดรายการจะถูกยกเลิกอัตโนมัติ</p>
-            </div>
+        {/* Payment Methods Grid */}
+        <div className="w-full flex flex-col items-center px-4 xl:px-24 mb-6">
+          <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">เลือกวิธีการชำระเงิน</h3>
+          <div className="w-full max-w-4xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+            {paymentMethods.map((method) => {
+              const isSelected = selectedMethodId === method.id;
+              const displayInfo = METHOD_DISPLAY_MAP[method.methodName] || { name: method.provider || method.methodName, icon: <Wallet /> };
+              return (
+                <button
+                  key={method.id}
+                  disabled={isSubmitting || !!viewState}
+                  onClick={() => { setSelectedMethodId(method.id); handleReset(); }}
+                  className={`relative flex flex-col items-center justify-center p-8 bg-white rounded-2xl border-2 transition-all shadow-md h-48 w-full ${isSelected ? "border-orange-500 ring-4 ring-orange-100" : "border-gray-200 hover:border-orange-300"}`}
+                >
+                  {isSelected && <div className="absolute top-3 right-3 bg-orange-500 text-white rounded-full p-1"><Check className="w-4 h-4" /></div>}
+                  <div className="mb-3 scale-110">{displayInfo.icon}</div>
+                  <span className="text-lg font-bold text-gray-800">{displayInfo.name}</span>
+                </button>
+              );
+            })}
           </div>
+        </div>
 
-          {/* RIGHT: Action & Summary Panel */}
-          <div className="w-full lg:w-96">
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden p-6 sticky top-6 border border-gray-100">
+        {/* Action Area */}
+        <div className="flex justify-center px-4 xl:px-24">
+          <div className="w-full max-w-xl">
+            <div className="bg-white rounded-2xl shadow-xl overflow-hidden p-8 border border-gray-100">
               
-              {/* --- VIEW 1: Summary (Before Proceed) --- */}
               {!viewState ? (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <h3 className="text-lg font-bold text-gray-800 mb-4">สรุปยอดบริจาค</h3>
-                    <div className="bg-orange-50 p-4 rounded-lg flex justify-between items-center mb-6 border border-orange-100">
-                        <span className="text-orange-800 font-semibold">ยอดชำระสุทธิ</span>
-                        <span className="text-2xl font-bold text-orange-600">{transaction.amount.toLocaleString()} ฿</span>
+                <div>
+                  <div className="flex items-start gap-3 p-4 bg-orange-50 border border-orange-100 rounded-xl mb-6 text-sm text-orange-800">
+                    <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold mb-1">เงื่อนไขการชำระเงิน</p>
+                      <p>กรุณาตรวจสอบยอดเงินให้ถูกต้องและชำระภายในเวลาที่กำหนด หากเกินเวลาหรือยอดเงินไม่ถูกต้อง รายการอาจถูกยกเลิก</p>
                     </div>
-                    
-                    <button 
-                        onClick={handleProceed}
-                        className="w-full bg-linear-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
-                    >
-                        {currentMethod?.methodName === PaymentMethodType.PROMPTPAY ? (
-                            <><Wallet className="w-5 h-5"/> สร้าง QR Code</>
-                        ) : 'ดำเนินการต่อ'}
-                    </button>
+                  </div>
+                  <div className="bg-orange-50 border border-orange-100 rounded-xl p-6 flex flex-col items-center">
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">สรุปยอดชำระเงิน</h3>
+                    <div className="mb-2 text-base text-gray-700">สำหรับ: <span className="font-semibold text-orange-700">{transaction.projectTitle}</span></div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-lg text-gray-700 font-medium">ยอดชำระสุทธิ</span>
+                      <span className="text-3xl font-bold text-orange-600">{transaction.amount.toLocaleString()} <span className="text-base text-gray-400 font-normal">THB</span></span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleProceed}
+                    className="w-full mt-8 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-4 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3 text-xl"
+                  >
+                    {currentMethod?.methodName === PaymentMethodType.PROMPTPAY ? <><Wallet className="w-6 h-6" /> สร้าง QR Code</> : 'ดำเนินการต่อ'}
+                  </button>
                 </div>
               ) : (
-                // --- VIEW 2: Payment Action ---
-                <div className="flex flex-col items-center animate-in zoom-in duration-300">
-                    
-                    {/* Amount Display */}
-                    <div className="text-center mb-6">
-                        <p className="text-gray-500 text-sm mb-1">ยอดชำระเงิน</p>
-                        <p className="text-3xl font-bold text-orange-600">{transaction.amount.toLocaleString()} ฿</p>
+                <div className="flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-300 w-full">
+                  <div className="w-full border-gray-100 pt-6">
+                    <div className="flex items-start gap-3 p-4 bg-orange-50 border border-orange-100 rounded-xl mb-6 text-sm text-orange-800">
+                      <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold mb-1">เงื่อนไขการชำระเงิน</p>
+                        <p>กรุณาตรวจสอบยอดเงินให้ถูกต้องและชำระภายในเวลาที่กำหนด</p>
+                      </div>
                     </div>
 
-                    {/* ---------- CASE 1: เงินสด (CASH) ---------- */}
-                    {viewState === 'CASH' && (
-                        <div className="w-full bg-blue-50 p-6 rounded-xl border border-blue-100 mb-6 text-center">
-                            <Store className="w-12 h-12 text-blue-600 mx-auto mb-3" />
-                            <h4 className="text-lg font-bold text-blue-800 mb-2">ชำระเงินที่สมาคม</h4>
-                            <p className="text-sm text-blue-700 mb-4">
-                                กรุณาติดต่อชำระเงินที่จุดรับบริจาคของสมาคม <br/>
-                                โดยแจ้งรหัสอ้างอิง: <strong>{transaction.refNo}</strong>
-                            </p>
-                            <div className="p-3 bg-white rounded border border-blue-200 text-xs text-gray-500">
-                                สถานะการจองของท่านจะยังไม่สมบูรณ์<br/>จนกว่าเจ้าหน้าที่จะยืนยันการรับเงิน
-                            </div>
-                        </div>
-                    )}
+                    <div className="flex flex-col border-b-2 items-start mb-8 px-2">
+                      <span className="text-gray-500 text-base mb-1">สำหรับ: <span className="font-semibold text-orange-700">{transaction.projectTitle}</span></span>
+                      <div className="flex justify-between items-center w-full">
+                        <span className="text-gray-500 text-lg font-medium">ยอดชำระสุทธิ</span>
+                        <span className="text-4xl font-bold text-orange-600">{transaction.amount.toLocaleString()} <span className="text-xl text-gray-400 font-normal">THB</span></span>
+                      </div>
+                    </div>
 
-                    {/* ---------- CASE 2: QR Code (PromptPay) ---------- */}
+                    {/* QR Display */}
                     {viewState === 'QR' && qrCodeUrl && (
-                        <div className="mb-6 text-center">
-                            <div className="p-4 border border-gray-200 rounded-xl bg-white shadow-sm mb-2 relative group mx-auto inline-block">
-                                <img src={qrCodeUrl} alt="Payment QR" className="w-48 h-48 object-contain mix-blend-multiply" />
-                            </div>
-                            <p className="text-sm font-medium text-gray-700">{currentMethod?.provider}</p>
-                            <p className="text-xs text-gray-500">PromptPay: {currentMethod?.accountNumber}</p>
+                      <div className="mb-6 text-center">
+                        <div className="p-4 border border-gray-200 rounded-xl bg-white shadow-sm inline-block">
+                          <img src={qrCodeUrl} alt="Payment QR" className="w-64 h-64 object-contain mix-blend-multiply" />
                         </div>
+                        <p className="mt-4 text-lg font-semibold text-gray-700">
+                          {currentMethod?.provider}: <span className="text-orange-600 font-bold">{currentMethod?.accountNumber}</span>
+                        </p>
+                      </div>
                     )}
 
-                    {/* ---------- CASE 3: Bank Details (Transfer) ---------- */}
+                    {/* Bank Transfer Details */}
                     {viewState === 'DETAILS' && (
-                        <div className="w-full bg-gray-50 p-5 rounded-xl border border-gray-200 mb-6">
-                            <h4 className="text-sm font-semibold text-gray-500 mb-3 uppercase tracking-wider">โอนเงินเข้าบัญชี</h4>
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-600 text-sm">ธนาคาร</span>
-                                    <span className="font-bold text-gray-800 text-right">{currentMethod?.provider}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-600 text-sm">เลขที่บัญชี</span>
-                                    <span className="font-mono text-lg font-bold text-purple-700 tracking-wide select-all bg-white px-2 py-0.5 rounded border border-gray-200">
-                                        {currentMethod?.accountNumber}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-600 text-sm">ชื่อบัญชี</span>
-                                    <span className="font-medium text-gray-800 text-right text-sm">สมาคมศิษย์เก่า (ตัวอย่าง)</span>
-                                </div>
-                            </div>
+                      <div className="w-full bg-gray-50 p-6 rounded-xl border border-gray-200 mb-6">
+                        <div className="space-y-4">
+                          <div className="flex justify-between"><span className="text-gray-500">ธนาคาร</span><span className="font-bold">{currentMethod?.provider}</span></div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-500">เลขที่บัญชี</span>
+                            <span className="text-2xl font-mono font-bold text-orange-600 bg-white px-2 py-1 rounded border">
+                              {currentMethod?.accountNumber}
+                              <button
+                                type="button"
+                                className="ml-2 px-2 py-1 text-xs bg-orange-100 text-orange-600 rounded"
+                                onClick={() => navigator.clipboard.writeText(currentMethod?.accountNumber || '')}
+                              >คัดลอก</button>
+                            </span>
+                          </div>
+                          <div className="flex justify-between"><span className="text-gray-500">ชื่อบัญชี</span><span className="font-medium">สมาคมศิษย์เก่า</span></div>
                         </div>
+                      </div>
                     )}
 
-                    <hr className="w-full border-gray-100 mb-6" />
+                    {/* Cash Details with Confirm Button */}
+                    {viewState === 'CASH' && (
+                      <div className="w-full space-y-6">
+                        <div className="bg-orange-50 p-8 rounded-xl border border-orange-100 text-center">
+                          <Store className="w-16 h-16 text-orange-600 mx-auto mb-4" />
+                          <h4 className="text-xl font-bold text-orange-600">ติดต่อชำระเงินที่สมาคม</h4>
+                          <p className="text-gray-600 mt-2">กรุณาแจ้งรหัสอ้างอิงนี้ต่อเจ้าหน้าที่:</p>
+                          <div className="text-3xl font-mono font-black text-gray-800 mt-2 bg-white py-2 rounded shadow-inner">{transaction.refNo}</div>
+                        </div>
+                        <div className="flex justify-end gap-4">
+                          <button
+                            onClick={handleReset}
+                            className="w-1/2 py-4 rounded-xl border border-gray-300 font-bold hover:bg-gray-50 transition-colors"
+                          >
+                            ย้อนกลับ
+                          </button>
+                          <button 
+                            onClick={handleConfirmCash} 
+                            disabled={isSubmitting}
+                            className="w-1/2 py-4 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold shadow-lg flex items-center justify-center gap-2"
+                          >
+                            {isSubmitting ? <Loader2 className="animate-spin" /> : "ยืนยันการจองชำระเงินสด"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
-                    {/* Upload Slip Section (Only for QR or DETAILS) */}
-                    {viewState !== 'CASH' ? (
-                        <div className="w-full space-y-4">
-                             {!slipPreview ? (
-                                <div 
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="border-2 border-dashed border-gray-300 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-colors group"
-                                >
-                                    <UploadCloud className="w-8 h-8 text-gray-400 group-hover:text-orange-500 mb-2" />
-                                    <p className="text-sm font-medium text-gray-600 group-hover:text-orange-600">แนบสลิปการโอนเงิน</p>
-                                </div>
-                            ) : (
-                                <div className="relative rounded-xl overflow-hidden border border-gray-200 group">
-                                    <img src={slipPreview} alt="Slip Preview" className="w-full h-auto max-h-48 object-cover mx-auto" />
-                                    <button 
-                                        onClick={() => { setSlipFile(null); setSlipPreview(null); }}
-                                        className="absolute top-2 right-2 bg-black/50 hover:bg-red-500 text-white p-1.5 rounded-full"
+                    {/* Upload Section for QR/Bank */}
+                    {(viewState === 'QR' || viewState === 'DETAILS') && (
+                      <div className="space-y-4">
+                        <div
+                          className="w-full flex flex-col items-center"
+                          onClick={() => !slipPreview && fileInputRef.current?.click()}
+                          style={{ cursor: !slipPreview ? 'pointer' : 'default' }}
+                        >
+                          <div
+                            className="w-full border border-gray-300 rounded-md p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:border-orange-400"
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            <label className="cursor-pointer">
+                              <input
+                                type="file"
+                                className="hidden"
+                                ref={fileInputRef}
+                                onChange={handleFileChange}
+                                accept="image/jpeg,image/png,image/gif"
+                              />
+                              <div className="flex flex-col items-center">
+                                {slipPreview ? (
+                                  <div className="relative w-48 h-48">
+                                    {/* ใช้ <img> แทน <Image> ของ next/image เพื่อความเข้ากันได้ */}
+                                    <img src={slipPreview} alt="Image Preview" className="object-contain w-full h-full" />
+                                  </div>
+                                ) : (
+                                  <>
+                                    <svg
+                                      className="w-10 h-10 text-gray-300"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
                                     >
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            )}
-                            
-                            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-
-                            <div className="flex gap-3 mt-4">
-                                <button onClick={handleReset} disabled={isSubmitting} className="flex-1 py-3 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 text-sm">
-                                    ย้อนกลับ
-                                </button>
-                                <button 
-                                    onClick={handleConfirmPayment}
-                                    disabled={!slipFile || isSubmitting}
-                                    className={`flex-2 py-3 rounded-xl font-bold text-white shadow-lg flex items-center justify-center gap-2
-                                        ${!slipFile || isSubmitting ? 'bg-gray-300 cursor-not-allowed shadow-none' : 'bg-orange-600 hover:bg-orange-700'}`
-                                    }
-                                >
-                                    {isSubmitting ? <Loader2 className="animate-spin" /> : "ยืนยันการชำระเงิน"}
-                                </button>
-                            </div>
+                                      <path
+                                        strokeWidth="2"
+                                        d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2m-4-4l-4-4m0 0l-4 4m4-4v12"
+                                      />
+                                    </svg>
+                                    <p className="text-sm text-gray-400 mt-2">อัปโหลดไฟล์</p>
+                                    <p className="text-xs text-gray-400">
+                                      รองรับไฟล์เอกสาร JPEG / PNG / GIF
+                                    </p>
+                                  </>
+                                )}
+                                {slipFile && (
+                                  <p className="text-xs text-gray-600 mt-1">{slipFile.name}</p>
+                                )}
+                              </div>
+                            </label>
+                          </div>
                         </div>
-                    ) : (
-                        // Back Button for CASH
-                        <button onClick={handleReset} className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50">
-                            ย้อนกลับ / เลือกวิธีอื่น
-                        </button>
+                        <div className="grid grid-cols-3 gap-4">
+                          <button onClick={handleReset} disabled={isSubmitting} className="col-span-1 py-4 rounded-xl border border-gray-300 font-bold hover:bg-gray-50 transition-colors">ย้อนกลับ</button>
+                          <button 
+                            onClick={handleConfirmPayment} 
+                            disabled={!slipFile || isSubmitting} 
+                            className={`col-span-2 py-4 rounded-xl font-bold text-white shadow-lg flex items-center justify-center gap-2 ${!slipFile || isSubmitting ? 'bg-gray-300 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700'}`}
+                          >
+                            {isSubmitting ? <Loader2 className="animate-spin" /> : "แจ้งชำระเงิน"}
+                          </button>
+                        </div>
+                      </div>
                     )}
-
+                  </div>
                 </div>
               )}
             </div>
           </div>
         </div>
+        <ConfirmModal
+          isOpen={confirmModal.open}
+          onClose={() => !confirmModal.isLoading && setConfirmModal({ open: false, onConfirm: null, message: '', isLoading: false })}
+          onConfirm={confirmModal.onConfirm || (() => {})}
+          title="ยืนยันการจองชำระเงินสด"
+          message={confirmModal.message}
+          confirmLabel="ยืนยัน"
+          cancelLabel="ยกเลิก"
+          isDanger={false}
+          isLoading={confirmModal.isLoading}
+        />
       </main>
     </div>
   );

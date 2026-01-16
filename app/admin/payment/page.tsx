@@ -15,6 +15,9 @@ import {
   MoreHorizontal // เพิ่มไอคอนสำหรับปุ่มจัดการ
 } from 'lucide-react';
 import { Card, CardContent } from '@/app/components/ui/Card';
+import AlertModal from '@/app/components/ui/AlertModal';
+import SuccessModal from '@/app/components/ui/SuccessModal';
+import ConfirmModal from '@/app/components/ui/ConfirmModal';
 
 // --- Type Definitions ---
 type Transaction = {
@@ -38,6 +41,9 @@ export default function TransactionHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedSlip, setSelectedSlip] = useState<string | null>(null);
+  const [alert, setAlert] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
+  const [success, setSuccess] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
+  const [confirm, setConfirm] = useState<{ open: boolean; onConfirm: (() => void) | null; message: string; isDanger?: boolean; isLoading?: boolean }>({ open: false, onConfirm: null, message: '', isDanger: false, isLoading: false });
 
   useEffect(() => {
     const ac = new AbortController();
@@ -119,9 +125,18 @@ export default function TransactionHistoryPage() {
 
   const handleStatusChange = async (txId: string, newStatus: string) => {
     const confirmMsg = newStatus === 'SUCCESS' ? 'ยืนยันยอดเงินเรียบร้อยแล้ว?' : 'ต้องการปฏิเสธ/ยกเลิกรายการนี้?';
-    if(confirm(confirmMsg)) {
+    setConfirm({
+      open: true,
+      message: confirmMsg,
+      isDanger: newStatus !== 'SUCCESS',
+      isLoading: false,
+      onConfirm: async () => {
+        setConfirm((prev) => ({ ...prev, isLoading: true }));
         setTransactions(prev => prev.map(t => t.id === txId ? { ...t, status: newStatus } : t));
-    }
+        setSuccess({ show: true, message: newStatus === 'SUCCESS' ? 'อัปเดตสถานะสำเร็จ' : 'ยกเลิกรายการสำเร็จ' });
+        setConfirm({ open: false, onConfirm: null, message: '', isDanger: false, isLoading: false });
+      }
+    });
   };
 
   const stats = useMemo(() => {
@@ -253,13 +268,13 @@ export default function TransactionHistoryPage() {
                     <th className="px-6 py-4 text-right text-sm font-medium text-gray-600">จำนวนเงิน</th>
                     <th className="px-6 py-4 text-center text-sm font-medium text-gray-600">หลักฐาน</th>
                     <th className="px-6 py-4 text-center text-sm font-medium text-gray-600">สถานะ</th>
-                    <th className="px-6 py-4 text-center text-sm font-medium text-gray-600">จัดการ</th>
+                    {/* <th className="px-6 py-4 text-center text-sm font-medium text-gray-600">จัดการ</th> */}
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
                   {filteredTransactions.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                         ไม่พบข้อมูลรายการ
                       </td>
                     </tr>
@@ -314,17 +329,6 @@ export default function TransactionHistoryPage() {
                                 )}
                             </div>
                         </td>
-                        <td className="px-6 py-4 text-center">
-                          {/* ปุ่มจัดการ (เพิ่มเติม) */}
-                          <div className="flex justify-center">
-                            <button 
-                                className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-full transition"
-                                title="ดูรายละเอียดเพิ่มเติม"
-                            >
-                                <MoreHorizontal className="w-5 h-5" />
-                            </button>
-                          </div>
-                        </td>
                       </tr>
                     ))
                   )}
@@ -364,6 +368,28 @@ export default function TransactionHistoryPage() {
           </div>
         )}
 
+        {/* Alert Modal */}
+        <AlertModal
+          isOpen={alert.show}
+          message={alert.message}
+          onClose={() => setAlert({ show: false, message: '' })}
+        />
+        <SuccessModal
+          show={success.show}
+          message={success.message}
+          onClose={() => setSuccess({ show: false, message: '' })}
+        />
+        <ConfirmModal
+          isOpen={confirm.open}
+          onClose={() => !confirm.isLoading && setConfirm({ open: false, onConfirm: null, message: '', isDanger: false, isLoading: false })}
+          onConfirm={confirm.onConfirm || (() => {})}
+          title="ยืนยันการเปลี่ยนสถานะ"
+          message={confirm.message}
+          confirmLabel="ยืนยัน"
+          cancelLabel="ยกเลิก"
+          isDanger={confirm.isDanger}
+          isLoading={confirm.isLoading}
+        />
       </div>
     </div>
   );

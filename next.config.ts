@@ -40,6 +40,11 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'team02storage.blob.core.windows.net', // ต้องใช้ชื่อนี้เท่านั้น
+        pathname: '/**', // อนุญาตทุกโฟลเดอร์ในที่เก็บข้อมูลนี้
+      },
+      {
+        protocol: 'https',
         hostname: 'cdn.example.com',
       },
     ],

@@ -61,7 +61,7 @@ export default function CentralDonationPage() {
     return (
 
         <div className="py-4">
-            <div className="container mx-auto mb-2 px-4 py-0 ">
+            <div className="container mx-auto mb-2 px-4 py-0">
                 <h2 className="text-3xl md:text-4xl font-semibold text-gray-800 mb-2">
                     การระดมทุน
                 </h2>
