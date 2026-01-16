@@ -253,7 +253,7 @@ export default function JobListPage() {
             onClick={handleCreateJob}
             className="flex items-center gap-2 px-8 py-2 bg-[#F26522] text-white rounded-lg font-medium hover:bg-[#FB793C] transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-5 h-5"/>
             <span>สร้างประกาศ</span>
           </button>
         </div>
