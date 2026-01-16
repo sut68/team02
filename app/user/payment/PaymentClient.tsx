@@ -190,10 +190,10 @@ export default function PaymentClient({ transaction, paymentMethods }: PaymentCl
   // เพิ่ม redirect ถ้ามาจาก booking
   useEffect(() => {
     if (isSuccess) {
-      const from = searchParams?.get('from');
-      if (from === 'booking') {
+      const bookingId = searchParams?.get('bookingId');
+      if (bookingId) {
         setTimeout(() => {
-          router.push('/user/booking/success');
+          router.push(`/user/booking/success?bookingId=${bookingId}`);
         }, 3000);
       } else {
         setTimeout(() => {
@@ -210,7 +210,7 @@ export default function PaymentClient({ transaction, paymentMethods }: PaymentCl
         <CheckCircle2 className="w-10 h-10 text-green-600 mx-auto mb-4" />
         <h2 className="text-2xl font-bold">บันทึกข้อมูลสำเร็จ!</h2>
         <p className="text-gray-500">
-          {searchParams?.get('from') === 'booking'
+          {searchParams?.get('bookingId')
             ? 'กำลังกลับไปยังหน้าการจอง...'
             : 'กำลังกลับสู่หน้ารายการ...'}
         </p>
