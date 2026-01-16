@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { CancelButton } from '@/app/components/ui/Button';
 
 interface Job {
   id: number;
@@ -289,12 +290,12 @@ export default function JobDetailPage() {
 
             {/* ปุ่มบันทึกและยกเลิก */}
             <div className="flex justify-end gap-4 pt-6 border-t border-gray-200">
-              <button
+              <CancelButton
                 onClick={handleCancel}
-                className="px-8 py-3 border border-gray-300 text-gray-700 text-sm font-medium rounded-full hover:bg-gray-50 transition-colors"
+                className='px-8 py-3 text-sm rounded-full'
               >
                 ยกเลิก
-              </button>
+              </CancelButton>
               <button
                 onClick={handleSave}
                 className="px-8 py-3 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-full transition-colors"

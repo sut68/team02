@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Upload, ChevronDown, ArrowLeft, AlertTriangle, FileText } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { CancelButton } from '@/app/components/ui/Button';
+import SuccessModal from '@/app/components/ui/SuccessModal';
 
 export default function EditJobPage() {
   const params = useParams();
@@ -25,6 +27,10 @@ export default function EditJobPage() {
   const closeModal = () => {
     setModalConfig(prev => ({ ...prev, isOpen: false }));
   };
+
+  // Success Modal State
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // State
   const [formData, setFormData] = useState({
@@ -238,17 +244,9 @@ export default function EditJobPage() {
       const result = await res.json();
       console.log('✅ Update successful:', result);
 
-      setModalConfig({
-        isOpen: true,
-        title: 'สำเร็จ',
-        message: 'แก้ไขประกาศงานสำเร็จ',
-        isDanger: false,
-        showCancelButton: false,
-        onConfirm: () => {
-          closeModal();
-          router.push('/user/job');
-        },
-      });
+      // Show Success Modal
+      setSuccessMessage('แก้ไขประกาศงานสำเร็จ');
+      setShowSuccess(true);
     } catch (error: any) {
       console.error('❌ Submit error:', error);
       setModalConfig({
@@ -522,14 +520,14 @@ export default function EditJobPage() {
 
             {/* Buttons */}
             <div className='flex justify-end gap-4 pt-6'>
-              <button
+              <CancelButton
                 type='button'
                 onClick={() => router.push('/user/job')}
                 disabled={isSubmitting}
-                className='px-8 py-3 bg-[#6D6E70] text-white text-sm font-medium rounded-lg hover:bg-[#4A4B4C] transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                className='px-8 py-3 text-sm'
               >
                 ยกเลิก
-              </button>
+              </CancelButton>
               <button
                 type='button'
                 onClick={handleSubmit}
@@ -575,6 +573,16 @@ export default function EditJobPage() {
           </div>
         </div>
       )}
+
+      {/* Success Modal */}
+      <SuccessModal
+        show={showSuccess}
+        message={successMessage}
+        onClose={() => {
+          setShowSuccess(false);
+          router.push('/user/job');
+        }}
+      />
     </div>
   );
 }
