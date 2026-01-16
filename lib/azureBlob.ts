@@ -1,4 +1,3 @@
-// Azure Blob Storage upload utility
 import { BlobServiceClient } from '@azure/storage-blob';
 import path from 'path';
 import { promises as fs } from 'fs';
@@ -31,9 +30,11 @@ export async function uploadToAzureBlob(fileBuffer: Buffer, blobName: string, mi
   const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
   const containerClient = blobServiceClient.getContainerClient(AZURE_STORAGE_CONTAINER_NAME);
   const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+  
   await blockBlobClient.uploadData(fileBuffer, {
     blobHTTPHeaders: mimetype ? { blobContentType: mimetype } : undefined,
   });
+  
   return blockBlobClient.url;
 } 
 
@@ -72,7 +73,6 @@ export async function deleteFromAzureBlob(fileUrlOrPath: string | null) {
 
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
     await blockBlobClient.deleteIfExists();
-    console.log(`Deleted blob: ${blobName}`);
 
   } catch (error) {
     console.warn(`Failed to delete blob: ${fileUrlOrPath}`, error);

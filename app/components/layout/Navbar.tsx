@@ -160,7 +160,7 @@ export default function Navbar() {
                 </Link>
               </div>
             </div>
-
+            <Link href="/user/vote" className="hover:text-gray-900">พิจารณาโครงการ</Link>
             <Link href="/user/budget" className="hover:text-gray-900">รายงานงบประมาณ</Link>
             <Link href="/user/talk" className="hover:text-gray-900">กระดานสนทนา</Link>
           </>

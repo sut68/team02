@@ -197,7 +197,7 @@ export default function VotePage() {
       {/* --- Hero Section --- */}
       <section className="relative w-full h-[300px] md:h-[400px] overflow-hidden mb-12 bg-gray-800">
         <Image
-          src="/budget/covers/14.jpg"
+          src="/budget/covers/12.jpg"
           alt="Banner พิจารณาโครงการ"
           fill
           className="object-cover"
@@ -416,7 +416,7 @@ export default function VotePage() {
                           <div className="grow w-full">
                             <div className="flex flex-col md:flex-row md:justify-between gap-2 mb-2">
                               <h3 className="text-lg font-bold text-gray-800">{project.projectName}</h3>
-                              <div className="self-start md:self-center px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 bg-green-100 text-green-700">
+                              <div className="self-start md:self-center px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 bg-orange-100 text-orange-700">
                                   <CheckCircle2 className="w-3 h-3"/>
                                   อนุมัติ
                               </div>

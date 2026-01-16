@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Sort by comment count in last 30 days and take top 5
+    // Sort by comment count in last 30 days, tie-break by newest first
     const sortedTopics = topics
       .map((topic) => ({
         id: topic.id,
@@ -41,10 +41,17 @@ export async function GET(request: NextRequest) {
         topicImage: topic.topicImage,
         category: topic.category,
         commentCount: topic.comments.length,
+        createddate: topic.createddate,
       }))
-      .filter((topic) => topic.commentCount > 0) // <--- เอา Comment ออกเพื่อให้กรองเฉพาะกระทู้ที่มีคอมเมนต์
-      .sort((a, b) => b.commentCount - a.commentCount)
-      .slice(0, 10); // แก้เป็น 5 ตามโจทย์ หรือ 10 ตามโค้ดเดิมก็ได้ (ใน Test ไม่ได้เช็คจำนวนละเอียด)
+      .sort((a, b) => {
+        // Primary: comment count (descending)
+        if (b.commentCount !== a.commentCount) {
+          return b.commentCount - a.commentCount;
+        }
+        // Tie-breaker: newer topics first (descending by date)
+        return new Date(b.createddate).getTime() - new Date(a.createddate).getTime();
+      })
+      .slice(0, 6); // Changed to 6 as per request
 
     // If no topics with comments, get recent topics instead
     if (sortedTopics.length === 0) {
@@ -63,7 +70,7 @@ export async function GET(request: NextRequest) {
         orderBy: {
           createddate: 'desc',
         },
-        take: 10,
+        take: 6,
       });
 
       const formattedRecentTopics = recentTopics.map((topic) => ({

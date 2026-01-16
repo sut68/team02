@@ -1,9 +1,11 @@
 // app/user/job/edit/[id]/page.tsx
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Upload, ChevronDown, ArrowLeft } from 'lucide-react';
+import { Upload, ChevronDown, ArrowLeft, AlertTriangle, FileText } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { CancelButton } from '@/app/components/ui/Button';
+import SuccessModal from '@/app/components/ui/SuccessModal';
 
 export default function EditJobPage() {
   const params = useParams();
@@ -12,6 +14,23 @@ export default function EditJobPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Modal State
+  const [modalConfig, setModalConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => { },
+    isDanger: false,
+    showCancelButton: false,
+  });
+
+  const closeModal = () => {
+    setModalConfig(prev => ({ ...prev, isOpen: false }));
+  };
+
+  // Success Modal State
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // State
   const [formData, setFormData] = useState({
@@ -47,6 +66,17 @@ export default function EditJobPage() {
     attachment: null,
     logo: null,
     image: null,
+  });
+
+  // Track which images should be removed
+  const [removeImages, setRemoveImages] = useState<{
+    attachment: boolean;
+    logo: boolean;
+    image: boolean;
+  }>({
+    attachment: false,
+    logo: false,
+    image: false,
   });
 
   // Load Job Data
@@ -89,8 +119,17 @@ export default function EditJobPage() {
 
     } catch (error) {
       console.error(error);
-      alert('ไม่สามารถโหลดข้อมูลงานได้');
-      router.push('/user/job');
+      setModalConfig({
+        isOpen: true,
+        title: 'เกิดข้อผิดพลาด',
+        message: 'ไม่สามารถโหลดข้อมูลงานได้',
+        isDanger: true,
+        showCancelButton: false,
+        onConfirm: () => {
+          closeModal();
+          router.push('/user/job');
+        },
+      });
     } finally {
       setIsLoading(false);
     }
@@ -139,7 +178,14 @@ export default function EditJobPage() {
   const handleSubmit = async () => {
     // Validation (Basic)
     if (!formData.jobTitle || !formData.companyName) {
-      alert('กรุณากรอกข้อมูลที่จำเป็น');
+      setModalConfig({
+        isOpen: true,
+        title: 'ข้อมูลไม่ครบถ้วน',
+        message: 'กรุณากรอกข้อมูลที่จำเป็น (*)',
+        isDanger: true,
+        showCancelButton: false,
+        onConfirm: closeModal,
+      });
       return;
     }
 
@@ -161,10 +207,24 @@ export default function EditJobPage() {
         submitData.append(key, value);
       });
 
-      // Append files only if new ones selected
-      if (files.attachment) submitData.append('attachment', files.attachment);
-      if (files.logo) submitData.append('logo', files.logo);
-      if (files.image) submitData.append('image', files.image);
+      // Append files or removal flags
+      if (files.attachment) {
+        submitData.append('attachment', files.attachment);
+      } else if (removeImages.attachment) {
+        submitData.append('removeAttachment', 'true');
+      }
+
+      if (files.logo) {
+        submitData.append('logo', files.logo);
+      } else if (removeImages.logo) {
+        submitData.append('removeLogo', 'true');
+      }
+
+      if (files.image) {
+        submitData.append('image', files.image);
+      } else if (removeImages.image) {
+        submitData.append('removeImage', 'true');
+      }
 
       console.log('🚀 Sending PATCH request to:', `/api/job/${jobId}`);
 
@@ -184,11 +244,19 @@ export default function EditJobPage() {
       const result = await res.json();
       console.log('✅ Update successful:', result);
 
-      alert('แก้ไขประกาศงานสำเร็จ');
-      router.push('/user/job');
+      // Show Success Modal
+      setSuccessMessage('แก้ไขประกาศงานสำเร็จ');
+      setShowSuccess(true);
     } catch (error: any) {
       console.error('❌ Submit error:', error);
-      alert(error.message);
+      setModalConfig({
+        isOpen: true,
+        title: 'เกิดข้อผิดพลาด',
+        message: error.message || 'บันทึกไม่สำเร็จ',
+        isDanger: true,
+        showCancelButton: false,
+        onConfirm: closeModal,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -199,15 +267,18 @@ export default function EditJobPage() {
   }
 
   return (
-    <div className='min-h-screen bg-[#F9FAFB] py-8'>
+    <div className='min-h-screen bg-white py-8'>
       <div className='max-w-4xl mx-auto px-4'>
-        <div className="flex items-center gap-4 mb-8">
-          <Link href="/user/job" className="text-gray-500 hover:text-gray-700">
-            <ArrowLeft className="w-6 h-6" />
-          </Link>
-          <h2 className='text-2xl font-medium text-[#1F2937]'>
-            แก้ไขประกาศงาน
-          </h2>
+        <div className='mb-8'>
+          <div className="flex items-center gap-4 mb-2">
+            <Link href="/user/job" className="text-gray-500 hover:text-gray-700">
+              <ArrowLeft className="w-6 h-6" />
+            </Link>
+            <h2 className='text-3xl font-semibold text-gray-800'>
+              แก้ไขประกาศงาน
+            </h2>
+          </div>
+          <p className='text-sm text-gray-500 ml-10'>แก้ไขข้อมูลประกาศงานของคุณ</p>
         </div>
 
         <div className='bg-[#FFFFFF] rounded-lg shadow-sm p-8'>
@@ -227,7 +298,7 @@ export default function EditJobPage() {
 
             {/* title */}
             <div>
-              <label className='block text-sm text-[#6B7280] mb-2'>title</label>
+              <label className='block text-sm text-[#6B7280] mb-2'>title <span className='text-red-500'>*</span></label>
               <input
                 type='text'
                 className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none'
@@ -239,10 +310,10 @@ export default function EditJobPage() {
             {/* ระดับการศึกษา และ ประเภทของงาน */}
             <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
               <div>
-                <label className='block text-sm text-[#6B7280] mb-2'>ระดับการศึกษา</label>
+                <label className='block text-sm text-[#6B7280] mb-2'>ระดับการศึกษา <span className='text-red-500'>*</span></label>
                 <div className='relative'>
                   <select
-                    className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm text-[#4B5563] focus:border-[#FB923C] focus:outline-none appearance-none bg-[#E5E7EB]'
+                    className='w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-sm text-gray-700 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 focus:outline-none appearance-none bg-white cursor-pointer pr-10 hover:border-orange-300 transition-colors'
                     value={formData.education}
                     onChange={(e) => handleInputChange('education', e.target.value)}
                   >
@@ -257,10 +328,10 @@ export default function EditJobPage() {
                 </div>
               </div>
               <div>
-                <label className='block text-sm text-[#6B7280] mb-2'>ประเภทของงาน</label>
+                <label className='block text-sm text-[#6B7280] mb-2'>ประเภทของงาน <span className='text-red-500'>*</span></label>
                 <div className='relative'>
                   <select
-                    className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm text-[#4B5563] focus:border-[#FB923C] focus:outline-none appearance-none bg-[#E5E7EB]'
+                    className='w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-sm text-gray-700 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 focus:outline-none appearance-none bg-white cursor-pointer pr-10 hover:border-orange-300 transition-colors'
                     value={formData.jobType}
                     onChange={(e) => handleInputChange('jobType', e.target.value)}
                   >
@@ -278,7 +349,7 @@ export default function EditJobPage() {
             {/* ตำแหน่งงาน และ รายได้เฉลี่ย */}
             <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
               <div>
-                <label className='block text-sm text-[#6B7280] mb-2'>ตำแหน่งงาน</label>
+                <label className='block text-sm text-[#6B7280] mb-2'>ตำแหน่งงาน <span className='text-red-500'>*</span></label>
                 <input
                   type='text'
                   className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none'
@@ -287,7 +358,7 @@ export default function EditJobPage() {
                 />
               </div>
               <div>
-                <label className='block text-sm text-[#6B7280] mb-2'>รายได้เฉลี่ย</label>
+                <label className='block text-sm text-[#6B7280] mb-2'>รายได้เฉลี่ย <span className='text-red-500'>*</span></label>
                 <input
                   type='text'
                   className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none'
@@ -300,7 +371,7 @@ export default function EditJobPage() {
             {/* ชื่อบริษัท และ จำนวนอัตรา */}
             <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
               <div>
-                <label className='block text-sm text-[#6B7280] mb-2'>ชื่อบริษัท</label>
+                <label className='block text-sm text-[#6B7280] mb-2'>ชื่อบริษัท <span className='text-red-500'>*</span></label>
                 <input
                   type='text'
                   className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none'
@@ -309,7 +380,7 @@ export default function EditJobPage() {
                 />
               </div>
               <div>
-                <label className='block text-sm text-[#6B7280] mb-2'>จำนวนอัตรา</label>
+                <label className='block text-sm text-[#6B7280] mb-2'>จำนวนอัตรา <span className='text-red-500'>*</span></label>
                 <input
                   type='number'
                   min="1"
@@ -322,7 +393,7 @@ export default function EditJobPage() {
 
             {/* Textareas */}
             <div>
-              <label className='block text-sm text-[#6B7280] mb-2'>ที่อยู่บริษัท</label>
+              <label className='block text-sm text-[#6B7280] mb-2'>ที่อยู่บริษัท <span className='text-red-500'>*</span></label>
               <textarea
                 className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none resize-none'
                 rows={3}
@@ -331,7 +402,7 @@ export default function EditJobPage() {
               />
             </div>
             <div>
-              <label className='block text-sm text-[#6B7280] mb-2'>ช่องทางการติดต่อ</label>
+              <label className='block text-sm text-[#6B7280] mb-2'>ช่องทางการติดต่อ <span className='text-red-500'>*</span></label>
               <textarea
                 className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none resize-none'
                 rows={3}
@@ -340,7 +411,7 @@ export default function EditJobPage() {
               />
             </div>
             <div>
-              <label className='block text-sm text-[#6B7280] mb-2'>วิธีการเดินทาง</label>
+              <label className='block text-sm text-[#6B7280] mb-2'>วิธีการเดินทาง <span className='text-red-500'>*</span></label>
               <textarea
                 className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none resize-none'
                 rows={3}
@@ -349,7 +420,7 @@ export default function EditJobPage() {
               />
             </div>
             <div>
-              <label className='block text-sm text-[#6B7280] mb-2'>คุณสมบัติ</label>
+              <label className='block text-sm text-[#6B7280] mb-2'>คุณสมบัติ <span className='text-red-500'>*</span></label>
               <textarea
                 className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none resize-none'
                 rows={4}
@@ -364,16 +435,25 @@ export default function EditJobPage() {
               <div>
                 <label className='block text-sm text-[#6B7280] mb-2'>ไฟล์แนบงาน</label>
                 {previews.attachment ? (
-                  <div className='relative border-2 border-[#D1D5DB] rounded-md overflow-hidden h-48 flex items-center justify-center bg-gray-100'>
-                    {previews.attachment.startsWith('/uploads') ? (
-                      <span className="text-xs text-gray-500 break-all p-2">ไฟล์เดิม: {previews.attachment.split('/').pop()}</span>
+                  <div className='relative border-2 border-[#D1D5DB] rounded-md overflow-hidden'>
+                    {previews.attachment.toLowerCase().endsWith('.pdf') ? (
+                      <div className="flex flex-col items-center justify-center h-48 bg-gray-50 text-gray-500">
+                        <FileText size={32} />
+                        <span className="text-xs mt-2 p-2 text-center break-all">{previews.attachment.split('/').pop()}</span>
+                      </div>
                     ) : (
-                      <img src={previews.attachment} alt="Preview" className='w-full h-full object-cover' />
+                      <img
+                        src={previews.attachment}
+                        alt="Preview"
+                        className='w-full h-auto max-h-[500px] object-contain'
+                      />
                     )}
                     <button
+                      type="button"
                       onClick={() => {
                         setFiles({ ...files, attachment: null });
-                        setPreviews({ ...previews, attachment: null }); // Note: This removes current file ref
+                        setPreviews({ ...previews, attachment: null });
+                        setRemoveImages({ ...removeImages, attachment: true });
                       }}
                       className='absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs'
                     >✕</button>
@@ -391,9 +471,15 @@ export default function EditJobPage() {
               <div>
                 <label className='block text-sm text-[#6B7280] mb-2'>ตราบริษัท</label>
                 {previews.logo ? (
-                  <div className='relative border-2 border-[#D1D5DB] rounded-md overflow-hidden h-48'>
-                    <img src={previews.logo} alt="Preview" className='w-full h-full object-cover' />
-                    <button onClick={() => { setFiles({ ...files, logo: null }); setPreviews({ ...previews, logo: null }); }}
+                  <div className='relative border-2 border-[#D1D5DB] rounded-md overflow-hidden'>
+                    <img src={previews.logo} alt="Preview" className='w-full h-auto max-h-[500px] object-contain' />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFiles({ ...files, logo: null });
+                        setPreviews({ ...previews, logo: null });
+                        setRemoveImages({ ...removeImages, logo: true });
+                      }}
                       className='absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs'
                     >✕</button>
                   </div>
@@ -410,9 +496,15 @@ export default function EditJobPage() {
               <div>
                 <label className='block text-sm text-[#6B7280] mb-2'>รูปบริษัท</label>
                 {previews.image ? (
-                  <div className='relative border-2 border-[#D1D5DB] rounded-md overflow-hidden h-48'>
-                    <img src={previews.image} alt="Preview" className='w-full h-full object-cover' />
-                    <button onClick={() => { setFiles({ ...files, image: null }); setPreviews({ ...previews, image: null }); }}
+                  <div className='relative border-2 border-[#D1D5DB] rounded-md overflow-hidden'>
+                    <img src={previews.image} alt="Preview" className='w-full h-auto max-h-[500px] object-contain' />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFiles({ ...files, image: null });
+                        setPreviews({ ...previews, image: null });
+                        setRemoveImages({ ...removeImages, image: true });
+                      }}
                       className='absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs'
                     >✕</button>
                   </div>
@@ -428,16 +520,19 @@ export default function EditJobPage() {
 
             {/* Buttons */}
             <div className='flex justify-end gap-4 pt-6'>
-              <button
+              <CancelButton
+                type='button'
                 onClick={() => router.push('/user/job')}
-                className='px-8 py-3 border border-[#D1D5DB] text-[#374151] text-sm font-medium rounded-full hover:bg-[#F9FAFB]'
+                disabled={isSubmitting}
+                className='px-8 py-3 text-sm'
               >
                 ยกเลิก
-              </button>
+              </CancelButton>
               <button
+                type='button'
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className='px-8 py-3 bg-[#F97316] hover:bg-[#EA580C] text-[#FFFFFF] text-sm font-medium rounded-full disabled:opacity-50'
+                className='px-8 py-3 bg-[#F97316] hover:bg-[#EA580C] text-[#FFFFFF] text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
               >
                 {isSubmitting ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
               </button>
@@ -445,6 +540,49 @@ export default function EditJobPage() {
           </div>
         </div>
       </div>
+
+      {modalConfig.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 p-6 text-center">
+            <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-full mb-4 bg-gray-50">
+              <div className={`p-3 rounded-full ${modalConfig.isDanger ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-[#F26522]'}`}>
+                <AlertTriangle size={32} strokeWidth={2.5} />
+              </div>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">{modalConfig.title}</h3>
+            <p className="text-gray-500 text-sm leading-relaxed mb-6">{modalConfig.message}</p>
+            <div className="flex gap-3 justify-center">
+              {modalConfig.showCancelButton && (
+                <button
+                  onClick={closeModal}
+                  className="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all"
+                >
+                  ยกเลิก
+                </button>
+              )}
+              <button
+                onClick={modalConfig.onConfirm}
+                className={`flex-1 px-4 py-2.5 text-sm font-semibold text-white rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${modalConfig.isDanger
+                  ? 'bg-red-600 hover:bg-red-700 shadow-red-500/20 hover:shadow-red-500/30'
+                  : 'bg-[#F26522] hover:bg-[#d65a1f] shadow-orange-500/20 hover:shadow-orange-500/30'
+                  }`}
+              >
+                ตกลง
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      <SuccessModal
+        show={showSuccess}
+        message={successMessage}
+        onClose={() => {
+          setShowSuccess(false);
+          router.push('/user/job');
+        }}
+      />
     </div>
   );
 }

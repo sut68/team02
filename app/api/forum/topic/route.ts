@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, title, content, topicImage, status, editedByUserId } = body;
+    const { id, title, content, topicImage, status, category_id, editedByUserId } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -198,6 +198,7 @@ export async function PUT(request: NextRequest) {
           ...(content && { content }),
           ...(topicImage !== undefined && { topicImage }),
           ...(status && { status }),
+          ...(category_id && { category_id }),
           lastactivitydate: new Date(),
         },
         include: {
@@ -221,6 +222,7 @@ export async function PUT(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
+    console.error('Error in PUT /api/forum/topic:', error);
     return NextResponse.json(
       { error: 'เกิดข้อผิดพลาดในการอัพเดทกระทู้' },
       { status: 500 }

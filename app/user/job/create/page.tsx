@@ -1,6 +1,8 @@
 'use client';
 import React, { useState } from 'react';
-import { Upload, ChevronDown } from 'lucide-react';
+import { Upload, ChevronDown, AlertTriangle } from 'lucide-react';
+import { CancelButton } from '@/app/components/ui/Button';
+import SuccessModal from '@/app/components/ui/SuccessModal';
 
 export default function JobPostPage() {
   // 1. กำหนด State เริ่มต้น
@@ -40,6 +42,24 @@ export default function JobPostPage() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Modal State
+  const [modalConfig, setModalConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => { },
+    isDanger: false,
+    showCancelButton: false,
+  });
+
+  const closeModal = () => {
+    setModalConfig(prev => ({ ...prev, isOpen: false }));
+  };
+
+  // Success Modal State
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   // ✅ เช็คความถูกต้องของฟอร์มแบบ Real-time
   const isFormValid =
@@ -100,14 +120,27 @@ export default function JobPostPage() {
 
   const handleSubmit = async () => {
     if (!isFormValid) {
-      alert('กรุณากรอกข้อมูลให้ครบทุกช่อง');
+      setModalConfig({
+        isOpen: true,
+        title: 'ข้อมูลไม่ครบถ้วน',
+        message: 'กรุณากรอกข้อมูลให้ครบทุกช่องที่มีเครื่องหมายดอกจัน (*)',
+        isDanger: true,
+        showCancelButton: false,
+        onConfirm: closeModal,
+      });
       return;
     }
 
-    // ✅ เพิ่มการตรวจสอบจำนวนอัตราก่อนส่ง ว่าต้องเป็นตัวเลขเท่านั้น
     if (isNaN(Number(formData.positions)) || Number(formData.positions) < 1) {
-        alert('กรุณาระบุจำนวนอัตราให้ถูกต้อง (อย่างน้อย 1 อัตรา)');
-        return;
+      setModalConfig({
+        isOpen: true,
+        title: 'ข้อมูลไม่ถูกต้อง',
+        message: 'กรุณาระบุจำนวนอัตราให้ถูกต้อง (อย่างน้อย 1 อัตรา)',
+        isDanger: true,
+        showCancelButton: false,
+        onConfirm: closeModal,
+      });
+      return;
     }
 
     setIsSubmitting(true);
@@ -123,10 +156,10 @@ export default function JobPostPage() {
       submitFormData.append('education', formData.education);
       submitFormData.append('salary', formData.salary);
       submitFormData.append('companyName', formData.companyName);
-      
+
       // ✅ ส่ง positions ไป (ค่าจะเป็น string ใน FormData เสมอ Backend ต้องแปลงเป็น Int เอง)
       submitFormData.append('positions', formData.positions);
-      
+
       submitFormData.append('address', formData.address);
       submitFormData.append('contact', formData.contact);
       submitFormData.append('transportation', formData.transportation);
@@ -148,15 +181,25 @@ export default function JobPostPage() {
         throw new Error(data.error || 'เกิดข้อผิดพลาดในการสร้างประกาศงาน');
       }
 
-      alert('บันทึกประกาศงานสำเร็จ!');
-      window.location.href = '/user/job';
-      
+      // Show Success Modal
+      setSuccessMessage('บันทึกประกาศงานสำเร็จ!');
+      setShowSuccess(true);
+
     } catch (error) {
       const errorMessage =
         error instanceof Error
           ? error.message
           : 'เกิดข้อผิดพลาดในการสร้างประกาศงาน';
-      alert(errorMessage);
+
+
+      setModalConfig({
+        isOpen: true,
+        title: 'เกิดข้อผิดพลาด',
+        message: errorMessage,
+        isDanger: true,
+        showCancelButton: false,
+        onConfirm: closeModal,
+      });
       console.error(error);
     } finally {
       setIsSubmitting(false);
@@ -164,11 +207,15 @@ export default function JobPostPage() {
   };
 
   return (
-    <div className='min-h-screen bg-[#F9FAFB] py-8'>
+    <div className='min-h-screen bg-white py-8'>
       <div className='max-w-4xl mx-auto px-4'>
-        <h2 className='text-2xl font-medium text-[#1F2937] mb-8'>
-          ประกาศรับสมัครงาน
-        </h2>
+        {/* Header Section */}
+        <div className='mb-8'>
+          <h2 className='text-3xl font-semibold text-gray-800'>
+            ประกาศรับสมัครงาน
+          </h2>
+          <p className='text-sm text-gray-500 mt-2'>กรอกข้อมูลเพื่อสร้างประกาศงานใหม่</p>
+        </div>
 
         <div className='bg-[#FFFFFF] rounded-lg shadow-sm p-8'>
           <div className='space-y-6'>
@@ -188,7 +235,7 @@ export default function JobPostPage() {
 
             {/* title */}
             <div>
-              <label className='block text-sm text-[#6B7280] mb-2'>title</label>
+              <label className='block text-sm text-[#6B7280] mb-2'>title <span className='text-red-500'>*</span></label>
               <input
                 type='text'
                 className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none'
@@ -202,17 +249,17 @@ export default function JobPostPage() {
             <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
               <div>
                 <label className='block text-sm text-[#6B7280] mb-2'>
-                  ระดับการศึกษา
+                  ระดับการศึกษา <span className='text-red-500'>*</span>
                 </label>
                 <div className='relative'>
                   <select
-                    className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm text-[#9CA3AF] focus:border-[#FB923C] focus:outline-none appearance-none bg-[#E5E7EB] cursor-pointer pr-10'
+                    className='w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-sm text-gray-700 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 focus:outline-none appearance-none bg-white cursor-pointer pr-10 hover:border-orange-300 transition-colors'
                     value={formData.education}
                     onChange={(e) =>
                       handleInputChange('education', e.target.value)
                     }
                   >
-                    <option>Select Education</option>
+                    <option value='' className='text-gray-400'>เลือกระดับการศึกษา</option>
                     <option>ต่ำกว่าปริญญาตรี</option>
                     <option>ปริญญาตรี</option>
                     <option>ปริญญาโท</option>
@@ -224,17 +271,17 @@ export default function JobPostPage() {
               </div>
               <div>
                 <label className='block text-sm text-[#6B7280] mb-2'>
-                  ประเภทของงาน
+                  ประเภทของงาน <span className='text-red-500'>*</span>
                 </label>
                 <div className='relative'>
                   <select
-                    className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm text-[#9CA3AF] focus:border-[#FB923C] focus:outline-none appearance-none bg-[#E5E7EB] cursor-pointer pr-10'
+                    className='w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-sm text-gray-700 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 focus:outline-none appearance-none bg-white cursor-pointer pr-10 hover:border-orange-300 transition-colors'
                     value={formData.jobType}
                     onChange={(e) =>
                       handleInputChange('jobType', e.target.value)
                     }
                   >
-                    <option>Select Type</option>
+                    <option value='' className='text-gray-400'>เลือกประเภทงาน</option>
                     <option>Full-time</option>
                     <option>Part-time</option>
                     <option>Contract</option>
@@ -249,7 +296,7 @@ export default function JobPostPage() {
             <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
               <div>
                 <label className='block text-sm text-[#6B7280] mb-2'>
-                  ตำแหน่งงาน
+                  ตำแหน่งงาน <span className='text-red-500'>*</span>
                 </label>
                 <input
                   type='text'
@@ -263,7 +310,7 @@ export default function JobPostPage() {
               </div>
               <div>
                 <label className='block text-sm text-[#6B7280] mb-2'>
-                  รายได้เฉลี่ย
+                  รายได้เฉลี่ย <span className='text-red-500'>*</span>
                 </label>
                 <input
                   type='text'
@@ -279,7 +326,7 @@ export default function JobPostPage() {
             <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
               <div>
                 <label className='block text-sm text-[#6B7280] mb-2'>
-                  ชื่อบริษัท
+                  ชื่อบริษัท <span className='text-red-500'>*</span>
                 </label>
                 <input
                   type='text'
@@ -295,7 +342,7 @@ export default function JobPostPage() {
               {/* 🔴 ส่วนที่แก้ไข: จำนวนอัตรา (ให้พิมพ์เอา) */}
               <div>
                 <label className='block text-sm text-[#6B7280] mb-2'>
-                  จำนวนอัตรา
+                  จำนวนอัตรา <span className='text-red-500'>*</span>
                 </label>
                 <input
                   type='number'     // บังคับให้ browser รับเฉพาะตัวเลข
@@ -313,7 +360,7 @@ export default function JobPostPage() {
             {/* ที่อยู่บริษัท */}
             <div>
               <label className='block text-sm text-[#6B7280] mb-2'>
-                ที่อยู่บริษัท
+                ที่อยู่บริษัท <span className='text-red-500'>*</span>
               </label>
               <textarea
                 className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none resize-none'
@@ -327,7 +374,7 @@ export default function JobPostPage() {
             {/* ช่องทางการติดต่อ */}
             <div>
               <label className='block text-sm text-[#6B7280] mb-2'>
-                ช่องทางการติดต่อ
+                ช่องทางการติดต่อ <span className='text-red-500'>*</span>
               </label>
               <textarea
                 className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none resize-none'
@@ -341,7 +388,7 @@ export default function JobPostPage() {
             {/* วิธีการเดินทาง */}
             <div>
               <label className='block text-sm text-[#6B7280] mb-2'>
-                วิธีการเดินทาง
+                วิธีการเดินทาง <span className='text-red-500'>*</span>
               </label>
               <textarea
                 className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none resize-none'
@@ -357,7 +404,7 @@ export default function JobPostPage() {
             {/* คุณสมบัติ */}
             <div>
               <label className='block text-sm text-[#6B7280] mb-2'>
-                คุณสมบัติ
+                คุณสมบัติ <span className='text-red-500'>*</span>
               </label>
               <textarea
                 className='w-full px-4 py-3 border border-[#D1D5DB] rounded-lg text-sm focus:border-[#FB923C] focus:outline-none resize-none'
@@ -516,16 +563,16 @@ export default function JobPostPage() {
 
             {/* Buttons */}
             <div className='flex justify-end gap-4 pt-6'>
-              <button
+              <CancelButton
                 onClick={handleCancel}
-                className='px-8 py-3 border border-[#D1D5DB] text-[#374151] text-sm font-medium rounded-full hover:bg-[#F9FAFB] transition-colors'
+                className='px-8 py-3 text-sm'
               >
                 ยกเลิก
-              </button>
+              </CancelButton>
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting || !isFormValid}
-                className='px-8 py-3 bg-[#F97316] hover:bg-[#EA580C] text-[#FFFFFF] text-sm font-medium rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                className='px-8 py-3 bg-[#F97316] hover:bg-[#EA580C] text-[#FFFFFF] text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
               >
                 {isSubmitting ? 'กำลังบันทึก...' : 'บันทึก'}
               </button>
@@ -533,6 +580,49 @@ export default function JobPostPage() {
           </div>
         </div>
       </div>
+
+      {modalConfig.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 p-6 text-center">
+            <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-full mb-4 bg-gray-50">
+              <div className={`p-3 rounded-full ${modalConfig.isDanger ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-[#F26522]'}`}>
+                <AlertTriangle size={32} strokeWidth={2.5} />
+              </div>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">{modalConfig.title}</h3>
+            <p className="text-gray-500 text-sm leading-relaxed mb-6">{modalConfig.message}</p>
+            <div className="flex gap-3 justify-center">
+              {modalConfig.showCancelButton && (
+                <button
+                  onClick={closeModal}
+                  className="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all"
+                >
+                  ยกเลิก
+                </button>
+              )}
+              <button
+                onClick={modalConfig.onConfirm}
+                className={`flex-1 px-4 py-2.5 text-sm font-semibold text-white rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${modalConfig.isDanger
+                  ? 'bg-red-600 hover:bg-red-700 shadow-red-500/20 hover:shadow-red-500/30'
+                  : 'bg-[#F26522] hover:bg-[#d65a1f] shadow-orange-500/20 hover:shadow-orange-500/30'
+                  }`}
+              >
+                ตกลง
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      <SuccessModal
+        show={showSuccess}
+        message={successMessage}
+        onClose={() => {
+          setShowSuccess(false);
+          window.location.href = '/user/job';
+        }}
+      />
     </div>
   );
 }
