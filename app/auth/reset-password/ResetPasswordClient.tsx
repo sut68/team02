@@ -49,11 +49,13 @@ function ResetPasswordForm() {
     setLoading(true);
 
     try {
+      // Normalize email เหมือนเมื่อสร้าง token
+      const normalizedEmail = email.trim().toLowerCase();
 
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, token, newPassword }),
+        body: JSON.stringify({ email: normalizedEmail, token, newPassword }),
       });
 
       const data = await response.json();
