@@ -982,8 +982,8 @@ model JobType {
 // ประกาศงาน
 model JobPosting {
   id            Int             @id @default(autoincrement())
-  title         String
-  namejob       String          // ชื่อตำแหน่งงาน
+  title         String          // รายละเอียดงาน
+  namejob       String          // ชื่องาน
   position      String?         // ตำแหน่งงาน
   qualification String?         @db.Text // คุณสมบัติ
   location      String?         @db.Text // ที่อยู่/สถานที่

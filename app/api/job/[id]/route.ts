@@ -190,6 +190,11 @@ export async function PATCH(
     const logoFile = formData.get('logo') as File | null;
     const imageFile = formData.get('image') as File | null;
 
+    // Get removal flags
+    const removeAttachment = formData.get('removeAttachment') === 'true';
+    const removeLogo = formData.get('removeLogo') === 'true';
+    const removeImage = formData.get('removeImage') === 'true';
+
     // Upload new files if provided
     const attachmentUrl = attachmentFile ? await uploadFile(attachmentFile, 'jobs') : undefined;
     const logoUrl = logoFile ? await uploadFile(logoFile, 'publish') : undefined;
@@ -213,9 +218,11 @@ export async function PATCH(
       jobtypeId: jobtypeId,
     };
 
-    // Only update JobPosterPath if a new file was uploaded
+    // Only update JobPosterPath if a new file was uploaded or removal requested
     if (attachmentUrl) {
       updateData.JobPosterPath = attachmentUrl;
+    } else if (removeAttachment) {
+      updateData.JobPosterPath = null;
     }
 
     console.log('📝 Updating job posting:', {
@@ -242,12 +249,17 @@ export async function PATCH(
         companyaddress: address?.trim() || null,
       };
 
-      // Only update logo/image if new files were uploaded
+      // Only update logo/image if new files were uploaded or removal requested
       if (logoUrl) {
         companyUpdateData.CompanyLogoPath = logoUrl;
+      } else if (removeLogo) {
+        companyUpdateData.CompanyLogoPath = null;
       }
+
       if (imageUrl) {
         companyUpdateData.CompanyPicturePath = imageUrl;
+      } else if (removeImage) {
+        companyUpdateData.CompanyPicturePath = null;
       }
 
       console.log('🏢 Updating company:', companyUpdateData);

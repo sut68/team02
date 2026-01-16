@@ -300,6 +300,137 @@ async function main() {
   console.log('✅ Seeded job types');
 
   // -----------------------------
+  //  JOB POSTINGS (ประกาศงาน)
+  // -----------------------------
+  const jobPostingsData = [
+    {
+      namejob: 'ประกาศรับสมัครพนักงาน บริษัท Tech Solutions Co., Ltd. ผู้นำด้านการพัฒนาซอฟต์แวร์ในประเทศไทย กำลังมองหานักพัฒนาที่มีความสามารถเข้าร่วมทีมของเรา พร้อมเติบโตไปด้วยกันในสภาพแวดล้อมการทำงานที่ท้าทาย',
+      title: 'Software Developer',
+      position: 'Junior Developer',
+      qualification: '- จบปริญญาตรี สาขาวิศวกรรมคอมพิวเตอร์หรือสาขาที่เกี่ยวข้อง\n- มีประสบการณ์ 0-2 ปี\n- สามารถเขียนโปรแกรมภาษา JavaScript, TypeScript ได้\n- มีความรู้เรื่อง React, Next.js จะพิจารณาเป็นพิเศษ',
+      location: 'กรุงเทพมหานคร',
+      salarydetail: '25,000 - 40,000 บาท/เดือน',
+      numpositions: 3,
+      contactInfo: 'hr@techcompany.co.th หรือโทร 02-123-4567',
+      educationlevel: 'BACHELOR' as const,
+      status: 'APPROVED' as const,
+      userEmail: 'alumni.2018@sut-eng.ac.th',
+      jobType: 'FULL_TIME' as const,
+      companyName: 'Tech Solutions Co., Ltd.',
+      companyAddress: '123 อาคารสยามพารากอน ชั้น 15 ถ.พหลโยธิน แขวงจตุจักร เขตจตุจักร กรุงเทพฯ 10900',
+      JobPosterPath: '/uploads/jobs/1767600678318_Screenshot_2025-10-31_184745.png',
+      CompanyLogoPath: '/uploads/jobs/companylogo/Screenshot 2025-10-31 200451.png',
+      CompanyPicturePath: '/uploads/jobs/companypicture/Screenshot 2025-11-15 204512.png',
+    },
+    {
+      namejob: 'รับสมัครด่วน! Data Driven Analytics บริษัทชั้นนำด้านการวิเคราะห์ข้อมูล เปิดรับสมัคร Data Analyst ประจำสำนักงานโคราช เรากำลังขยายทีมและต้องการผู้เชี่ยวชาญที่มีความสนใจในงานวิเคราะห์ข้อมูล',
+      title: 'Data Analyst',
+      position: 'Senior Data Analyst',
+      qualification: '- จบปริญญาตรี/โท สาขาสถิติ, วิทยาการคอมพิวเตอร์, หรือสาขาที่เกี่ยวข้อง\n- มีประสบการณ์ 3-5 ปี\n- สามารถใช้งาน SQL, Python, Power BI ได้เป็นอย่างดี\n- มีทักษะการวิเคราะห์และนำเสนอข้อมูล',
+      location: 'นครราชสีมา',
+      salarydetail: '35,000 - 55,000 บาท/เดือน',
+      numpositions: 2,
+      contactInfo: 'recruit@datadriven.co.th',
+      educationlevel: 'BACHELOR' as const,
+      status: 'APPROVED' as const,
+      userEmail: 'alumni.2015@sut-eng.ac.th',
+      jobType: 'FULL_TIME' as const,
+      companyName: 'Data Driven Analytics',
+      companyAddress: '456 ถ.มิตรภาพ ต.ในเมือง อ.เมือง จ.นครราชสีมา 30000',
+      JobPosterPath: '/uploads/jobs/1767960487570_Screenshot_2025-10-31_204952.png',
+    },
+    {
+      namejob: 'โอกาสฝึกงานสำหรับนักศึกษา! Big Corporation เปิดรับนักศึกษาฝึกงานด้าน IT Support เรียนรู้การทำงานจริงกับทีมมืออาชีพ พัฒนาทักษะและเตรียมพร้อมสู่โลกการทำงาน',
+      title: 'IT Support Intern',
+      position: 'Intern',
+      qualification: '- กำลังศึกษาชั้นปีที่ 3-4 สาขาวิศวกรรมคอมพิวเตอร์หรือสาขาที่เกี่ยวข้อง\n- มีความรู้พื้นฐานด้านระบบเครือข่าย\n- สามารถทำงานร่วมกับทีมได้ดี',
+      location: 'กรุงเทพมหานคร',
+      salarydetail: '12,000 - 15,000 บาท/เดือน',
+      numpositions: 5,
+      contactInfo: 'internship@bigcorp.co.th',
+      educationlevel: 'BACHELOR' as const,
+      status: 'APPROVED' as const,
+      userEmail: 'admin@sut-eng.ac.th',
+      jobType: 'INTERNSHIP' as const,
+      companyName: 'Big Corporation',
+      companyAddress: '789 อาคารเซ็นทรัลเวิลด์ ชั้น 20 ถ.ราชดำริ กรุงเทพฯ',
+      JobPosterPath: '/uploads/jobs/1768407756349_Screenshot_2025-10-31_184745.png',
+    },
+    {
+      namejob: 'รับสมัครวิศวกรโยธา งาน Part-time! Construction Pro บริษัทก่อสร้างชั้นนำในภาคอีสาน เปิดโอกาสให้วิศวกรที่ต้องการรายได้เสริม มาร่วมงานกับเราในโปรเจกต์ที่น่าตื่นเต้น',
+      title: 'Civil Engineer',
+      position: 'Part-time Engineer',
+      qualification: '- จบปริญญาตรี สาขาวิศวกรรมโยธา\n- มีใบประกอบวิชาชีพ (กว.) จะพิจารณาเป็นพิเศษ\n- สามารถทำงานนอกเวลาได้',
+      location: 'ขอนแก่น',
+      salarydetail: '800 - 1,200 บาท/วัน',
+      numpositions: 2,
+      contactInfo: 'hr@constructionpro.co.th',
+      educationlevel: 'BACHELOR' as const,
+      status: 'APPROVED' as const,
+      userEmail: 'alumni.2020@sut-eng.ac.th',
+      jobType: 'PART_TIME' as const,
+      companyName: 'Construction Pro',
+      companyAddress: '101 ถ.มิตรภาพ อ.เมือง จ.ขอนแก่น 40000',
+      JobPosterPath: '/uploads/jobs/1768465320577_Screenshot_2025-10-31_204952.png',
+    },
+  ];
+
+  for (const job of jobPostingsData) {
+    const userId = userMap[job.userEmail]?.id;
+    if (!userId) {
+      console.log(`⚠️ User ${job.userEmail} not found, skipping job: ${job.title}`);
+      continue;
+    }
+
+    // Get JobType
+    const jobType = await prisma.jobType.findUnique({
+      where: { typename: job.jobType }
+    });
+
+    // Check if job already exists
+    const existingJob = await prisma.jobPosting.findFirst({
+      where: { title: job.title, userId }
+    });
+
+    if (!existingJob) {
+      // Create JobPosting first
+      const newJob = await prisma.jobPosting.create({
+        data: {
+          title: job.title,
+          namejob: job.namejob,
+          position: job.position,
+          qualification: job.qualification,
+          location: job.location,
+          salarydetail: job.salarydetail,
+          numpositions: job.numpositions,
+          contactInfo: job.contactInfo,
+          educationlevel: job.educationlevel,
+          status: job.status,
+          userId: userId,
+          jobtypeId: jobType?.id,
+          JobPosterPath: job.JobPosterPath,
+        }
+      });
+
+      // Then create Company linked to this JobPosting
+      await prisma.company.create({
+        data: {
+          companyname: job.companyName,
+          companyaddress: job.companyAddress,
+          CompanyLogoPath: job.CompanyLogoPath,
+          CompanyPicturePath: job.CompanyPicturePath,
+          jobId: newJob.id,
+        }
+      });
+
+      console.log(`   + Created job: ${job.title}`);
+    } else {
+      console.log(`   ↻ Job exists: ${job.title}`);
+    }
+  }
+  console.log('✅ Seeded job postings');
+
+  // -----------------------------
   //  CATEGORY (Forum Categories)
   // -----------------------------
   const categoryData = [
@@ -324,6 +455,149 @@ async function main() {
     }
   }
   console.log('✅ Seeded forum categories');
+
+  // -----------------------------
+  //  TOPICS (กระทู้)
+  // -----------------------------
+  const topicsData = [
+    {
+      title: 'แนะนำตัว! มาทำความรู้จักกันหน่อยครับ',
+      content: 'สวัสดีครับ ผมเป็นศิษย์เก่าวิศวกรรมคอมพิวเตอร์ รุ่น 18 ตอนนี้ทำงานเป็น Software Engineer ที่บริษัทแห่งหนึ่งครับ มาแนะนำตัวกันหน่อยครับ ใครเป็นรุ่นไหน ทำงานอะไรกันบ้าง?',
+      categoryName: 'ทั่วไป',
+      userEmail: 'alumni.2018@sut-eng.ac.th',
+    },
+    {
+      title: 'ถามเรื่องการเรียนต่อ ป.โท ที่ต่างประเทศ',
+      content: 'มีใครมีประสบการณ์เรียนต่อ ป.โท ที่ต่างประเทศบ้างครับ? อยากทราบเรื่องค่าใช้จ่าย การเตรียมตัว และทุนต่างๆ ครับ ขอบคุณล่วงหน้าครับ!',
+      categoryName: 'การศึกษา',
+      userEmail: 'b6631345@g.sut.ac.th',
+    },
+    {
+      title: 'แชร์ประสบการณ์ใช้ AI ในการทำงาน',
+      content: 'สมัยนี้ AI มาแรงมาก อยากถามเพื่อนๆ ว่าใช้ AI tools อะไรบ้างในการทำงาน? ผมใช้ ChatGPT และ GitHub Copilot ช่วยเขียนโค้ดครับ ทำให้ทำงานได้เร็วขึ้นมากเลย',
+      categoryName: 'เทคโนโลยี',
+      userEmail: 'alumni.2015@sut-eng.ac.th',
+    },
+    {
+      title: 'ข่าวดี! งาน Reunion คณะวิศวกรรมศาสตร์ 2026',
+      content: 'สวัสดีครับพี่น้องชาววิศวะ! ปีนี้จะมีงาน Reunion ครั้งใหญ่ของคณะวิศวกรรมศาสตร์ จัดขึ้นวันที่ 15 มีนาคม 2569 ที่หอประชุมมหาวิทยาลัย มาเจอกันครับ!',
+      categoryName: 'ข่าวสาร',
+      userEmail: 'admin@sut-eng.ac.th',
+    },
+    {
+      title: 'ใครสนใจเล่นฟุตบอลบ้างครับ?',
+      content: 'กลุ่มศิษย์เก่าวิศวะจัดตั้งทีมฟุตบอลขึ้นมาครับ เล่นกันทุกวันเสาร์ตอนเย็น ที่สนามฟุตบอล มทส. ใครสนใจมาร่วมออกกำลังกายได้เลยนะครับ',
+      categoryName: 'กีฬา',
+      userEmail: 'alumni.2020@sut-eng.ac.th',
+    },
+    {
+      title: 'มทส. สุดเจ๋ง! กวาด 3 รางวัลสหกิจศึกษาดีเด่นระดับชาติ ตอกย้ำคุณภาพการศึกษาเชิงบูรณาการ (CWIE) แห่งปี 2567 มหาวิทยาลัยเทคโนโลยีสุรนารี (มทส.) สร้างความภาคภูมิใจครั้งใหญ่ให้กับชาวมหาวิทยาลัยและประเทศชาติอีกครั้ง ด้วยการคว้า 3 รางวัลอันทรงเกียรติ จากการประกวดผลงาน สหกิจศึกษาและการศึกษาเชิงบูรณาการกับการทำงาน (Cooperative and Work-Integrated Education: CWIE) ดีเด่นระดับชาติ ประจำปี พ.ศ. 2567',
+      content: `ความสำเร็จครั้งนี้ถือเป็นเครื่องพิสูจน์ถึงความมุ่งมั่นและวิสัยทัศน์ของ มทส. ที่ให้ความสำคัญกับการจัดการศึกษาที่เน้นการเรียนรู้จากการปฏิบัติงานจริง 
+      (Work-Integrated Learning) ซึ่งเป็นหัวใจสำคัญของหลักสูตรสหกิจศึกษามาตั้งแต่ก่อตั้งมหาวิทยาลัย โดยการศึกษาแบบ CWIE ของ มทส. 
+      มุ่งเน้นการผลิตบัณฑิตให้มี "สมรรถนะสูง" (High Competency) และ "พร้อมใช้" (Work Ready) ตอบโจทย์ความต้องการของภาคอุตสาหกรรมและตลาดแรงงานยุคใหม่ได้อย่างแท้จริง
+      รางวัลที่ได้รับครอบคลุมหลายมิติ สะท้อนถึงความเข้มแข็งของการดำเนินงานแบบองค์รวม ตั้งแต่ระดับนักศึกษา คณาจารย์นิเทศงาน 
+      ไปจนถึงสถานประกอบการที่ให้ความร่วมมือ ซึ่งรวมถึงรางวัลในประเภทสำคัญ เช่น:
+
+      นักศึกษา CWIE ดีเด่น (ด้านวิทยาศาสตร์และเทคโนโลยี)
+
+      สถานประกอบการขนาดกลางดำเนินการ CWIE ดีเด่น
+      สถานศึกษาดำเนินการ CWIE นานาชาติ ดีเด่น (อ้างอิงจากข้อมูลความสำเร็จต่อเนื่องของ มทส. ในปี 2567/2568)
+      การคว้า 3 รางวัลระดับชาติในครั้งนี้ ไม่เพียงแต่เป็นเกียรติประวัติของมหาวิทยาลัยเท่านั้น 
+
+      แต่ยังเป็นแรงผลักดันสำคัญในการพัฒนาหลักสูตรและรูปแบบการเรียนการสอนแบบ CWIE ให้ก้าวหน้ายิ่งขึ้น เพื่อสร้างบัณฑิตที่สามารถเป็นกำลังสำคัญในการขับเคลื่อนเศรษฐกิจ สังคม และนวัตกรรมของประเทศได้อย่างยั่งยืน`,
+      categoryName: 'การศึกษา',
+      userEmail: 'admin@sut-eng.ac.th',
+      topicImage: '/uploads/talk/Screenshot 2026-01-16 170128.png',
+    },
+  ];
+
+  // Get all categories for mapping
+  const allCategories = await prisma.category.findMany();
+  const categoryMap = Object.fromEntries(
+    allCategories.map(c => [c.categoryname, c.id])
+  );
+
+  for (const topic of topicsData) {
+    const userId = userMap[topic.userEmail]?.id;
+    const categoryId = categoryMap[topic.categoryName];
+
+    if (!userId) {
+      console.log(`⚠️ User ${topic.userEmail} not found, skipping topic: ${topic.title}`);
+      continue;
+    }
+
+    if (!categoryId) {
+      console.log(`⚠️ Category ${topic.categoryName} not found, skipping topic: ${topic.title}`);
+      continue;
+    }
+
+    const existingTopic = await prisma.topic.findFirst({
+      where: { title: topic.title, user_id: userId }
+    });
+
+    if (!existingTopic) {
+      await prisma.topic.create({
+        data: {
+          title: topic.title,
+          content: topic.content,
+          user_id: userId,
+          category_id: categoryId,
+          status: 'ACTIVE',
+          topicImage: (topic as any).topicImage || null, // Map topicImage field
+        }
+      });
+      console.log(`   + Created topic: ${topic.title.substring(0, 30)}...`);
+    } else {
+      console.log(`   ↻ Topic exists: ${topic.title.substring(0, 30)}...`);
+    }
+  }
+  console.log('✅ Seeded forum topics');
+
+  // -----------------------------
+  //  SEED COMMENTS FOR SPECIFIC TOPIC (มทส. สุดเจ๋ง!)
+  // -----------------------------
+  const targetTopicTitleStart = 'มทส. สุดเจ๋ง! กวาด 3 รางวัลสหกิจศึกษาดีเด่นระดับชาติ';
+  const targetTopic = await prisma.topic.findFirst({
+    where: {
+      title: {
+        startsWith: targetTopicTitleStart
+      }
+    }
+  });
+
+  if (targetTopic) {
+    const commentsToSeed = [
+      { content: 'สุดยอดเลยครับ มทส. ของเรา!', userEmail: 'alumni.2018@sut-eng.ac.th' },
+      { content: 'ขอแสดงความยินดีกับน้องๆ และอาจารย์ทุกท่านครับ', userEmail: 'b6631345@g.sut.ac.th' }
+    ];
+
+    for (const comment of commentsToSeed) {
+      const commenterId = userMap[comment.userEmail]?.id;
+      if (commenterId) {
+        // Check duplications optionally or just create
+        const existingComment = await prisma.comment.findFirst({
+          where: {
+            topic_id: targetTopic.id,
+            user_id: commenterId,
+            content: comment.content
+          }
+        });
+
+        if (!existingComment) {
+          await prisma.comment.create({
+            data: {
+              content: comment.content,
+              topic_id: targetTopic.id,
+              user_id: commenterId,
+              status: 'ACTIVE'
+            }
+          });
+        }
+      }
+    }
+    console.log(`✅ Seeded comments for topic: ${targetTopic.title.substring(0, 20)}...`);
+  }
+
   // -----------------------------
   // 4) SOUVENIR ITEMS (จัดหมวดใหม่)
   // -----------------------------
@@ -455,7 +729,7 @@ async function main() {
 
   type BookingFormKey = `${EventType}|${string}`;
   const bookingFormMap = new Map<BookingFormKey, number>();
-  
+
   for (const form of bookingFormsData) {
     const saved = await prisma.bookingForm.upsert({
       where: { Type_StartDate: { Type: form.Type!, StartDate: form.StartDate! } },
@@ -495,77 +769,77 @@ async function main() {
     bookingFormKey: BookingFormKey | null;
     souvenirSku: string | null;
   }> = [
-    {
-      TitleName: "SUT CHEERLEADERS CLUB",
-      Description:
-        "ขอแสดงความยินดีกับ ชมรมเชียร์ลีดเดอร์ มทส. SUT CHEERLEADERS CLUB ได้รับราวัลจากการแข่งขันเชียร์ลีดเดอร์ชิงถ้วยพระราชทานฯ ครั้งที่ 21 ประจำปี 2568",
-      categories: ContentCategoryType.NEWS,
-      Booking: Option.NOT,
-      Userid: adminId,
-      bookingFormKey: null,
-      souvenirSku: null,
-    },
-    {
-      TitleName: "พิธิมอบหมวกนักศึกษาพยาบาล มทส.",
-      Description:
-        "มทส. จัดพิธีมอบหมวก เข็มสัญลักษณ์ และตะเกียงไนติงเกล ให้กับนักศึกษาพยาบาล รุ่นที่ 16 ประจำปีการศึกษา 2568",
-      categories: ContentCategoryType.NEWS,
-      Booking: Option.NOT,
-      Userid: adminId,
-      bookingFormKey: null,
-      souvenirSku: null,
-    },
-    {
-      TitleName: "DSA MASCOT CONTENT",
-      Description:
-        "ขอเชิญชวนนักศึกษา ผู้เรียน และศิษย์เก่า มทส. ทุกท่านร่วมโหวตผลงานผู้เข้าประกวด พร้อมอ่านแนวคิดการออกแบบ ในกิจกรรม“DSA Mascot Contest”",
-      categories: ContentCategoryType.NEWS,
-      Booking: Option.NOT,
-      Userid: adminId,
-      bookingFormKey: null,
-      souvenirSku: null,
-    },
-    {
-      TitleName: "การแต่งตั้งให้ดำรงตำแหน่งรักษาการแทนอธิการบดี มทส.",
-      Description:
-        "มหาวิทยาลัยเทคโนโลยีสุรนารี ประกาศแต่งตั้งคณะผู้บริหารรักษาการชุดใหม่ *มีผลตั้งแต่วันที่ 15 พฤศจิกายน 2568 เป็นต้นไป",
-      categories: ContentCategoryType.NEWS,
-      Booking: Option.NOT,
-      Userid: adminId,
-      bookingFormKey: null,
-      souvenirSku: null,
-    },
-    {
-      TitleName: "IESUT FAMILY 2025",
-      Description:
-        "จากวันนั้นถึงวันนี้...ความผูกพัน IE มทส ไม่เคยจางหาย #IESUTFamily2025 #ย้อนวัยIEมทส #คืนสู่เหย้าIEสุรนารี #รวมพลชาวเลือดสีน้ำตาล",
-      categories: ContentCategoryType.ACTIVITY,
-      Booking: Option.HAVE,
-      Userid: adminId,
-      bookingFormKey: `${EventType.WORKSHOP}|2025-06-01T09:00:00.000Z` as BookingFormKey,
-      souvenirSku: "CAP-ENGI-2025", // ผูกกับหมวก
-    },
-    {
-      TitleName: "ENGi Research to Marget",
-      Description:
-        "โครงการ เส้นทางสู่นวัตวณิชย์ วิศวกรรม มทส. หรือ ENGi R2M (Research to Market) ครั้งที่ 1",
-      categories: ContentCategoryType.ACTIVITY,
-      Booking: Option.HAVE,
-      Userid: adminId,
-      bookingFormKey: `${EventType.REUNION}|2025-03-15T09:00:00.000Z` as BookingFormKey,
-      souvenirSku: "BROOCH-ENGI-2025", // ผูกกับเข็มกลัด
-    },
-    {
-      TitleName: "SUT GLOBAL ENTREPRENEURSHIP CAMP 2026",
-      Description:
-        "Be brave to try. Be proud to grow. Be part of GEC2026 !Got the spirit to try, learn, and make new international friends? This camp is for YOU!",
-      categories: ContentCategoryType.NEWS,
-      Booking: Option.NOT,
-      Userid: adminId,
-      bookingFormKey: null,
-      souvenirSku: null,
-    },
-  ];
+      {
+        TitleName: "SUT CHEERLEADERS CLUB",
+        Description:
+          "ขอแสดงความยินดีกับ ชมรมเชียร์ลีดเดอร์ มทส. SUT CHEERLEADERS CLUB ได้รับราวัลจากการแข่งขันเชียร์ลีดเดอร์ชิงถ้วยพระราชทานฯ ครั้งที่ 21 ประจำปี 2568",
+        categories: ContentCategoryType.NEWS,
+        Booking: Option.NOT,
+        Userid: adminId,
+        bookingFormKey: null,
+        souvenirSku: null,
+      },
+      {
+        TitleName: "พิธิมอบหมวกนักศึกษาพยาบาล มทส.",
+        Description:
+          "มทส. จัดพิธีมอบหมวก เข็มสัญลักษณ์ และตะเกียงไนติงเกล ให้กับนักศึกษาพยาบาล รุ่นที่ 16 ประจำปีการศึกษา 2568",
+        categories: ContentCategoryType.NEWS,
+        Booking: Option.NOT,
+        Userid: adminId,
+        bookingFormKey: null,
+        souvenirSku: null,
+      },
+      {
+        TitleName: "DSA MASCOT CONTENT",
+        Description:
+          "ขอเชิญชวนนักศึกษา ผู้เรียน และศิษย์เก่า มทส. ทุกท่านร่วมโหวตผลงานผู้เข้าประกวด พร้อมอ่านแนวคิดการออกแบบ ในกิจกรรม“DSA Mascot Contest”",
+        categories: ContentCategoryType.NEWS,
+        Booking: Option.NOT,
+        Userid: adminId,
+        bookingFormKey: null,
+        souvenirSku: null,
+      },
+      {
+        TitleName: "การแต่งตั้งให้ดำรงตำแหน่งรักษาการแทนอธิการบดี มทส.",
+        Description:
+          "มหาวิทยาลัยเทคโนโลยีสุรนารี ประกาศแต่งตั้งคณะผู้บริหารรักษาการชุดใหม่ *มีผลตั้งแต่วันที่ 15 พฤศจิกายน 2568 เป็นต้นไป",
+        categories: ContentCategoryType.NEWS,
+        Booking: Option.NOT,
+        Userid: adminId,
+        bookingFormKey: null,
+        souvenirSku: null,
+      },
+      {
+        TitleName: "IESUT FAMILY 2025",
+        Description:
+          "จากวันนั้นถึงวันนี้...ความผูกพัน IE มทส ไม่เคยจางหาย #IESUTFamily2025 #ย้อนวัยIEมทส #คืนสู่เหย้าIEสุรนารี #รวมพลชาวเลือดสีน้ำตาล",
+        categories: ContentCategoryType.ACTIVITY,
+        Booking: Option.HAVE,
+        Userid: adminId,
+        bookingFormKey: `${EventType.WORKSHOP}|2025-06-01T09:00:00.000Z` as BookingFormKey,
+        souvenirSku: "CAP-ENGI-2025", // ผูกกับหมวก
+      },
+      {
+        TitleName: "ENGi Research to Marget",
+        Description:
+          "โครงการ เส้นทางสู่นวัตวณิชย์ วิศวกรรม มทส. หรือ ENGi R2M (Research to Market) ครั้งที่ 1",
+        categories: ContentCategoryType.ACTIVITY,
+        Booking: Option.HAVE,
+        Userid: adminId,
+        bookingFormKey: `${EventType.REUNION}|2025-03-15T09:00:00.000Z` as BookingFormKey,
+        souvenirSku: "BROOCH-ENGI-2025", // ผูกกับเข็มกลัด
+      },
+      {
+        TitleName: "SUT GLOBAL ENTREPRENEURSHIP CAMP 2026",
+        Description:
+          "Be brave to try. Be proud to grow. Be part of GEC2026 !Got the spirit to try, learn, and make new international friends? This camp is for YOU!",
+        categories: ContentCategoryType.NEWS,
+        Booking: Option.NOT,
+        Userid: adminId,
+        bookingFormKey: null,
+        souvenirSku: null,
+      },
+    ];
 
   for (const c of contentData) {
     const BookingFormID = c.bookingFormKey
@@ -574,8 +848,8 @@ async function main() {
 
     let souvenirId = null;
     if (c.souvenirSku) {
-        const item = await prisma.souvenirItem.findUnique({ where: { sku: c.souvenirSku }});
-        if (item) souvenirId = item.id;
+      const item = await prisma.souvenirItem.findUnique({ where: { sku: c.souvenirSku } });
+      if (item) souvenirId = item.id;
     }
 
     await prisma.content.upsert({
@@ -648,7 +922,7 @@ async function main() {
       isActive: true,
     },
     {
-      methodName: PaymentMethodType.BANKTRANSFER, 
+      methodName: PaymentMethodType.BANKTRANSFER,
       accountNumber: "0943976007",
       provider: "SUT K-Bank",
       isActive: true,
@@ -683,7 +957,7 @@ async function main() {
         },
       });
     }
-    
+
     // เก็บตัวแปรไว้ใช้เทส Transaction
     if (pm.methodName === PaymentMethodType.BANKTRANSFER) {
       payMethodForTest = record;
@@ -691,7 +965,7 @@ async function main() {
   }
 
   if (!payMethodForTest) throw new Error("Seed Error: BANK_TRANSFER method missing");
-  const payMethod = payMethodForTest; 
+  const payMethod = payMethodForTest;
 
   console.log("✅ Seeded all payment methods");
 
@@ -700,14 +974,14 @@ async function main() {
     {
       title: "กองทุนกลางสมาคมศิษย์เก่าวิศวกรรมศาสตร์",
       description: "กองทุนหลักเพื่อบริหารจัดการและสนับสนุนกิจกรรมต่างๆ ของคณะ",
-      goalAmount: 1000000, 
+      goalAmount: 1000000,
       startDate: new Date("2025-01-01T00:00:00Z"),
       endDate: new Date("2026-12-31T23:59:59Z"),
       projectType: DonationProjectType.CENTRAL,
       ownerName: "สมาคมศิษย์เก่า",
       contact: "044-223-344",
       posterUrl: "/uploads/posters/1766588375462-3ac8382dfe3a.png",
-      skuToLink: "BOTTLE-ENGI-2025" 
+      skuToLink: "BOTTLE-ENGI-2025"
     },
     {
       title: "โครงการทุนการศึกษา ENGI 2026",
@@ -847,16 +1121,16 @@ async function main() {
   // ---------------------------------------------------------
   // 5.3 Prepare Test User & Project for Transaction
   // ---------------------------------------------------------
-  
+
   const testUser = await prisma.user.findFirst({
     where: { email: "b6631345@g.sut.ac.th" },
   });
   if (!testUser) throw new Error("Test user not found");
 
   const targetProject = await prisma.donationProject.findFirst({
-    where: { projectType: DonationProjectType.CENTRAL } 
+    where: { projectType: DonationProjectType.CENTRAL }
   });
-  
+
   if (!targetProject) {
     console.log("⚠️ Skipping transaction seed: Central Project not found.");
   } else {
@@ -903,7 +1177,7 @@ async function main() {
 
       // 5.7 Increment Project Amount
       await prisma.donationProject.update({
-        where: { id: targetProject.id }, 
+        where: { id: targetProject.id },
         data: { currentAmount: { increment: 500 } },
       });
 
@@ -914,7 +1188,7 @@ async function main() {
           amount: 500,
           purpose: "seed test",
           status: "completed",
-          souvenirItemId: targetProject.souvenirItemId, 
+          souvenirItemId: targetProject.souvenirItemId,
         },
       });
 
@@ -928,7 +1202,7 @@ async function main() {
             source: EntitlementSource.DONATION,
           },
         });
-        
+
         if (!existedEnt) {
           await prisma.entitlement.create({
             data: {
@@ -962,7 +1236,7 @@ async function main() {
 
   const allParticipantEmails = [
     "b6631345@g.sut.ac.th",
-    "b6610364@g.sut.ac.th", 
+    "b6610364@g.sut.ac.th",
     "student.2ndyear@g.sut.ac.th",
     "alumni.2018@sut-eng.ac.th",
     "alumni.2020@sut-eng.ac.th"
@@ -1177,7 +1451,7 @@ async function main() {
 
   // 6.3 Mark some shipments as delivered (test data for delivered status)
   console.log("\n📦 Marking some shipments as DELIVERED...");
-  
+
   const allShipments = await prisma.shipment.findMany({
     where: { status: ShipStatus.PENDING },
     take: 3 // Mark only 3 as delivered, leave rest as PENDING for testing

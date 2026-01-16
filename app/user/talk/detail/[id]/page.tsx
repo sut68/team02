@@ -8,6 +8,7 @@ import {
   Edit,
   Trash2,
   X,
+  AlertTriangle,
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 
@@ -60,6 +61,20 @@ export default function TopicDetailPage() {
   const [selectedComment, setSelectedComment] = useState<number | null>(null);
   const [deletionReason, setDeletionReason] = useState<string>('');
   const [deletingComment, setDeletingComment] = useState(false);
+
+  // New Modal State for Topic Delete
+  const [modalConfig, setModalConfig] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => { },
+    isDanger: false,
+    showCancelButton: false,
+  });
+
+  const closeModal = () => {
+    setModalConfig(prev => ({ ...prev, isOpen: false }));
+  };
 
   const loadTopic = useCallback(async () => {
     if (!params.id) return;
@@ -367,13 +382,62 @@ export default function TopicDetailPage() {
               </button>
               <div className='flex items-center space-x-2'>
                 {isTopicOwner && (
-                  <button
-                    onClick={() => router.push(`/user/talk/edit/${topic.id}`)}
-                    className='flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-orange-500 transition-colors'
-                  >
-                    <Edit className='w-5 h-5' />
-                    <span>แก้ไข</span>
-                  </button>
+                  <>
+                    <button
+                      onClick={() => router.push(`/user/talk/edit/${topic.id}`)}
+                      className='flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-orange-500 transition-colors'
+                    >
+                      <Edit className='w-5 h-5' />
+                      <span>แก้ไข</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setModalConfig({
+                          isOpen: true,
+                          title: 'ยืนยันการลบ',
+                          message: 'คุณแน่ใจว่าต้องการลบกระทู้นี้?',
+                          isDanger: true,
+                          showCancelButton: true,
+                          onConfirm: async () => {
+                            // Close confirm modal
+                            closeModal();
+
+                            try {
+                              const res = await fetch(`/api/forum/topic?id=${topic.id}`, { method: 'DELETE' });
+                              if (res.ok) {
+                                setModalConfig({
+                                  isOpen: true,
+                                  title: 'สำเร็จ',
+                                  message: 'ลบกระทู้สำเร็จ',
+                                  isDanger: false,
+                                  showCancelButton: false,
+                                  onConfirm: () => {
+                                    closeModal();
+                                    router.push('/user/talk');
+                                  }
+                                });
+                              } else {
+                                throw new Error('Failed to delete');
+                              }
+                            } catch (e) {
+                              setModalConfig({
+                                isOpen: true,
+                                title: 'เกิดข้อผิดพลาด',
+                                message: 'เกิดข้อผิดพลาดในการลบกระทู้',
+                                isDanger: true,
+                                showCancelButton: false,
+                                onConfirm: closeModal
+                              });
+                            }
+                          }
+                        });
+                      }}
+                      className='flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-red-500 transition-colors'
+                    >
+                      <Trash2 className='w-5 h-5' />
+                      <span>ลบ</span>
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -425,8 +489,8 @@ export default function TopicDetailPage() {
                   <div
                     key={comment.id}
                     className={`flex space-x-3 p-4 rounded-lg relative ${comment.status === 'DELETED'
-                        ? 'bg-red-50 border border-red-200'
-                        : 'bg-gray-50'
+                      ? 'bg-red-50 border border-red-200'
+                      : 'bg-gray-50'
                       }`}
                   >
                     <div className='flex-shrink-0'>
@@ -455,8 +519,8 @@ export default function TopicDetailPage() {
 
                       <p
                         className={`text-gray-700 whitespace-pre-wrap ${comment.status === 'DELETED'
-                            ? 'opacity-50 line-through'
-                            : ''
+                          ? 'opacity-50 line-through'
+                          : ''
                           }`}
                       >
                         {comment.content}
@@ -592,6 +656,39 @@ export default function TopicDetailPage() {
           </div>
         )}
       </div>
+
+      {modalConfig.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 p-6 text-center">
+            <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-full mb-4 bg-gray-50">
+              <div className={`p-3 rounded-full ${modalConfig.isDanger ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-[#F26522]'}`}>
+                <AlertTriangle size={32} strokeWidth={2.5} />
+              </div>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">{modalConfig.title}</h3>
+            <p className="text-gray-500 text-sm leading-relaxed mb-6">{modalConfig.message}</p>
+            <div className="flex gap-3 justify-center">
+              {modalConfig.showCancelButton && (
+                <button
+                  onClick={closeModal}
+                  className="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all"
+                >
+                  ยกเลิก
+                </button>
+              )}
+              <button
+                onClick={modalConfig.onConfirm}
+                className={`flex-1 px-4 py-2.5 text-sm font-semibold text-white rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${modalConfig.isDanger
+                  ? 'bg-red-600 hover:bg-red-700 shadow-red-500/20 hover:shadow-red-500/30'
+                  : 'bg-[#F26522] hover:bg-[#d65a1f] shadow-orange-500/20 hover:shadow-orange-500/30'
+                  }`}
+              >
+                ตกลง
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
