@@ -315,35 +315,48 @@ export default function SouvenirDonationPage() {
                   <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">{selectedProject.title}</h2>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Card 1: ทั้งหมด */}
-                    <div onClick={() => setSelectedStatus('registered')} className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${selectedStatus === 'registered' ? 'border-orange-300 shadow-xl' : 'border-orange-100 hover:shadow-lg'}`}>
-                      <div className="p-10 text-center w-full">
-                        <div className="flex items-center justify-center mb-4">
-                          <Layers className="w-8 h-8 text-orange-500" />
+                    <Card
+                      className={`cursor-pointer border-2 transition ${selectedStatus === 'registered' ? 'border-orange-300' : 'border-orange-100'}`}
+                      onClick={() => setSelectedStatus('registered')}
+                    >
+                      <CardContent className="p-8 text-center">
+                        <div className="flex justify-center mb-4">
+                          <Layers className="w-16 h-16 text-orange-500" strokeWidth={1.5} />
                         </div>
-                        <div className={`text-5xl font-bold mb-2 ${selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-800'}`}>{donations.length}</div>
-                        <div className={`font-medium ${selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-600'}`}>ทั้งหมด</div>
-                      </div>
-                    </div>
+                        <h3 className="text-base font-normal text-gray-700">ทั้งหมด</h3>
+                        <p className="text-2xl font-medium text-gray-800 mt-2">{donations.length}</p>
+                      </CardContent>
+                    </Card>
+
                     {/* Card 2: คงเหลือ */}
-                    <div onClick={() => setSelectedStatus('remaining')} className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${selectedStatus === 'remaining' ? 'border-orange-300 shadow-xl' : 'border-orange-100 hover:shadow-lg'}`}>
-                      <div className="p-10 text-center w-full">
-                        <div className="flex items-center justify-center mb-4">
-                          <RefreshCw className="w-8 h-8 text-orange-500" />
+                    <Card
+                      className={`cursor-pointer border-2 transition ${selectedStatus === 'remaining' ? 'border-orange-300' : 'border-orange-100'}`}
+                      onClick={() => setSelectedStatus('remaining')}
+                    >
+                      <CardContent className="p-8 text-center">
+                        <div className="flex justify-center mb-4">
+                          <RefreshCw className="w-16 h-16 text-orange-500" strokeWidth={1.5} />
                         </div>
-                        <div className={`text-5xl font-bold mb-2 ${selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-800'}`}>{donations.filter(d => d.shipments[0]?.status !== 'DELIVERED').length}</div>
-                        <div className={`font-medium ${selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-600'}`}>คงเหลือ</div>
-                      </div>
-                    </div>
+                        <h3 className="text-base font-normal text-gray-700">คงเหลือ</h3>
+                        <p className="text-2xl font-medium text-gray-800 mt-2">
+                          {donations.filter(d => d.shipments[0]?.status !== 'DELIVERED').length}
+                        </p>
+                      </CardContent>
+                    </Card>
+
                     {/* Card 3: จัดส่งแล้ว */}
-                    <div onClick={() => setSelectedStatus('claimed')} className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${selectedStatus === 'claimed' ? 'border-orange-300 shadow-xl' : 'border-orange-100 hover:shadow-lg'}`}>
-                      <div className="p-10 text-center w-full">
-                        <div className="flex items-center justify-center mb-4">
-                          <CheckCircle className="w-8 h-8 text-orange-500" />
+                    <Card
+                      className={`cursor-pointer border-2 transition ${selectedStatus === 'claimed' ? 'border-orange-300' : 'border-orange-100'}`}
+                      onClick={() => setSelectedStatus('claimed')}
+                    >
+                      <CardContent className="p-8 text-center">
+                        <div className="flex justify-center mb-4">
+                          <CheckCircle className="w-16 h-16 text-orange-500" strokeWidth={1.5} />
                         </div>
-                        <div className={`text-5xl font-bold mb-2 ${selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-800'}`}>{deliveredCount}</div>
-                        <div className={`font-medium ${selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-600'}`}>จัดส่งแล้ว</div>
-                      </div>
-                    </div>
+                        <h3 className="text-base font-normal text-gray-700">จัดส่งแล้ว</h3>
+                        <p className="text-2xl font-medium text-gray-800 mt-2">{deliveredCount}</p>
+                      </CardContent>
+                    </Card>
                   </div>
                 </section>
 

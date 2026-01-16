@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, MapPin, Calendar, RefreshCw, Layers, CheckCircle, Search } from "lucide-react";
+import { Card, CardContent } from "@/app/components/ui/Card";
 
 const CATEGORY_LABEL = {
   ACTIVITY: "กิจกรรม",
@@ -414,74 +415,56 @@ export default function SouvenirActivityPage() {
                     {selectedActivity.name}
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div 
+                    <Card
+                      className={`cursor-pointer border-2 transition ${
+                        selectedStatus === 'registered' ? 'border-orange-300' : 'border-orange-100'
+                      }`}
                       onClick={() => setSelectedStatus('registered')}
-                      className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
-                        selectedStatus === 'registered' 
-                          ? 'border-orange-300 shadow-xl' 
-                          : 'border-orange-100 hover:shadow-lg'
-                      }`}
                     >
-                      <div className="p-10 text-center w-full">
-                        <div className="flex items-center justify-center mb-4">
-                          <Layers className="w-8 h-8 text-orange-500" />
+                      <CardContent className="p-8 text-center">
+                        <div className="flex justify-center mb-4">
+                          <Layers className="w-16 h-16 text-orange-500" strokeWidth={1.5} />
                         </div>
-                        <div className={`text-5xl font-bold mb-2 ${
-                          selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-800'
-                        }`}>
+                        <h3 className="text-base font-normal text-gray-700">ลงทะเบียน</h3>
+                        <p className="text-2xl font-medium text-gray-800 mt-2">
                           {safeRegistrations.length}
-                        </div>
-                        <div className={`font-medium ${
-                          selectedStatus === 'registered' ? 'text-orange-500' : 'text-gray-600'
-                        }`}>ลงทะเบียน</div>
-                      </div>
-                    </div>
+                        </p>
+                      </CardContent>
+                    </Card>
 
-                    <div 
+                    <Card
+                      className={`cursor-pointer border-2 transition ${
+                        selectedStatus === 'remaining' ? 'border-orange-300' : 'border-orange-100'
+                      }`}
                       onClick={() => setSelectedStatus('remaining')}
-                      className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
-                        selectedStatus === 'remaining' 
-                          ? 'border-orange-300 shadow-xl' 
-                          : 'border-orange-100 hover:shadow-lg'
-                      }`}
                     >
-                      <div className="p-10 text-center w-full">
-                        <div className="flex items-center justify-center mb-4">
-                          <RefreshCw className="w-8 h-8 text-orange-500" />
+                      <CardContent className="p-8 text-center">
+                        <div className="flex justify-center mb-4">
+                          <RefreshCw className="w-16 h-16 text-orange-500" strokeWidth={1.5} />
                         </div>
-                        <div className={`text-5xl font-bold mb-2 ${
-                          selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-800'
-                        }`}>
+                        <h3 className="text-base font-normal text-gray-700">คงเหลือ</h3>
+                        <p className="text-2xl font-medium text-gray-800 mt-2">
                           {safeRegistrations.filter(r => !hasClaimed(r)).length}
-                        </div>
-                        <div className={`font-medium ${
-                          selectedStatus === 'remaining' ? 'text-orange-500' : 'text-gray-600'
-                        }`}>คงเหลือ</div>
-                      </div>
-                    </div>
+                        </p>
+                      </CardContent>
+                    </Card>
 
-                    <div 
-                      onClick={() => setSelectedStatus('claimed')}
-                      className={`bg-white rounded-xl shadow-md border-2 transition-all duration-300 cursor-pointer min-h-[200px] flex items-center ${
-                        selectedStatus === 'claimed' 
-                          ? 'border-orange-300 shadow-xl' 
-                          : 'border-orange-100 hover:shadow-lg'
+                    <Card
+                      className={`cursor-pointer border-2 transition ${
+                        selectedStatus === 'claimed' ? 'border-orange-300' : 'border-orange-100'
                       }`}
+                      onClick={() => setSelectedStatus('claimed')}
                     >
-                      <div className="p-10 text-center w-full">
-                        <div className="flex items-center justify-center mb-4">
-                          <CheckCircle className="w-8 h-8 text-orange-500" />
+                      <CardContent className="p-8 text-center">
+                        <div className="flex justify-center mb-4">
+                          <CheckCircle className="w-16 h-16 text-orange-500" strokeWidth={1.5} />
                         </div>
-                        <div className={`text-5xl font-bold mb-2 ${
-                          selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-800'
-                        }`}>
+                        <h3 className="text-base font-normal text-gray-700">รับของแล้ว</h3>
+                        <p className="text-2xl font-medium text-gray-800 mt-2">
                           {safeRegistrations.filter(r => hasClaimed(r)).length}
-                        </div>
-                        <div className={`font-medium ${
-                          selectedStatus === 'claimed' ? 'text-orange-500' : 'text-gray-600'
-                        }`}>รับของแล้ว</div>
-                      </div>
-                    </div>
+                        </p>
+                      </CardContent>
+                    </Card>
                   </div>
                 </section>
 
