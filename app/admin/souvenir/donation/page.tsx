@@ -433,14 +433,20 @@ export default function SouvenirDonationPage() {
                               };
 
                               const handleStatusChange = async () => {
-                                // ตรวจสอบ: ถ้าเปลี่ยนเป็น DELIVERED ต้องมี tracking number
-                                if (editState.status === 'DELIVERED' && !editState.trackingNo.trim()) {
+                                // Logic: ถ้ามีเลขแทรก ให้กำหนดสถานะที่จะบันทึกเป็น DELIVERED ทันที
+                                let statusToSave = editState.status;
+                                if (editState.trackingNo.trim().length > 0) {
+                                  statusToSave = 'DELIVERED';
+                                }
+
+                                // ตรวจสอบ: ถ้าจะบันทึกเป็น DELIVERED ต้องมี tracking number
+                                if (statusToSave === 'DELIVERED' && !editState.trackingNo.trim()) {
                                   alert('ต้องใส่เลขแทรกก่อนที่จะเปลี่ยนสถานะเป็นจัดส่งแล้ว');
                                   return;
                                 }
 
                                 // ตรวจสอบ: ห้ามเปลี่ยนจาก DELIVERED กลับไปเป็น PENDING
-                                if (status === 'DELIVERED' && editState.status !== 'DELIVERED') {
+                                if (status === 'DELIVERED' && statusToSave !== 'DELIVERED') {
                                   alert('ไม่สามารถเปลี่ยนสถานะจากจัดส่งแล้วกลับไปได้');
                                   updateEditState({ status });
                                   return;
@@ -448,11 +454,12 @@ export default function SouvenirDonationPage() {
 
                                 updateEditState({ saving: true });
                                 try {
+                                  // 1. บันทึกข้อมูล (PATCH)
                                   const res = await fetch(`/api/admin/shipments/${shipmentId}`, {
                                     method: 'PATCH',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
-                                      status: editState.status,
+                                      status: statusToSave,
                                       trackingNo: editState.trackingNo || null
                                     })
                                   });
@@ -465,17 +472,38 @@ export default function SouvenirDonationPage() {
                                   }
 
                                   updateEditState({ enabled: false, saving: false });
-                                  // Refresh data
+
+                                  // 2. ดึงข้อมูลใหม่ (Refresh Data)
                                   if (selectedProject) {
-                                    const projectRes = await fetch(`/api/donation-project/${selectedProject.id}/donations`);
+                                    console.log('Refreshing data for project:', selectedProject.id);
+                                    
+                                    // เพิ่ม timestamp เพื่อป้องกัน Browser caching และกำหนด cache: 'no-store'
+                                    const projectRes = await fetch(`/api/donation-project/${selectedProject.id}/donations?t=${Date.now()}`, {
+                                      cache: 'no-store',
+                                      headers: {
+                                        'Pragma': 'no-cache',
+                                        'Cache-Control': 'no-cache'
+                                      }
+                                    });
+
                                     if (projectRes.ok) {
                                       const data = await projectRes.json();
-                                      setDonations(data.donations || []);
+                                      
+                                      // ตรวจสอบว่าเป็น Array จริงหรือไม่ก่อน update state
+                                      if (Array.isArray(data)) {
+                                        console.log('Data received:', data.length, 'items');
+                                        setDonations(data);
+                                      } else {
+                                        console.error('Invalid data format received:', data);
+                                        // ถ้าไม่ใช่ Array (เช่น เป็น Error object) ให้ไม่ทำอะไร หรือแจ้งเตือน
+                                      }
+                                    } else {
+                                      console.error('Failed to fetch updated donations');
                                     }
                                   }
                                 } catch (error) {
                                   console.error('Error updating shipment:', error);
-                                  alert('เกิดข้อผิดพลาด');
+                                  alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
                                   updateEditState({ status, trackingNo: trackingNo || '', saving: false });
                                 }
                               };
