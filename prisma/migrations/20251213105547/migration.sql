@@ -95,7 +95,7 @@ CREATE TABLE "PaymentRecord" (
     "id" SERIAL NOT NULL,
     "paymentRefId" TEXT,
     "amount" DOUBLE PRECISION NOT NULL,
-    "transactionCode" TEXT,
+    -- "transactionCode" TEXT,
     "paymentSlipUrl" TEXT,
     "paymentStatus" "PaymentStatusType" NOT NULL DEFAULT 'CONFIRMED',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

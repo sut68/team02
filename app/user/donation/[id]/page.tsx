@@ -87,7 +87,7 @@ const DonationProgressArc: React.FC<ProgressArcProps> = ({ currentAmount, goalAm
       <div className="relative w-[220px] h-[110px] mb-2">
         <svg viewBox="0 0 200 110" className="w-full h-full overflow-visible">
 
-          <text x="100" y="30" textAnchor="middle" className="fill-[#F2994A]">
+          <text x="100" y="30" textAnchor="middle" className="fill-[#F2994A] mb-4">
             <tspan className="text-4xl font-bold">
               {formatNumber(currentAmount)}
             </tspan>
@@ -118,7 +118,7 @@ const DonationProgressArc: React.FC<ProgressArcProps> = ({ currentAmount, goalAm
             stroke="#F2994A"
             strokeWidth="20"
             strokeLinecap="round"
-            filter="url(#shadow)"
+            // filter="url(#shadow)"
           />
 
           {/* Text เปอร์เซ็นต์ ตรงกลางท้องช้าง */}

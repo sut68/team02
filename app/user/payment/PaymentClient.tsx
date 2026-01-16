@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 // แก้ไขการนำเข้า Icon บางตัวที่อาจมีปัญหา HMR และเพิ่ม CheckCircle เข้ามา
 import { 
-  Wallet, Check, Store, Landmark, CloudUpload, X, 
-  Loader2, Clock, AlertCircle, FileText, CheckCircle2 
+  Wallet, Check, Store, Landmark, X, 
+  Loader2, Clock, AlertCircle, CheckCircle2 
 } from 'lucide-react';
 import generatePayload from 'promptpay-qr';
 import qrcode from 'qrcode';
@@ -47,6 +47,7 @@ interface PaymentClientProps {
 
 export default function PaymentClient({ transaction, paymentMethods }: PaymentClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [selectedMethodId, setSelectedMethodId] = useState<number | null>(
     paymentMethods.length > 0 ? paymentMethods[0].id : null
@@ -186,8 +187,36 @@ export default function PaymentClient({ transaction, paymentMethods }: PaymentCl
     setViewState(null); setQrCodeUrl(null); setSlipFile(null); setSlipPreview(null);
   };
 
+  // เพิ่ม redirect ถ้ามาจาก booking
+  useEffect(() => {
+    if (isSuccess) {
+      const from = searchParams?.get('from');
+      if (from === 'booking') {
+        setTimeout(() => {
+          router.push('/user/booking/success');
+        }, 3000);
+      } else {
+        setTimeout(() => {
+          router.push('/user/donation');
+        }, 3000);
+      }
+    }
+  }, [isSuccess, router, searchParams]);
+
   if (isExpired) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="bg-white p-10 rounded-2xl shadow-xl text-center"><X className="w-10 h-10 text-red-600 mx-auto mb-4" /><h2 className="text-2xl font-bold mb-2">รายการหมดอายุ</h2><button onClick={() => router.push('/user/donation')} className="mt-4 px-6 py-2 bg-gray-800 text-white rounded-lg">กลับสู่หน้าแรก</button></div></div>;
-  if (isSuccess) return <div className="min-h-screen flex items-center justify-center bg-green-50"><div className="bg-white p-10 rounded-2xl shadow-xl text-center"><CheckCircle2 className="w-10 h-10 text-green-600 mx-auto mb-4" /><h2 className="text-2xl font-bold">บันทึกข้อมูลสำเร็จ!</h2><p className="text-gray-500">กำลังกลับสู่หน้ารายการ...</p></div></div>;
+  if (isSuccess) return (
+    <div className="min-h-screen flex items-center justify-center bg-green-50">
+      <div className="bg-white p-10 rounded-2xl shadow-xl text-center">
+        <CheckCircle2 className="w-10 h-10 text-green-600 mx-auto mb-4" />
+        <h2 className="text-2xl font-bold">บันทึกข้อมูลสำเร็จ!</h2>
+        <p className="text-gray-500">
+          {searchParams?.get('from') === 'booking'
+            ? 'กำลังกลับไปยังหน้าการจอง...'
+            : 'กำลังกลับสู่หน้ารายการ...'}
+        </p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-white font-sans text-gray-700 pb-10">

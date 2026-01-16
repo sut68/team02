@@ -939,7 +939,6 @@ model PaymentMethodRecord {
 model PaymentRecord {
   id Int @id @default(autoincrement())
   amount          Decimal @db.Decimal(10, 2)
-  transactionCode String?
   paymentSlipUrl  String? 
   paymentStatus PaymentStatusType 
 
