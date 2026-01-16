@@ -14,9 +14,7 @@ function getUserFromToken(req: NextRequest) {
   }
 }
 
-// -----------------------------------------------------------------------------
-// POST: ทำการโหวต
-// -----------------------------------------------------------------------------
+// POST: โหวตโครงการ
 export async function POST(req: NextRequest) {
   try {
     const user = getUserFromToken(req);
@@ -31,7 +29,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "ไม่พบรหัสโครงการ" }, { status: 400 });
     }
 
-    // 1. ดึงข้อมูลโครงการที่จะโหวต เพื่อดูว่าอยู่ "รอบงบประมาณ (Budget Round)" ไหน
     const targetProject = await prisma.projectProposal.findUnique({
       where: { id: Number(projectId) },
       include: { budgetRound: true }
@@ -41,7 +38,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "ไม่พบข้อมูลโครงการ" }, { status: 404 });
     }
 
-    // ตรวจสอบความสมบูรณ์ของข้อมูล (กันค่า null)
     if (!targetProject.budgetRoundId) {
       return NextResponse.json(
         { error: "ข้อมูลโครงการไม่สมบูรณ์ (ไม่ระบุรอบงบประมาณ)" },
@@ -54,15 +50,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "โครงการนี้ปิดรับคะแนนโหวตแล้ว" }, { status: 400 });
     }
 
+    // ตรวจสอบเงื่อนไขเวลา: 15 วันก่อนปิดรอบ
     if (targetProject.budgetRound?.endDate) {
         const endDate = new Date(targetProject.budgetRound.endDate);
         const now = new Date();
+
+        // 1. เช็คว่าหมดเวลาโหวตหรือยัง (เกินวันปิดรอบ)
+        if (now > endDate) {
+             return NextResponse.json(
+                { error: "หมดเวลาการโหวตแล้ว (รอระบบประมวลผลสรุปคะแนน)" },
+                { status: 400 }
+             );
+        }
         
-        // 15 วัน (เป็น Milliseconds)
+        // 2. เช็คว่าถึงเวลาเปิดโหวตหรือยัง (ต้องอยู่ในช่วง 15 วันก่อนปิดรอบ)
         const fifteenDaysInMs = 15 * 24 * 60 * 60 * 1000;
-        
-        // เวลาปัจจุบันต้องอยู่ในช่วง 15 วันก่อนปิดรอบ
-        // (endDate - now) ต้องน้อยกว่า 15 วัน
         const timeRemaining = endDate.getTime() - now.getTime();
 
         // ถ้าเวลายังเหลือมากกว่า 15 วัน แสดงว่ายังไม่ถึงเวลาเปิดโหวต
@@ -79,13 +81,12 @@ export async function POST(req: NextRequest) {
         }
     }
 
-    // STEP 1: เช็คประวัติการบริจาค (ตามรอบงบประมาณ)
-    // ผู้ใช้ต้องเคยบริจาคเข้ากองทุน "ในรอบงบประมาณเดียวกับโครงการนี้"
+    // เช็คประวัติการบริจาค
     const donationRecord = await prisma.budgetDonation.findFirst({
         where: {
             userId: user.userId,
             budgetRoundId: targetProject.budgetRoundId, 
-            deletedAt: null // ต้องไม่ถูกยกเลิก
+            deletedAt: null 
         }
     });
 
@@ -96,13 +97,12 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    // STEP 2: เช็คประวัติการโหวต (ตามรอบงบประมาณ)
-    // เช็คว่าเคยใช้สิทธิ์โหวต "ในรอบงบประมาณนี้" ไปหรือยัง
+    // เช็คประวัติการโหวตซ้ำ
     const existingVote = await prisma.projectVote.findFirst({
       where: {
         alumniId: user.userId,
         proposal: {
-            budgetRoundId: targetProject.budgetRoundId // ✅ Key สำคัญ: เช็คเฉพาะรอบนี้
+            budgetRoundId: targetProject.budgetRoundId 
         }
       },
     });
@@ -114,9 +114,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // STEP 3: บันทึกการโหวต
+    // บันทึกการโหวต
     const result = await prisma.$transaction(async (tx) => {
-      // 3.1 สร้าง Record การโหวต
       const newVote = await tx.projectVote.create({
         data: {
           alumniId: user.userId,
@@ -125,7 +124,6 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // 3.2 เพิ่มคะแนนให้โครงการ
       const updatedProject = await tx.projectProposal.update({
         where: { id: Number(projectId) },
         data: {
@@ -146,30 +144,27 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// -----------------------------------------------------------------------------
-// GET: เช็คสถานะการโหวต (สำหรับแสดงผลหน้าเว็บ)
-// -----------------------------------------------------------------------------
+// GET: ตรวจสอบสถานะการโหวตของผู้ใช้ + [เพิ่ม] ส่ง activeRoundId กลับไป
 export async function GET(req: NextRequest) {
   const user = getUserFromToken(req);
-  if (!user) return NextResponse.json({ voted: false });
+  // ถ้าไม่ได้ Login ก็ส่งกลับไปว่ายังไม่โหวต และไม่มี Active Round (เพื่อความปลอดภัย)
+  if (!user) return NextResponse.json({ voted: false, activeRoundId: null });
 
   try {
-    // 1. หา Budget Round ที่กำลังเปิด (OPEN) อยู่ ณ ตอนนี้
-    // (เมื่อขึ้นรอบใหม่ รอบเก่าจะ Closed ทำให้ openRounds เปลี่ยนเป็นรอบใหม่)
     const openRounds = await prisma.budgetRound.findMany({
         where: { status: 'OPEN' },
-        select: { id: true }
+        select: { id: true },
+        orderBy: { endDate: 'asc' } // เอารอบที่ใกล้ปิดที่สุดขึ้นก่อน (กรณีมีหลายรอบ)
     });
 
-    // ถ้าไม่มีรอบเปิดอยู่เลย แสดงว่ายังโหวตไม่ได้
     if (openRounds.length === 0) {
-        return NextResponse.json({ voted: false });
+        return NextResponse.json({ voted: false, activeRoundId: null });
     }
 
+    // เพิ่ม: เก็บ ID ของรอบที่กำลังเปิดอยู่ (ใช้ตัวแรกสุด)
+    const activeRoundId = openRounds[0].id;
     const openRoundIds = openRounds.map(r => r.id);
 
-    // 2. เช็คว่า "ในรอบที่เปิดอยู่นี้" ผู้ใช้โหวตไปหรือยัง
-    // (ข้อมูลการโหวตของรอบเก่าจะไม่ถูกนับรวมที่นี่ เพราะ id ไม่ตรงกับ openRoundIds)
     const vote = await prisma.projectVote.findFirst({
       where: { 
         alumniId: user.userId,
@@ -191,7 +186,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ 
       voted: !!vote, 
       votedProjectId: vote?.proposalId || null,
-      canVote: !!donation // ส่งค่านี้ไปบอกหน้าเว็บ
+      canVote: !!donation,
+      activeRoundId: activeRoundId
     });
 
   } catch (error) {

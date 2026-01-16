@@ -4,35 +4,38 @@ import React, { useState, useEffect, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { 
-  FileText, X, AlertCircle, Save, Image as ImageIcon,
-  CloudUpload, CheckCircle2 
+  FileText, X, AlertCircle, Upload, CheckCircle2 
 } from "lucide-react";
 import { PrimaryButton, CancelButton } from "@/app/components/ui/Button";
 import { Input } from "@/app/components/ui/Input";
 import { Textarea } from "@/app/components/ui/InputTextArea";
 import SuccessModal from "@/app/components/ui/SuccessModal";
+import ConfirmModal from "@/app/components/ui/ConfirmModal";
 
 function CreateBudgetReportForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const projectIdParam = searchParams.get("projectId");
 
-  // Refs สำหรับ File Input
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
-  // ถ้าไม่มี projectIdParam = Manual Mode (สร้างโครงการใหม่พร้อมรายงาน)
   const isManualMode = !projectIdParam;
 
   // --- State ---
   const [loading, setLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Modals State
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false); 
+  const [showErrorModal, setShowErrorModal] = useState(false);     
+  const [errorMessage, setErrorMessage] = useState("");            
   
   const [currentStaffId, setCurrentStaffId] = useState<number | null>(null);
 
-  // 1. ข้อมูลโครงการ
+  // Data State
   const [projectData, setProjectData] = useState({
     projectName: "",
     responsibilityUnit: "",
@@ -46,7 +49,6 @@ function CreateBudgetReportForm() {
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
 
-  // 2. ข้อมูลผู้รับผิดชอบ
   const [managerData, setManagerData] = useState({
     firstName: "",
     lastName: "",
@@ -56,32 +58,22 @@ function CreateBudgetReportForm() {
     email: "",
   });
 
-  // 3. ข้อมูลรายงานผล
   const [reportData, setReportData] = useState({
     actualExpense: "",
   });
   const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
   const [activityImages, setActivityImages] = useState<File[]>([]);
   
-  // State สำหรับ Drag & Drop UI
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [isDraggingImage, setIsDraggingImage] = useState(false);
   const [isDraggingCover, setIsDraggingCover] = useState(false);
 
-  // Errors
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // --- Styles ---
-  const headerPillStyle = "w-full bg-[#F3F4F6] rounded-lg py-3 text-center mb-6 border border-gray-200 mt-8 first:mt-0";
-  const headerTextStyle = "text-gray-600 font-semibold text-lg";
-  const labelStyle = "block text-sm text-gray-600 mb-2 ml-4 font-medium";
-  const errorTextStyle = "text-red-500 text-xs mt-1 ml-4 flex items-center animate-in fade-in slide-in-from-top-1";
-  
-  const getInputClass = (fieldName: string, isReadOnly: boolean = false) => {
-    if (isReadOnly) return "bg-gray-50 text-gray-500 border-gray-200 cursor-not-allowed focus:ring-0";
-    return errors[fieldName] 
-      ? "border-red-500 focus-visible:border-red-500 focus-visible:ring-red-500"
-      : "border-gray-300 focus-visible:border-orange-500 focus-visible:ring-orange-500";
+  // --- Helpers ---
+  const showError = (msg: string) => {
+    setErrorMessage(msg);
+    setShowErrorModal(true);
   };
 
   const formatFileSize = (bytes: number) => {
@@ -90,6 +82,35 @@ function CreateBudgetReportForm() {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  // --- Validation Helpers ---
+  
+  // 1. Validate Document (PDF/Word) - Limit 20MB
+  const validateDoc = (file: File) => {
+    if (file.size > 20 * 1024 * 1024) { 
+        showError(`ไฟล์ ${file.name} มีขนาดเกิน 20MB`); 
+        return false; 
+    }
+    const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!validTypes.includes(file.type) && !/\.(pdf|doc|docx)$/i.test(file.name)) {
+      showError(`ไฟล์ ${file.name} ไม่ถูกต้อง (รองรับเฉพาะ PDF หรือ Word)`); 
+      return false;
+    }
+    return true;
+  };
+
+  // 2. Validate Image (JPG/PNG) - Limit 5MB
+  const validateImage = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+        showError(`ไฟล์ ${file.name} ไม่ใช่รูปภาพ`);
+        return false;
+    }
+    if (file.size > 5 * 1024 * 1024) { // 5 MB Limit
+        showError(`รูปภาพ ${file.name} มีขนาดเกิน 5 MB`);
+        return false;
+    }
+    return true;
   };
 
   // --- Fetch Data ---
@@ -112,7 +133,6 @@ function CreateBudgetReportForm() {
   useEffect(() => {
     const fetchProject = async () => {
       if (!projectIdParam) return;
-      
       setLoading(true);
       try {
         const res = await fetch(`/api/project-proposal?id=${projectIdParam}`);
@@ -131,7 +151,6 @@ function CreateBudgetReportForm() {
               coverFilePath: p.coverFilePath || "",
             });
             if (p.coverFilePath) setCoverPreview(p.coverFilePath);
-
             if (p.manager) {
               setManagerData({
                 firstName: p.manager.firstName || "",
@@ -150,45 +169,39 @@ function CreateBudgetReportForm() {
         setLoading(false);
       }
     };
-
     fetchProject();
   }, [projectIdParam]);
 
-  // --- Handlers ---
+  // --- Input Handlers ---
   const handleProjectChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setProjectData(prev => ({ ...prev, [name]: value }));
     clearError(name);
   };
-
   const handleManagerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setManagerData(prev => ({ ...prev, [name]: value }));
     clearError(name);
   };
-
   const handleReportChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setReportData(prev => ({ ...prev, [name]: value }));
     clearError(name);
   };
-
   const clearError = (key: string) => {
-    if (errors[key]) {
-      setErrors(prev => {
-        const n = { ...prev };
-        delete n[key];
-        return n;
-      });
-    }
+    if (errors[key]) setErrors(prev => { const n = { ...prev }; delete n[key]; return n; });
   };
 
-  // --- File Upload Handlers ---
+  // --- Upload Handlers ---
   
-  // 1. Cover Image
+  // Cover
   const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!validateImage(file)) {
+          e.target.value = ""; // Reset input
+          return;
+      }
       const objectUrl = URL.createObjectURL(file);
       setCoverPreview(objectUrl);
       setCoverFile(file);
@@ -202,7 +215,8 @@ function CreateBudgetReportForm() {
       if (!isManualMode) return;
       
       const file = e.dataTransfer.files?.[0];
-      if (file && file.type.startsWith('image/')) {
+      if (file) {
+          if (!validateImage(file)) return;
           const objectUrl = URL.createObjectURL(file);
           setCoverPreview(objectUrl);
           setCoverFile(file);
@@ -210,44 +224,36 @@ function CreateBudgetReportForm() {
       }
   };
 
-  // 2. Validate Helper
-  const validateFile = (file: File) => {
-    if (file.size > 20 * 1024 * 1024) { 
-        alert("ขนาดไฟล์เกิน 20MB"); 
-        return false; 
-    }
-    const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    if (!validTypes.includes(file.type) && !/\.(pdf|doc|docx)$/i.test(file.name)) {
-      alert("รับเฉพาะไฟล์ PDF หรือ Word เท่านั้น"); 
-      return false;
-    }
-    return true;
-  };
-
-  // 3. Evidence & Activity
+  // Evidence
   const handleEvidenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
-      const files = Array.from(e.target.files).filter(validateFile);
-      setEvidenceFiles(prev => [...prev, ...files]);
-      clearError("evidenceFiles");
+      const files = Array.from(e.target.files).filter(validateDoc);
+      if (files.length > 0) {
+        setEvidenceFiles(prev => [...prev, ...files]);
+        clearError("evidenceFiles");
+      }
+      e.target.value = "";
     }
   };
 
+  // Activity Images
   const handleImagesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
-      const files = Array.from(e.target.files);
-      setActivityImages(prev => [...prev, ...files]);
-      clearError("activityImages");
+      const files = Array.from(e.target.files).filter(validateImage);
+      if (files.length > 0) {
+        setActivityImages(prev => [...prev, ...files]);
+        clearError("activityImages");
+      }
+      e.target.value = "";
     }
   };
 
   const removeEvidence = (index: number) => setEvidenceFiles(prev => prev.filter((_, i) => i !== index));
   const removeImage = (index: number) => setActivityImages(prev => prev.filter((_, i) => i !== index));
 
-  // --- Validation ---
+  // --- Submit Logic ---
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-
     if (isManualMode) {
       if (!projectData.projectName.trim()) newErrors.projectName = "กรุณาระบุชื่อโครงการ";
       if (!projectData.responsibilityUnit.trim()) newErrors.responsibilityUnit = "กรุณาระบุหน่วยงาน";
@@ -255,7 +261,6 @@ function CreateBudgetReportForm() {
       if (!projectData.requestedAmount || Number(projectData.requestedAmount) <= 0) newErrors.requestedAmount = "งบประมาณต้องมากกว่า 0";
       if (!projectData.projectStartDate) newErrors.projectStartDate = "ระบุวันเริ่ม";
       if (!projectData.projectEndDate) newErrors.projectEndDate = "ระบุวันสิ้นสุด";
-      
       if (!managerData.firstName.trim()) newErrors.firstName = "ระบุชื่อ";
       if (!managerData.lastName.trim()) newErrors.lastName = "ระบุนามสกุล";
       if (!managerData.department.trim()) newErrors.department = "ระบุสังกัด";
@@ -263,22 +268,23 @@ function CreateBudgetReportForm() {
       if (!managerData.phoneNumber.trim()) newErrors.phoneNumber = "ระบุเบอร์โทร";
       if (!managerData.email.trim()) newErrors.email = "ระบุอีเมล";
     }
-
     if (!reportData.actualExpense) newErrors.actualExpense = "กรุณาระบุจำนวนเงินที่ใช้จ่ายจริง";
     if (evidenceFiles.length === 0) newErrors.evidenceFiles = "กรุณาแนบไฟล์หลักฐาน";
     if (activityImages.length < 2) newErrors.activityImages = "กรุณาแนบภาพกิจกรรมอย่างน้อย 2 ภาพ";
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // --- Submit Logic ---
-  const handleSubmit = async () => {
+  const handlePreSubmit = () => {
     if (!validateForm()) {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-    
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmSubmit = async () => {
+    setShowConfirmModal(false);
     setIsSubmitting(true);
     try {
       let targetProjectId = projectIdParam ? parseInt(projectIdParam) : null;
@@ -289,18 +295,12 @@ function CreateBudgetReportForm() {
             const coverFormData = new FormData();
             coverFormData.append('file', coverFile);
             coverFormData.append('folder', 'budget/covers');
-            
-            const uploadRes = await fetch('/api/upload', {
-                method: 'POST',
-                body: coverFormData
-            });
-            
+            const uploadRes = await fetch('/api/upload', { method: 'POST', body: coverFormData });
             if (uploadRes.ok) {
                 const uploadData = await uploadRes.json();
                 uploadedCoverPath = uploadData.url;
             }
           }
-
           const projectPayload = {
             project: {
               projectName: projectData.projectName,
@@ -316,53 +316,37 @@ function CreateBudgetReportForm() {
             },
             manager: managerData
           };
-
           const projectRes = await fetch("/api/project-proposal", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(projectPayload),
           });
-
           if (!projectRes.ok) {
             const err = await projectRes.json();
             throw new Error(err.error || "สร้างโครงการไม่สำเร็จ");
           }
-
           const projectJson = await projectRes.json();
           targetProjectId = projectJson.proposal.id;
       }
 
-      if (!targetProjectId) {
-          throw new Error("ไม่พบรหัสโครงการ");
-      }
+      if (!targetProjectId) throw new Error("ไม่พบรหัสโครงการ");
 
       const formData = new FormData();
       formData.append("projectId", targetProjectId.toString());
       formData.append("actualExpense", reportData.actualExpense);
-      
-      evidenceFiles.forEach(file => {
-        formData.append("evidenceFiles", file);
-      });
-      
-      activityImages.forEach(file => {
-        formData.append("activityImages", file);
-      });
+      evidenceFiles.forEach(file => formData.append("evidenceFiles", file));
+      activityImages.forEach(file => formData.append("activityImages", file));
 
-      const reportRes = await fetch("/api/budget-report", {
-          method: "POST",
-          body: formData
-      });
-
+      const reportRes = await fetch("/api/budget-report", { method: "POST", body: formData });
       if (!reportRes.ok) {
           const err = await reportRes.json();
           throw new Error(err.error || "บันทึกรายงานไม่สำเร็จ");
       }
 
       setShowSuccessModal(true);
-
     } catch (error) {
       console.error("Submission error:", error);
-      alert("เกิดข้อผิดพลาด: " + (error as Error).message);
+      showError("เกิดข้อผิดพลาด: " + (error as Error).message);
     } finally {
       setIsSubmitting(false);
     }
@@ -373,486 +357,126 @@ function CreateBudgetReportForm() {
     router.push("/admin/budget_report");
   };
 
+  // Styles
+  const headerPillStyle = "w-full bg-[#F3F4F6] rounded-lg py-3 text-center mb-6 border border-gray-200 mt-8 first:mt-0";
+  const headerTextStyle = "text-gray-600 font-semibold text-lg";
+  const labelStyle = "block text-sm text-gray-600 mb-2 ml-4 font-medium";
+  const errorTextStyle = "text-red-500 text-xs mt-1 ml-4 flex items-center animate-in fade-in slide-in-from-top-1";
+  const getInputClass = (fieldName: string, isReadOnly: boolean = false) => {
+    if (isReadOnly) return "bg-gray-50 text-gray-500 border-gray-200 cursor-not-allowed focus:ring-0";
+    return errors[fieldName] ? "border-red-500 focus-visible:border-red-500" : "border-gray-300 focus-visible:border-orange-500";
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center text-gray-500">กำลังโหลดข้อมูล...</div>;
 
   return (
     <div className="min-h-screen bg-white py-10 px-4 font-sans relative">
-      <SuccessModal
-        show={showSuccessModal}
-        onClose={handleModalClose}
-        message="บันทึกรายงานเรียบร้อยแล้ว"
-      />
+      <SuccessModal show={showSuccessModal} onClose={handleModalClose} message="บันทึกรายงานเรียบร้อยแล้ว" />
+      <ConfirmModal isOpen={showConfirmModal} onClose={() => setShowConfirmModal(false)} onConfirm={handleConfirmSubmit} title="ยืนยันการบันทึก" message="คุณต้องการบันทึกรายงานโครงการนี้ใช่หรือไม่?" confirmLabel="ยืนยัน" cancelLabel="ยกเลิก" />
+      <ConfirmModal isOpen={showErrorModal} onClose={() => setShowErrorModal(false)} onConfirm={() => setShowErrorModal(false)} title="แจ้งเตือน" message={errorMessage} confirmLabel="ตกลง" cancelLabel="" isDanger={true} />
 
       <div className="max-w-5xl mx-auto">
-        <h1 className="text-3xl font-semibold text-gray-700 mt-4 mb-8 text-center">
-          {isManualMode ? "สร้างรายงานโครงการ (โครงการใหม่)" : "เพิ่มรายงานโครงการ"}
-        </h1>
+        <h1 className="text-3xl font-semibold text-gray-700 mt-4 mb-8 text-center">{isManualMode ? "สร้างรายงานโครงการ (โครงการใหม่)" : "เพิ่มรายงานโครงการ"}</h1>
 
-        {/* ================= SECTION 1: ข้อมูลโครงการ ================= */}
-        <div className={headerPillStyle}>
-          <h2 className={headerTextStyle}>ส่วนที่ 1: ข้อมูลโครงการ</h2>
-        </div>
-
+        {/* SECTION 1 */}
+        <div className={headerPillStyle}><h2 className={headerTextStyle}>ส่วนที่ 1: ข้อมูลโครงการ</h2></div>
         <div className="space-y-6 px-0 mb-10">
-          <div>
-            <label className={labelStyle}>ชื่อโครงการ <span className="text-red-500">*</span></label>
-            <Input
-              name="projectName"
-              value={projectData.projectName}
-              onChange={handleProjectChange}
-              readOnly={!isManualMode}
-              radius="md"
-              className={getInputClass("projectName", !isManualMode)}
-              placeholder="ระบุชื่อโครงการ"
-            />
-            {errors.projectName && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.projectName}</p>}
-          </div>
-
-          <div>
-            <label className={labelStyle}>ชื่อหน่วยงาน/องค์กร <span className="text-red-500">*</span></label>
-            <Input
-              name="responsibilityUnit"
-              value={projectData.responsibilityUnit}
-              onChange={handleProjectChange}
-              readOnly={!isManualMode}
-              radius="md"
-              className={getInputClass("responsibilityUnit", !isManualMode)}
-              placeholder="ระบุหน่วยงาน"
-            />
-             {errors.responsibilityUnit && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.responsibilityUnit}</p>}
-          </div>
-
+          <div><label className={labelStyle}>ชื่อโครงการ <span className="text-red-500">*</span></label><Input name="projectName" value={projectData.projectName} onChange={handleProjectChange} readOnly={!isManualMode} radius="md" className={getInputClass("projectName", !isManualMode)} placeholder="ระบุชื่อโครงการ" />{errors.projectName && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.projectName}</p>}</div>
+          <div><label className={labelStyle}>ชื่อหน่วยงาน/องค์กร <span className="text-red-500">*</span></label><Input name="responsibilityUnit" value={projectData.responsibilityUnit} onChange={handleProjectChange} readOnly={!isManualMode} radius="md" className={getInputClass("responsibilityUnit", !isManualMode)} placeholder="ระบุหน่วยงาน" />{errors.responsibilityUnit && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.responsibilityUnit}</p>}</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <div>
-                <label className={labelStyle}>วัตถุประสงค์ <span className="text-red-500">*</span></label>
-                <Input
-                    name="objective"
-                    value={projectData.objective}
-                    onChange={handleProjectChange}
-                    readOnly={!isManualMode}
-                    radius="md"
-                    className={getInputClass("objective", !isManualMode)}
-                />
-                <div className="flex justify-between items-start mt-1">
-                    <div className="flex-1">
-                      {errors.objective && (
-                        <p className="text-red-500 text-xs ml-4">{errors.objective}</p>
-                      )}
-                    </div>
-                    <div className="text-right text-xs text-gray-500 whitespace-nowrap ml-2">
-                      {projectData.objective ? projectData.objective.length : 0} / 100 ตัวอักษร
-                    </div>
-                  </div>
-             </div>
-             <div>
-                <label className={labelStyle}>งบประมาณที่ขอตั้งต้น (บาท) <span className="text-red-500">*</span></label>
-                <Input
-                    type="number"
-                    name="requestedAmount"
-                    value={projectData.requestedAmount}
-                    onChange={handleProjectChange}
-                    readOnly={!isManualMode}
-                    radius="md"
-                    className={getInputClass("requestedAmount", !isManualMode)}
-                    placeholder="0.00"
-                />
-                {errors.requestedAmount && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.requestedAmount}</p>}
-             </div>
+             <div><label className={labelStyle}>วัตถุประสงค์ <span className="text-red-500">*</span></label><Input name="objective" value={projectData.objective} onChange={handleProjectChange} readOnly={!isManualMode} radius="md" className={getInputClass("objective", !isManualMode)} />
+                <div className="flex justify-between items-start mt-1"><div className="flex-1">{errors.objective && (<p className="text-red-500 text-xs ml-4">{errors.objective}</p>)}</div><div className="text-right text-xs text-gray-500 whitespace-nowrap ml-2">{projectData.objective.length} / 100 ตัวอักษร</div></div></div>
+             <div><label className={labelStyle}>งบประมาณที่ขอตั้งต้น (บาท) <span className="text-red-500">*</span></label><Input type="number" name="requestedAmount" value={projectData.requestedAmount} onChange={handleProjectChange} readOnly={!isManualMode} radius="md" className={getInputClass("requestedAmount", !isManualMode)} placeholder="0.00" />{errors.requestedAmount && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.requestedAmount}</p>}</div>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label className={labelStyle}>วันเริ่มโครงการ <span className="text-red-500">*</span></label>
-                <Input
-                    type="date"
-                    name="projectStartDate"
-                    value={projectData.projectStartDate}
-                    onChange={handleProjectChange}
-                    readOnly={!isManualMode}
-                    radius="md"
-                    className={getInputClass("projectStartDate", !isManualMode)}
-                />
-                {errors.projectStartDate && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.projectStartDate}</p>}
-            </div>
-            <div>
-                <label className={labelStyle}>วันสิ้นสุดโครงการ <span className="text-red-500">*</span></label>
-                <Input
-                    type="date"
-                    name="projectEndDate"
-                    value={projectData.projectEndDate}
-                    onChange={handleProjectChange}
-                    readOnly={!isManualMode}
-                    radius="md"
-                    className={getInputClass("projectEndDate", !isManualMode)}
-                />
-                {errors.projectEndDate && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.projectEndDate}</p>}
-            </div>
+            <div><label className={labelStyle}>วันเริ่มโครงการ <span className="text-red-500">*</span></label><Input type="date" name="projectStartDate" value={projectData.projectStartDate} onChange={handleProjectChange} readOnly={!isManualMode} radius="md" className={getInputClass("projectStartDate", !isManualMode)} />{errors.projectStartDate && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.projectStartDate}</p>}</div>
+            <div><label className={labelStyle}>วันสิ้นสุดโครงการ <span className="text-red-500">*</span></label><Input type="date" name="projectEndDate" value={projectData.projectEndDate} onChange={handleProjectChange} readOnly={!isManualMode} radius="md" className={getInputClass("projectEndDate", !isManualMode)} />{errors.projectEndDate && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.projectEndDate}</p>}</div>
           </div>
+          <div><label className={labelStyle}>รายละเอียดเพิ่มเติม</label><Textarea name="description" value={projectData.description} onChange={handleProjectChange} readOnly={!isManualMode} className={`rounded-2xl min-h-[100px] ${getInputClass("description", !isManualMode)}`} placeholder="ข้อมูลเพิ่มเติม..." /><div className="text-right text-xs text-gray-500 mt-1">{projectData.description.length} / 500 ตัวอักษร</div></div>
 
-          <div>
-            <label className={labelStyle}>รายละเอียดเพิ่มเติม</label>
-            <Textarea
-                name="description"
-                value={projectData.description}
-                onChange={handleProjectChange}
-                readOnly={!isManualMode}
-                className={`rounded-2xl min-h-[100px] focus-visible:ring-0 focus-visible:ring-offset-0 border-gray-300 focus:border-gray-400 ${getInputClass("description", !isManualMode)}`}
-                placeholder="สำหรับกรอกข้อมูลเพิ่มเติม เช่น หลักการและเหตุผลของโครงการ สามารถเว้นว่างได้หรือไม่เกิน 500 ตัวอักษร"
-            />
-            <div className="text-right text-xs text-gray-500 mt-1">
-                {projectData.description ? projectData.description.length : 0} / 500 ตัวอักษร
-            </div>
-          </div>
-
-          {/* ================= ส่วนอัปโหลดภาพปก (เพิ่มปุ่มเลือกไฟล์) ================= */}
+          {/* Cover Upload */}
           {(isManualMode || coverPreview) && (
               <div>
                 <label className={labelStyle}>ภาพปกโครงการ {isManualMode && <span className="text-gray-400 font-normal">(ถ้ามี)</span>}</label>
-                
-                <div 
-                    onDragOver={(e) => { e.preventDefault(); if(isManualMode) setIsDraggingCover(true); }}
-                    onDragLeave={(e) => { e.preventDefault(); if(isManualMode) setIsDraggingCover(false); }}
-                    onDrop={handleCoverDrop}
-                    onClick={() => isManualMode && !coverPreview && coverInputRef.current?.click()}
-                    className={`mt-2 border-2 border-dashed rounded-xl p-6 transition-colors h-64 flex flex-col items-center justify-center relative overflow-hidden bg-white 
-                    ${isManualMode && !coverPreview ? 'cursor-pointer hover:border-orange-300' : ''} 
-                    ${isDraggingCover ? 'border-orange-500 bg-orange-50/50' : 'border-gray-200'}
-                    `}
-                >
-                    
+                <div onDragOver={(e) => { e.preventDefault(); if(isManualMode) setIsDraggingCover(true); }} onDragLeave={(e) => { e.preventDefault(); if(isManualMode) setIsDraggingCover(false); }} onDrop={handleCoverDrop} onClick={() => isManualMode && !coverPreview && coverInputRef.current?.click()} className={`mt-2 border rounded-xl p-6 transition-colors h-64 flex flex-col items-center justify-center relative overflow-hidden bg-white ${isManualMode && !coverPreview ? 'cursor-pointer hover:border-orange-300' : ''} ${isDraggingCover ? 'border-orange-500 bg-orange-50/50' : 'border-gray-200'}`}>
                     {coverPreview ? (
-                        <>
-                            <img src={coverPreview} alt="Cover" className="w-full h-full object-contain z-10" />
-                            {isManualMode && (
-                                <button
-                                    type="button"
-                                    onClick={(e) => { 
-                                        e.stopPropagation(); 
-                                        setCoverPreview(null); 
-                                        setCoverFile(null); 
-                                        if (coverInputRef.current) coverInputRef.current.value = "";
-                                    }}
-                                    className="absolute top-2 right-2 p-2 bg-white/90 rounded-full text-gray-500 hover:text-red-500 shadow-md transition-all"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            )}
-                        </>
+                        <><img src={coverPreview} alt="Cover" className="w-full h-full object-contain z-10" />{isManualMode && (<button type="button" onClick={(e) => { e.stopPropagation(); setCoverPreview(null); setCoverFile(null); if (coverInputRef.current) coverInputRef.current.value = ""; }} className="absolute top-2 right-2 p-2 bg-white/90 rounded-full text-gray-500 hover:text-red-500 shadow-md z-20"><X className="w-4 h-4" /></button>)}</>
                     ) : (
-                        <div className="flex flex-col items-center justify-center w-full h-full text-center">
-                            <CloudUpload className="w-10 h-10 text-gray-300 mb-3" />
-                            <p className="text-sm font-medium text-gray-600 mb-1">
-                                คลิกเพื่ออัปโหลดภาพปก หรือลากไฟล์มาวาง
-                            </p>
-                            <p className="text-xs text-gray-400 mb-4">รองรับ JPG, PNG</p>
-                            <button type="button" className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 shadow-sm pointer-events-none">
-                                เลือกรูปภาพ
-                            </button>
-                        </div>
+                        <div className="flex flex-col items-center justify-center w-full h-full text-center"><Upload className="w-10 h-10 text-gray-300 mb-3" /><p className="text-sm font-medium text-gray-600 mb-1">คลิกเพื่ออัปโหลดภาพปก หรือลากไฟล์มาวาง</p><p className="text-xs text-gray-400 mb-4">รองรับ JPG, PNG (ไม่เกิน 5 MB)</p></div>
                     )}
-                    <input 
-                        ref={coverInputRef}
-                        type="file" 
-                        className="hidden" 
-                        accept="image/*" 
-                        onChange={handleCoverUpload} 
-                        disabled={!isManualMode}
-                    />
+                    <input ref={coverInputRef} type="file" className="hidden" accept="image/*" onChange={handleCoverUpload} disabled={!isManualMode} />
                 </div>
               </div>
           )}
         </div>
 
-
-        {/* ================= SECTION 2: ข้อมูลผู้รับผิดชอบ ================= */}
-        <div className={headerPillStyle}>
-          <h2 className={headerTextStyle}>ส่วนที่ 2: ข้อมูลผู้รับผิดชอบโครงการ</h2>
-        </div>
-
+        {/* SECTION 2 */}
+        <div className={headerPillStyle}><h2 className={headerTextStyle}>ส่วนที่ 2: ข้อมูลผู้รับผิดชอบโครงการ</h2></div>
         <div className="space-y-6 px-0 mb-10">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label className={labelStyle}>ชื่อ <span className="text-red-500">*</span></label>
-                    <Input
-                        name="firstName"
-                        value={managerData.firstName}
-                        onChange={handleManagerChange}
-                        readOnly={!isManualMode}
-                        radius="md"
-                        className={getInputClass("firstName", !isManualMode)}
-                    />
-                    {errors.firstName && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.firstName}</p>}
-                </div>
-                <div>
-                    <label className={labelStyle}>นามสกุล <span className="text-red-500">*</span></label>
-                    <Input
-                        name="lastName"
-                        value={managerData.lastName}
-                        onChange={handleManagerChange}
-                        readOnly={!isManualMode}
-                        radius="md"
-                        className={getInputClass("lastName", !isManualMode)}
-                    />
-                    {errors.lastName && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.lastName}</p>}
-                </div>
+                <div><label className={labelStyle}>ชื่อ <span className="text-red-500">*</span></label><Input name="firstName" value={managerData.firstName} onChange={handleManagerChange} readOnly={!isManualMode} radius="md" className={getInputClass("firstName", !isManualMode)} />{errors.firstName && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.firstName}</p>}</div>
+                <div><label className={labelStyle}>นามสกุล <span className="text-red-500">*</span></label><Input name="lastName" value={managerData.lastName} onChange={handleManagerChange} readOnly={!isManualMode} radius="md" className={getInputClass("lastName", !isManualMode)} />{errors.lastName && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.lastName}</p>}</div>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label className={labelStyle}>สังกัด/หน่วยงาน <span className="text-red-500">*</span></label>
-                    <Input
-                        name="department"
-                        value={managerData.department}
-                        onChange={handleManagerChange}
-                        readOnly={!isManualMode}
-                        radius="md"
-                        className={getInputClass("department", !isManualMode)}
-                    />
-                     {errors.department && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.department}</p>}
-                </div>
-                <div>
-                    <label className={labelStyle}>ตำแหน่ง <span className="text-red-500">*</span></label>
-                    <Input
-                        name="position"
-                        value={managerData.position}
-                        onChange={handleManagerChange}
-                        readOnly={!isManualMode}
-                        radius="md"
-                        className={getInputClass("position", !isManualMode)}
-                    />
-                     {errors.position && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.position}</p>}
-                </div>
+                <div><label className={labelStyle}>สังกัด/หน่วยงาน <span className="text-red-500">*</span></label><Input name="department" value={managerData.department} onChange={handleManagerChange} readOnly={!isManualMode} radius="md" className={getInputClass("department", !isManualMode)} />{errors.department && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.department}</p>}</div>
+                <div><label className={labelStyle}>ตำแหน่ง <span className="text-red-500">*</span></label><Input name="position" value={managerData.position} onChange={handleManagerChange} readOnly={!isManualMode} radius="md" className={getInputClass("position", !isManualMode)} />{errors.position && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.position}</p>}</div>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label className={labelStyle}>เบอร์โทรติดต่อ <span className="text-red-500">*</span></label>
-                    <Input
-                        name="phoneNumber"
-                        value={managerData.phoneNumber}
-                        onChange={handleManagerChange}
-                        readOnly={!isManualMode}
-                        radius="md"
-                        className={getInputClass("phoneNumber", !isManualMode)}
-                    />
-                     {errors.phoneNumber && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.phoneNumber}</p>}
-                </div>
-                <div>
-                    <label className={labelStyle}>อีเมล <span className="text-red-500">*</span></label>
-                    <Input
-                        name="email"
-                        value={managerData.email}
-                        onChange={handleManagerChange}
-                        readOnly={!isManualMode}
-                        radius="md"
-                        className={getInputClass("email", !isManualMode)}
-                    />
-                     {errors.email && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.email}</p>}
-                </div>
+                <div><label className={labelStyle}>เบอร์โทรติดต่อ <span className="text-red-500">*</span></label><Input name="phoneNumber" value={managerData.phoneNumber} onChange={handleManagerChange} readOnly={!isManualMode} radius="md" className={getInputClass("phoneNumber", !isManualMode)} />{errors.phoneNumber && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.phoneNumber}</p>}</div>
+                <div><label className={labelStyle}>อีเมล <span className="text-red-500">*</span></label><Input name="email" value={managerData.email} onChange={handleManagerChange} readOnly={!isManualMode} radius="md" className={getInputClass("email", !isManualMode)} />{errors.email && <p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.email}</p>}</div>
             </div>
         </div>
 
-
-        {/* ================= SECTION 3: รายงานผล ================= */}
-        <div className={headerPillStyle}>
-          <h2 className={headerTextStyle}>ส่วนที่ 3: รายงานการใช้จ่ายและหลักฐาน</h2>
-        </div>
-
+        {/* SECTION 3 */}
+        <div className={headerPillStyle}><h2 className={headerTextStyle}>ส่วนที่ 3: รายงานการใช้จ่ายและหลักฐาน</h2></div>
         <div className="space-y-8 px-0">
-          {/* จำนวนเงิน */}
-          <div>
-            <label className={labelStyle}>
-              จำนวนเงินที่ใช้จ่ายตามจริง <span className="text-red-500">*</span>
-            </label>
-            <div className="relative max-w-md">
-              <Input
-                type="number"
-                name="actualExpense"
-                value={reportData.actualExpense}
-                onChange={handleReportChange}
-                radius="md"
-                className={`w-full text-md pr-12 ${getInputClass("actualExpense")}`}
-                placeholder="ระบุจำนวนเงิน"
-              />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium pointer-events-none">
-                บาท
-              </span>
-            </div>
-            {errors.actualExpense && (
-              <p className={errorTextStyle}>
-                <AlertCircle className="w-3 h-3 mr-1" /> {errors.actualExpense}
-              </p>
-            )}
-          </div>
+          <div><label className={labelStyle}>จำนวนเงินที่ใช้จ่ายตามจริง <span className="text-red-500">*</span></label><div className="relative max-w-md"><Input type="number" name="actualExpense" value={reportData.actualExpense} onChange={handleReportChange} radius="md" className={`w-full text-md pr-12 ${getInputClass("actualExpense")}`} placeholder="ระบุจำนวนเงิน" /><span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium pointer-events-none">บาท</span></div>{errors.actualExpense && (<p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.actualExpense}</p>)}</div>
 
-          {/* Upload เอกสาร (เพิ่มปุ่มเลือกไฟล์) */}
+          {/* Documents */}
           <div>
-            <label className={labelStyle}>
-              เอกสารแนบหลักฐาน <span className="text-gray-400 font-normal">(ไฟล์สรุปผล/ใบเสร็จ)</span> <span className="text-red-500">*</span>
-            </label>
-
-            {/* Dropzone */}
-            <div 
-                onDragOver={(e) => { e.preventDefault(); setIsDraggingFile(true); }}
-                onDragLeave={(e) => { e.preventDefault(); setIsDraggingFile(false); }}
-                onDrop={(e) => { 
-                    e.preventDefault(); 
-                    setIsDraggingFile(false); 
-                    if(e.dataTransfer.files?.length) {
-                        const files = Array.from(e.dataTransfer.files).filter(validateFile);
-                        setEvidenceFiles(prev => [...prev, ...files]);
-                        clearError("evidenceFiles");
-                    }
-                }}
-                className={`mt-2 border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isDraggingFile ? 'border-orange-500 bg-orange-50/50' : 'border-gray-200 bg-white hover:border-gray-300'} ${errors.evidenceFiles ? 'border-red-300 bg-red-50/10' : ''}`}
-                onClick={() => fileInputRef.current?.click()}
-            >
-                <CloudUpload className={`w-10 h-10 mb-3 ${errors.evidenceFiles ? 'text-red-300' : 'text-gray-300'}`} />
-                <p className="text-gray-700 font-medium mb-1">คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</p>
-                <p className="text-gray-400 text-xs mb-4">รองรับ PDF, DOCX ขนาดไม่เกิน 20 MB</p>
-                <button type="button" className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 shadow-sm pointer-events-none">
-                  เลือกไฟล์
-                </button>
+            <label className={labelStyle}>เอกสารแนบหลักฐาน <span className="text-gray-400 font-normal">(ไฟล์สรุปผล/ใบเสร็จ)</span> <span className="text-red-500">*</span></label>
+            <div onDragOver={(e) => { e.preventDefault(); setIsDraggingFile(true); }} onDragLeave={(e) => { e.preventDefault(); setIsDraggingFile(false); }} onDrop={(e) => { e.preventDefault(); setIsDraggingFile(false); if(e.dataTransfer.files?.length) { const files = Array.from(e.dataTransfer.files).filter(validateDoc); setEvidenceFiles(prev => [...prev, ...files]); clearError("evidenceFiles"); } }} className={`mt-2 border rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all cursor-pointer ${isDraggingFile ? 'border-orange-500 bg-orange-50/50' : 'border-gray-200 bg-white hover:border-gray-300'} ${errors.evidenceFiles ? 'border-red-300 bg-red-50/10' : ''}`} onClick={() => fileInputRef.current?.click()}>
+                <Upload className={`w-10 h-10 mb-3 ${errors.evidenceFiles ? 'text-red-300' : 'text-gray-300'}`} /><p className="text-gray-700 font-medium mb-1">คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</p><p className="text-gray-400 text-xs mb-4">รองรับ PDF, DOCX ขนาดไม่เกิน 20 MB</p>
                 <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx" multiple onChange={handleEvidenceUpload} />
             </div>
-
-            {/* File List */}
             {evidenceFiles.length > 0 && (
                 <div className="mt-4 space-y-3">
                   {evidenceFiles.map((file, idx) => (
                     <div key={idx} className="flex items-center justify-between p-3 border border-orange-200 rounded-xl bg-orange-50 shadow-sm animate-in fade-in slide-in-from-top-2">
-                        <div className="flex items-center gap-3 overflow-hidden">
-                            <div className="w-10 h-10 flex items-center justify-center bg-white rounded-lg border border-orange-100 shrink-0">
-                                <FileText className="w-5 h-5 text-orange-600" />
-                            </div>
-                            <div className="min-w-0">
-                                <a href={URL.createObjectURL(file)} target="_blank" className="text-sm font-semibold text-gray-800 truncate hover:text-orange-600 hover:underline" title="คลิกเพื่อดูตัวอย่าง">
-                                    {file.name}
-                                </a>
-                                <div className="flex items-center gap-2 text-xs text-gray-500">
-                                    <span>{formatFileSize(file.size)}</span>
-                                    <span className="w-1 h-1 bg-gray-300 rounded-full" />
-                                    <span className="text-orange-600 font-medium flex items-center gap-1">
-                                        <CheckCircle2 className="w-4 h-4" /> พร้อมอัปโหลด
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); removeEvidence(idx); }} 
-                            className="p-2 text-gray-400 hover:text-red-500 transition-colors"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center gap-3 overflow-hidden"><div className="w-10 h-10 flex items-center justify-center bg-white rounded-lg border border-orange-100 shrink-0"><FileText className="w-5 h-5 text-orange-600" /></div><div className="min-w-0"><a href={URL.createObjectURL(file)} target="_blank" className="text-sm font-semibold text-gray-800 truncate hover:text-orange-600 hover:underline">{file.name}</a><div className="flex items-center gap-2 text-xs text-gray-500"><span>{formatFileSize(file.size)}</span><span className="w-1 h-1 bg-gray-300 rounded-full" /><span className="text-orange-600 font-medium flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> พร้อมอัปโหลด</span></div></div></div>
+                        <button onClick={(e) => { e.stopPropagation(); removeEvidence(idx); }} className="p-2 text-gray-400 hover:text-red-500 transition-colors"><X className="w-5 h-5" /></button>
                     </div>
                   ))}
                 </div>
             )}
-            
-            {errors.evidenceFiles && evidenceFiles.length === 0 && (
-              <p className={errorTextStyle}>
-                <AlertCircle className="w-3 h-3 mr-1" /> {errors.evidenceFiles}
-              </p>
-            )}
+            {errors.evidenceFiles && evidenceFiles.length === 0 && (<p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.evidenceFiles}</p>)}
           </div>
 
-          {/* Upload รูปภาพ (เพิ่มปุ่มเลือกภาพ) */}
+          {/* Activity Images */}
           <div className="pb-4">
-            <label className={labelStyle}>
-              ภาพกิจกรรม <span className="text-gray-400 font-normal">(อย่างน้อย 2 ภาพ)</span> <span className="text-red-500">*</span>
-            </label>
-
-            {/* Upload Dropzone */}
-            <div 
-                onDragOver={(e) => { e.preventDefault(); setIsDraggingImage(true); }}
-                onDragLeave={(e) => { e.preventDefault(); setIsDraggingImage(false); }}
-                onDrop={(e) => { 
-                    e.preventDefault(); 
-                    setIsDraggingImage(false); 
-                    if(e.dataTransfer.files?.length) {
-                        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-                        setActivityImages(prev => [...prev, ...files]);
-                        clearError("activityImages");
-                    }
-                }}
-                className={`mt-2 border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all cursor-pointer mb-6 ${isDraggingImage ? 'border-orange-500 bg-orange-50/50' : 'border-gray-200 bg-white hover:border-gray-300'} ${errors.activityImages ? 'border-red-300 bg-red-50/10' : ''}`}
-                onClick={() => imageInputRef.current?.click()}
-            >
-                <CloudUpload className={`w-10 h-10 mb-3 ${errors.activityImages ? 'text-red-300' : 'text-gray-300'}`} />
-                <p className="text-gray-700 font-medium mb-1">คลิกเพื่อเลือกรูปภาพ หรือลากไฟล์มาวางที่นี่</p>
-                <p className="text-gray-400 text-xs mb-4">รองรับไฟล์ภาพ JPEG, PNG (เลือกได้หลายไฟล์)</p>
-                <button type="button" className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 shadow-sm pointer-events-none">
-                  เลือกภาพ
-                </button>
+            <label className={labelStyle}>ภาพกิจกรรม <span className="text-gray-400 font-normal">(อย่างน้อย 2 ภาพ)</span> <span className="text-red-500">*</span></label>
+            <div onDragOver={(e) => { e.preventDefault(); setIsDraggingImage(true); }} onDragLeave={(e) => { e.preventDefault(); setIsDraggingImage(false); }} onDrop={(e) => { e.preventDefault(); setIsDraggingImage(false); if(e.dataTransfer.files?.length) { const files = Array.from(e.dataTransfer.files).filter(validateImage); setActivityImages(prev => [...prev, ...files]); clearError("activityImages"); } }} className={`mt-2 border rounded-xl p-8 flex flex-col items-center justify-center text-center transition-all cursor-pointer mb-6 ${isDraggingImage ? 'border-orange-500 bg-orange-50/50' : 'border-gray-200 bg-white hover:border-gray-300'} ${errors.activityImages ? 'border-red-300 bg-red-50/10' : ''}`} onClick={() => imageInputRef.current?.click()}>
+                <Upload className={`w-10 h-10 mb-3 ${errors.activityImages ? 'text-red-300' : 'text-gray-300'}`} /><p className="text-gray-700 font-medium mb-1">คลิกเพื่อเลือกรูปภาพ หรือลากไฟล์มาวางที่นี่</p><p className="text-gray-400 text-xs mb-4">รองรับไฟล์ภาพ JPEG, PNG (ไม่เกิน 5 MB)</p>
                 <input ref={imageInputRef} type="file" className="hidden" accept="image/*" multiple onChange={handleImagesUpload} />
             </div>
-
-            {/* Image Grid */}
             <div className="grid grid-cols-2 gap-6 [&>div:last-child:nth-child(odd)]:col-span-2 [&>div:last-child:nth-child(odd)]:w-[calc(50%-0.75rem)] [&>div:last-child:nth-child(odd)]:justify-self-center">
                 {activityImages.map((file, idx) => (
                     <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border-2 border-orange-200 group shadow-sm animate-in fade-in zoom-in-95">
-                        <a href={URL.createObjectURL(file)} target="_blank" className="block w-full h-full cursor-zoom-in">
-                            <div className="relative w-full h-full">
-                                <Image
-                                    src={URL.createObjectURL(file)}
-                                    alt={`activity-${idx}`}
-                                    fill
-                                    unoptimized // จำเป็นสำหรับ local blob url
-                                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                                />
-                            </div>
-                        </a>
-                        <div className="absolute bottom-2 left-2 px-3 py-1 bg-orange-500 text-white text-xs rounded-lg shadow-md pointer-events-none">
-                            ภาพใหม่
-                        </div>
-                        <button 
-                            onClick={() => removeImage(idx)} 
-                            className="absolute top-2 right-2 p-2 bg-white/90 rounded-full text-gray-500 hover:text-red-500 shadow-md transition-all"
-                        >
-                            <X className="w-4 h-4" />
-                        </button>
+                        <a href={URL.createObjectURL(file)} target="_blank" className="block w-full h-full cursor-zoom-in"><div className="relative w-full h-full"><Image src={URL.createObjectURL(file)} alt={`activity-${idx}`} fill unoptimized className="object-cover transition-transform duration-300 group-hover:scale-105" /></div></a>
+                        <div className="absolute bottom-2 left-2 px-3 py-1 bg-orange-500 text-white text-xs rounded-lg shadow-md pointer-events-none">ภาพใหม่</div>
+                        <button onClick={() => removeImage(idx)} className="absolute top-2 right-2 p-2 bg-white/90 rounded-full text-gray-500 hover:text-red-500 shadow-md transition-all z-20"><X className="w-4 h-4" /></button>
                     </div>
                 ))}
             </div>
-
-            {errors.activityImages && (
-              <p className={errorTextStyle}>
-                <AlertCircle className="w-3 h-3 mr-1" /> {errors.activityImages}
-              </p>
-            )}
+            {errors.activityImages && (<p className={errorTextStyle}><AlertCircle className="w-3 h-3 mr-1" /> {errors.activityImages}</p>)}
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Buttons */}
         <div className="flex justify-end pt-8 pb-10 gap-4 mt-8 border-t border-gray-100">
-          <CancelButton
-            type="button"
-            onClick={() => router.back()}
-            style={{ borderRadius: "8px", width: "140px", height: "40px" }}
-          >
-            ย้อนกลับ
-          </CancelButton>
-          
-          <PrimaryButton
-            type="button"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="px-6 transition-all duration-200" 
-            style={{ borderRadius: "8px", minWidth: "140px", height: "40px" }}
-          >
-            <div className="flex items-center justify-center gap-2 whitespace-nowrap">
-              {isSubmitting ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  <span>กำลังบันทึก...</span>
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" /> 
-                  <span>บันทึก</span>
-                </>
-              )}
-            </div>
+          <CancelButton type="button" onClick={() => router.back()} style={{ borderRadius: "8px", width: "140px", height: "40px" }}>ย้อนกลับ</CancelButton>
+          <PrimaryButton type="button" onClick={handlePreSubmit} disabled={isSubmitting} className="px-6" style={{ borderRadius: "8px", minWidth: "140px", height: "40px" }}>
+            <div className="flex items-center justify-center gap-2 whitespace-nowrap">{isSubmitting ? <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /><span>กำลังบันทึก...</span></> : <span>บันทึก</span>}</div>
           </PrimaryButton>
         </div>
       </div>

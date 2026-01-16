@@ -16,6 +16,9 @@ import {
   DonationProjectType,
   ShipStatus,
   RedeemMethod,
+  RoundStatus,
+  ProjectProposalStatus,
+  SummarySubmissionStatus,
 } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
@@ -1149,6 +1152,359 @@ async function main() {
 
   console.log(`✅ Marked ${allShipments.length} shipments as DELIVERED (others remain PENDING for testing)`);
 
+  // =========================================================
+  // 7) BUDGET SYSTEM (Year 2569) - FORMAL FISCAL YEAR SEEDING
+  // =========================================================
+  console.log("\n💰 Seeding Budget System (2569) - Using Existing Data...");
+
+// -----------------------------
+  // 7) BUDGET SYSTEM (Year 2569) - FORMAL FISCAL YEAR SEEDING
+  // -----------------------------
+  console.log("\n💰 Seeding Budget System (2569) - Using Existing Data...");
+
+  // 7.1 Reuse Existing Data (Users & Central Project)
+  // MOVED UP: ดึงข้อมูล User พร้อม Profile เตรียมไว้ตรงนี้เลย (ก่อนเข้า Loop)
+  const allEligibleUsers = await prisma.user.findMany({
+    where: { 
+      role: { not: Role.ADMIN }, 
+    },
+    select: {
+        id: true,
+        email: true,
+        fullName: true,
+        phone: true,
+        address: true,
+        subdistrict: true,
+        district: true,
+        province: true,
+        postalCode: true
+    }
+  });
+
+  // ประกาศตัวแปรนี้ตรงนี้ เพื่อให้ถูกเรียกใช้ได้ทั่วทั้ง Section 7
+  const totalVoters = allEligibleUsers.length;
+  console.log(`      > 👥 Found Existing Voters: ${totalVoters} users.`);
+
+  if (totalVoters === 0) {
+    console.warn("      ⚠️ Warning: No eligible voters found from previous sections.");
+  }
+
+  // 2. ดึงกองทุนกลางที่มีอยู่แล้ว (Reuse จาก Section 5)
+  const centralProject = await prisma.donationProject.findFirst({
+    where: { projectType: DonationProjectType.CENTRAL }
+  });
+  // ... (โค้ดส่วน ProjectManager และ budgetConfig ด้านล่างปล่อยไว้เหมือนเดิม)
+  // 3. Project Manager (ส่วนนี้ของใหม่ จำเป็นต้องสร้างสำหรับ Budget System)
+  const projectManager = await prisma.projectManager.upsert({
+    where: { id: 1 }, 
+    update: {},
+    create: { 
+      firstName: "Somchai", 
+      lastName: "Manager", 
+      position: "Head of Strategic Planning",
+      email: "planning@sut.ac.th", 
+      department: "Division of Planning and Budget" 
+    }
+  });
+
+  // Mock Images สำหรับ Budget
+  const mockImages = ["/budget/upload/04.jpg", "/budget/upload/05.jpg", "/budget/upload/03.jpg"];
+
+  // 7.2 Budget Rounds & Proposals Configuration
+  const budgetConfig = [
+    { 
+      year: "2569", 
+      rounds: [
+        "รอบการพิจารณาที่ 1 ประจำปีงบประมาณ 2569", // รอบต้นปี
+        "รอบการพิจารณาที่ 2 ประจำปีงบประมาณ 2569"  // รอบระหว่างปี
+      ] 
+    }
+  ];
+
+  for (const config of budgetConfig) {
+    const { year, rounds } = config;
+    const christianYear = parseInt(year) - 543; // 2026
+
+    for (const [roundIdx, roundName] of rounds.entries()) {
+      
+      // --- A. BUDGET CALCULATION ---
+      const donationPerHead = 2000; 
+      const totalFundReal = donationPerHead * (totalVoters || 1); // ป้องกันคูณ 0 กรณีไม่มี User
+      
+      // กำหนดช่วงเวลา (Fiscal Year Logic)
+      let startYear, startMonth;
+      if (roundIdx === 0) {
+        startMonth = 10; // Oct Previous Year
+        startYear = christianYear - 1; 
+      } else {
+        startMonth = 1; // Jan Current Year
+        startYear = christianYear; 
+      }
+
+      const startDate = new Date(`${startYear}-${String(startMonth).padStart(2, '0')}-01`);
+      const endDate = new Date(new Date(startDate).setDate(startDate.getDate() + 45));
+      
+      // สถานะ: รอบ 1 = CLOSED, รอบ 2 = OPEN
+      const status = (roundIdx === 1) ? RoundStatus.OPEN : RoundStatus.CLOSED; 
+
+      // --- B. CREATE/UPDATE BUDGET ROUND ---
+      let budgetRound = await prisma.budgetRound.findFirst({ 
+        where: { fiscalYear: year, roundName: roundName } 
+      });
+
+      const roundData = { 
+        roundName, 
+        fiscalYear: year, 
+        totalBudget: totalFundReal, 
+        startDate, 
+        endDate, 
+        status: status,
+        isPublished: true, 
+        creatorId: adminId // Reuse adminId จาก Section 1
+      };
+      
+      if (!budgetRound) {
+        budgetRound = await prisma.budgetRound.create({ data: roundData });
+      } else {
+        await prisma.budgetRound.update({ where: { id: budgetRound.id }, data: roundData });
+      }
+      console.log(`      > 📅 Processed Round ${roundIdx+1}: ${status}`);
+
+      // --- C. SYNC VOTING RIGHTS (BudgetDonation) ---
+      // แจกสิทธิ์โหวตให้ User ที่มีอยู่แล้ว (ใช้ตัวแปร allEligibleUsers จากด้านบน 7.1)
+      if (totalVoters > 0) {
+        
+        // 1. ดึง Payment Method (Bank Transfer) มาเตรียมไว้เชื่อมโยง
+        const bankMethod = await prisma.paymentMethodRecord.findFirst({ 
+            where: { methodName: PaymentMethodType.BANKTRANSFER } 
+        });
+
+        // 2. วนลูปสร้างข้อมูลโดยใช้ allEligibleUsers ตัวเดิม
+        await Promise.all(allEligibleUsers.map(async (voter) => {
+          
+          const budgetDonationCreateInput = {
+            userId: voter.id, 
+            budgetRoundId: budgetRound.id, 
+            projectId: centralProject!.id, // ใส่ ! หรือเช็ค null ให้แน่ใจ
+            amount: donationPerHead, 
+            status: TransactionStatus.SUCCESS,
+            
+            // Map ข้อมูล Profile จริงลงไป
+            fullName: voter.fullName, 
+            email: voter.email, 
+            phone: voter.phone || "", 
+            address: voter.address || "", 
+            subdistrict: voter.subdistrict || "", 
+            district: voter.district || "", 
+            province: voter.province || "", 
+            postalCode: voter.postalCode || "", 
+            
+            isPublic: false,
+            
+            // สร้าง PaymentRecord คู่กันเสมอ
+            paymentRecord: {
+              create: {
+                amount: donationPerHead,
+                paymentStatus: PaymentStatusType.CONFIRMED,
+                paymentMethodId: bankMethod?.id,
+                paymentSlipUrl: "/uploads/budget/auto-seed-slip.jpg"
+              }
+            }
+          };
+
+          // ตรวจสอบว่ามีอยู่แล้วหรือไม่
+          const existing = await prisma.budgetDonation.findFirst({ 
+            where: { userId: voter.id, budgetRoundId: budgetRound.id } 
+          });
+
+          if (!existing) {
+            return prisma.budgetDonation.create({ data: budgetDonationCreateInput });
+          } else {
+            return prisma.budgetDonation.update({ 
+              where: { id: existing.id }, 
+              data: { amount: donationPerHead } 
+            });
+          }
+        }));
+      }
+
+      // --- D. PROJECTS & VOTES (Mock Data: Budget-Based Approval Logic) ---
+      if (roundIdx === 0) {
+        // [ROUND 1 - CLOSED] รอบนี้เราจะจำลองว่ามี 3 โครงการ และอนุมัติตามงบที่เหลือ
+        const projectsData = [
+          { 
+            name: "โครงการปรับปรุงห้องปฏิบัติการคอมพิวเตอร์ (Smart Lab)", 
+            desc: "จัดซื้อเครื่องคอมพิวเตอร์สมรรถนะสูง สำหรับ AI และ Data Science", 
+            unit: "สาขาวิชาวิศวกรรมคอมพิวเตอร์", 
+            budget: Math.floor(totalFundReal * 0.40), // 40% ของงบ (แพง)
+            targetPercent: 0.50 // คนโหวต 50% (ที่ 1)
+          },
+          {
+            name: "โครงการติดตั้งไฟโซลาร์เซลล์รอบหอพัก",
+            desc: "ติดตั้งโคมไฟพลังงานแสงอาทิตย์เพื่อความปลอดภัยในจุดเสี่ยง",
+            unit: "ส่วนอาคารสถานที่",
+            budget: Math.floor(totalFundReal * 0.30), // 30% ของงบ
+            targetPercent: 0.30 // คนโหวต 30% (ที่ 2)
+          },
+          {
+            name: "โครงการจัดสวนหย่อมหน้าอาคารเรียนรวม",
+            desc: "ปรับภูมิทัศน์เพิ่มพื้นที่สีเขียวและจุดพักผ่อนสำหรับนักศึกษา",
+            unit: "ส่วนภูมิทัศน์",
+            budget: Math.floor(totalFundReal * 0.40), // 40% ของงบ
+            targetPercent: 0.20 // คนโหวต 20% (ที่ 3)
+          }
+        ];
+
+        // 1. เรียงลำดับตามคะแนนโหวต (มาก -> น้อย) เพื่อพิจารณาอนุมัติ
+        // ในที่นี้ targetPercent คือตัวแทนคะแนนโหวต
+        const rankedProjects = [...projectsData].sort((a, b) => b.targetPercent - a.targetPercent);
+
+        // 2. คำนวณตัดเกรด (Approve ตามงบประมาณที่มี)
+        let currentUsedBudget = 0;
+        const projectsWithStatus = rankedProjects.map(p => {
+            // เช็คว่าถ้ารวมโครงการนี้เข้าไป งบจะเกินไหม?
+            if (currentUsedBudget + p.budget <= totalFundReal) {
+                currentUsedBudget += p.budget;
+                return { ...p, finalStatus: ProjectProposalStatus.APPROVED };
+            } else {
+                return { ...p, finalStatus: ProjectProposalStatus.CLOSE }; // งบหมด อดไป
+            }
+        });
+
+        // Shuffle voters เพื่อกระจายคนโหวตไม่ให้ซ้ำกัน
+        const shuffledAllVoters = [...allEligibleUsers].sort(() => 0.5 - Math.random());
+        let currentIndex = 0;
+
+        // 3. เริ่มสร้างข้อมูลลง Database
+        for (const [idx, p] of projectsWithStatus.entries()) {
+          
+          // Upsert Proposal
+          const proposalData = {
+            projectName: p.name, 
+            description: p.desc, 
+            requestedAmount: p.budget, 
+            responsibilityUnit: p.unit, 
+            status: p.finalStatus, 
+            budgetRoundId: budgetRound.id, 
+            managerId: projectManager.id, 
+            staffId: adminId, 
+            projectStartDate: new Date(endDate.getTime() + 86400000 * 15),
+            projectEndDate: new Date(endDate.getTime() + 86400000 * 180),
+            coverFilePath: mockImages[idx % mockImages.length], 
+            scoreTotal: 0 
+          };
+
+          const proposal = await prisma.projectProposal.upsert({
+             where: { id: -1 }, 
+             create: proposalData,
+             update: proposalData
+          }).catch(async () => {
+             const found = await prisma.projectProposal.findFirst({
+                 where: { projectName: p.name, budgetRoundId: budgetRound.id }
+             });
+             if(found) return prisma.projectProposal.update({ where: { id: found.id }, data: proposalData });
+             return prisma.projectProposal.create({ data: proposalData });
+          });
+
+          // *** SIMULATE VOTES ***
+          const voteCount = Math.floor(totalVoters * p.targetPercent);
+          const votersForThisProject = shuffledAllVoters.slice(currentIndex, currentIndex + voteCount);
+          currentIndex += voteCount;
+          
+          let actualScore = 0;
+          for (const voter of votersForThisProject) {
+             await prisma.projectVote.upsert({ 
+               where: { alumniId_proposalId: { alumniId: voter.id, proposalId: proposal.id } }, 
+               update: {}, 
+               create: { alumniId: voter.id, proposalId: proposal.id, voteWeight: 1 } 
+             });
+             actualScore++;
+          }
+          
+          // Update คะแนนรวม
+          await prisma.projectProposal.update({ where: { id: proposal.id }, data: { scoreTotal: actualScore } });
+
+          // สร้าง Report เฉพาะโครงการที่ "งบพอ" และ "อนุมัติ"
+          if (p.finalStatus === ProjectProposalStatus.APPROVED) {
+            const summaryData = { 
+              proposalId: proposal.id, 
+              status: SummarySubmissionStatus.APPROVED, 
+              submitterId: adminId, 
+              totalActualExpense: p.budget * 0.98, // ใช้จริง 98% ของที่ขอ
+              submissionDate: new Date(proposalData.projectEndDate.getTime() + 86400000), 
+              summaryFilePath: "/uploads/mock-report.pdf"
+            };
+
+            const summary = await prisma.summarySubmission.upsert({
+              where: { proposalId: proposal.id },
+              update: summaryData,
+              create: summaryData
+            });
+
+            await prisma.submissionImage.createMany({
+              data: [
+                  { submissionId: summary.id, imagePath: mockImages[0] },
+                  { submissionId: summary.id, imagePath: mockImages[1] }
+              ],
+              skipDuplicates: true
+            });
+            
+            console.log(`      > 🏆 Project "${p.name}" APPROVED (Votes: ${actualScore}, Budget Used: ${p.budget})`);
+          } else {
+            console.log(`      > ❌ Project "${p.name}" REJECTED/CLOSED (Votes: ${actualScore}, Not enough budget)`);
+          }
+        }
+      } else {
+        // [ROUND 2 - OPEN] สร้างโครงการปัจจุบันที่เปิดให้โหวตอยู่
+        const round2Projects = [
+          { 
+            name: "โครงการปรับปรุงภูมิทัศน์ลานกิจกรรม (Co-working Space)", 
+            desc: "สร้างพื้นที่เรียนรู้ภายนอกอาคาร พร้อมจุดชาร์จและ Wi-Fi สำหรับนักศึกษา", 
+            unit: "สำนักงานบริหารทรัพย์สิน", 
+            budget: Math.floor(totalFundReal * 0.50), 
+            img: mockImages[2] 
+          },
+          { 
+            name: "โครงการรถไฟฟ้าสวัสดิการ (EV Shuttle Bus)", 
+            desc: "จัดซื้อรถโดยสารพลังงานไฟฟ้า 2 คัน เพื่อรับ-ส่งภายในมหาวิทยาลัย ลดมลพิษ", 
+            unit: "ส่วนกิจการนักศึกษา", 
+            budget: Math.floor(totalFundReal * 0.45), 
+            img: mockImages[0] 
+          }
+        ];
+
+        for (const p of round2Projects) {
+          const proposalData = {
+            projectName: p.name, 
+            description: p.desc, 
+            requestedAmount: p.budget, 
+            responsibilityUnit: p.unit, 
+            status: ProjectProposalStatus.OPEN, 
+            budgetRoundId: budgetRound.id, 
+            managerId: projectManager.id, 
+            staffId: adminId, 
+            projectStartDate: new Date(endDate.getTime() + 86400000 * 30), 
+            projectEndDate: new Date(endDate.getTime() + 86400000 * 200),
+            coverFilePath: p.img, 
+            scoreTotal: 0 
+          };
+
+          // Logic เดิม: findFirst -> create/update
+          const found = await prisma.projectProposal.findFirst({
+             where: { projectName: p.name, budgetRoundId: budgetRound.id }
+          });
+          
+          if(found) {
+             await prisma.projectProposal.update({ where: { id: found.id }, data: proposalData });
+          } else {
+             await prisma.projectProposal.create({ data: proposalData });
+          }
+          
+          console.log(`      > 🗳️ Created OPEN Project: "${p.name}"`);
+        }
+      }
+    }
+  }
   console.log("\n🎉 All seed data inserted successfully.");
   console.log("\n📋 Login credentials (password: SUT@Seed2025!):");
   console.log("   • admin@sut-eng.ac.th");
