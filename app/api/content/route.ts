@@ -70,6 +70,7 @@ export async function GET(req: NextRequest) {
 // POST
 // ============================
 export async function POST(req: NextRequest) {
+  let uploadedUrls: string[] = [];
   try {
     const formData = await req.formData();
 
@@ -145,7 +146,6 @@ export async function POST(req: NextRequest) {
     // --- Save Files (upload to Azure Blob) ---
     // Upload each picture to Azure and collect returned URLs
     const picturePaths: string[] = [];
-    const uploadedUrls: string[] = [];
     for (const file of validPictureFiles) {
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
