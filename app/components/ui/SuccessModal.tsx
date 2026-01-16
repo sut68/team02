@@ -55,7 +55,7 @@ export default function SuccessModal({
         isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
       }`}>
         <div className="mb-4 flex justify-center">
-          <div className="bg-green-100 rounded-full p-3 ring-8 ring-green-50 animate-pulse">
+          <div className="bg-orange-100 rounded-full p-5 animate-pulse">
             <CheckCircle className="w-12 h-12 text-orange-600" strokeWidth={2.5} />
           </div>
         </div>
