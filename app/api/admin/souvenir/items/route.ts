@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
 
 
 // POST - สร้างของที่ระลึกใหม่
+// POST - สร้างของที่ระลึกใหม่
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -62,7 +63,10 @@ export async function POST(request: NextRequest) {
       imageUrl, 
       unit, 
       initialStock,
-      linkedBookingId, // ใช้ field ที่ schema รองรับเท่านั้น
+      active,
+      linkedType,
+      linkedEventId,
+      linkedDonationProjectId
     } = body;
 
     // Validate required fields
@@ -85,31 +89,58 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const item = await prisma.souvenirItem.create({
-      data: {
-        sku,
-        name,
-        description,
-        category,
-        imageUrl,
-        unit,
-        initialStock: initialStock || 0,
-        linkedBookingId: linkedBookingId || null,
-      },
-      include: {
-        booking: true,
-      },
+    // ใช้ Transaction เพื่อสร้างของและผูกความสัมพันธ์พร้อมกัน
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. สร้างของที่ระลึก
+      const item = await tx.souvenirItem.create({
+        data: {
+          sku,
+          name,
+          description,
+          category,
+          imageUrl,
+          unit,
+          initialStock: initialStock || 0,
+          active: active !== undefined ? active : true, // บันทึกสถานะ active
+        },
+      });
+
+      // 2. จัดการการเชื่อมโยง (Linking Logic)
+      if (linkedType === 'event' && linkedEventId) {
+        // ตรวจสอบก่อนว่ากิจกรรมนั้นมีของผูกอยู่แล้วหรือไม่
+        const targetEvent = await tx.content.findUnique({ where: { id: linkedEventId } });
+        if (targetEvent?.souvenirItemId) {
+          throw new Error('กิจกรรมนี้มีของที่ระลึกผูกอยู่แล้ว กรุณาเลือกกิจกรรมอื่น');
+        }
+        
+        // อัปเดตกิจกรรมให้ชี้มาที่ของชิ้นนี้
+        await tx.content.update({
+          where: { id: linkedEventId },
+          data: { souvenirItemId: item.id }
+        });
+
+      } else if (linkedType === 'donation' && linkedDonationProjectId) {
+        // ตรวจสอบก่อนว่าโครงการนั้นมีของผูกอยู่แล้วหรือไม่
+        const targetProject = await tx.donationProject.findUnique({ where: { id: linkedDonationProjectId } });
+        if (targetProject?.souvenirItemId) {
+           throw new Error('โครงการบริจาคนี้มีของที่ระลึกผูกอยู่แล้ว กรุณาเลือกโครงการอื่น');
+        }
+
+        // อัปเดตโครงการบริจาคให้ชี้มาที่ของชิ้นนี้
+        await tx.donationProject.update({
+          where: { id: linkedDonationProjectId },
+          data: { souvenirItemId: item.id }
+        });
+      }
+
+      return item;
     });
 
-    // ไม่สร้าง stock movement สำหรับ initialStock อีกต่อไป (initialStock เก็บใน field เดียว)
-
-    // ไม่เชื่อมโยงกับ Event หรือ Donation แบบ hardcode อีกต่อไป ใช้ schema-driven เท่านั้น
-
-    return NextResponse.json(item, { status: 201 });
-  } catch (error) {
+    return NextResponse.json(result, { status: 201 });
+  } catch (error: any) {
     console.error('Error creating souvenir item:', error);
     return NextResponse.json(
-      { error: 'Failed to create souvenir item' },
+      { error: error.message || 'Failed to create souvenir item' },
       { status: 500 }
     );
   }

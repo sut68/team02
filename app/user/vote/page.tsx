@@ -234,16 +234,16 @@ export default function VotePage() {
 
             {/* ปุ่ม CTA ไปบริจาค */}
             {!canVote && activeRoundId && votingProjects.length > 0 && (
-                <div className="md:ml-auto flex items-center gap-3 bg-blue-50 text-blue-800 px-4 py-3 rounded-lg border border-blue-100 shadow-xs">
-                    <div className="bg-blue-100 p-2 rounded-full">
+                <div className="my-4 md:ml-auto flex items-center gap-3 bg-orange-50 text-orange-800 px-4 py-3 rounded-lg border border-orange-100 shadow-xs gap-4">
+                    <div className="bg-orange-100 p-2 rounded-full">
                         <HeartHandshake className="w-5 h-5"/>
                     </div>
                     <div className="text-sm">
                         <p className="font-bold">ท่านยังไม่มีสิทธิ์โหวต</p>
                         <p className="text-xs opacity-80">กรุณาร่วมบริจาคในรอบงบประมาณนี้ก่อน</p>
                     </div>
-                    <Link href={`/user/donation/form?roundId=${activeRoundId}`}>
-                        <span className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-md transition-colors font-semibold cursor-pointer block">
+                    <Link href={`/user/donation`}>
+                        <span className="bg-orange-600 hover:bg-orange-700 text-white text-sm px-4 py-2 rounded-md transition-colors font-semibold cursor-pointer block">
                             ไปบริจาค
                         </span>
                     </Link>
@@ -324,7 +324,7 @@ export default function VotePage() {
                             if (!canVote && !userVotedId) {
                                 setModalState({
                                     type: 'ERROR',
-                                    title: "ไม่มีสิทธิ์โหวต",
+                                    title: "ไม่มีสิทธิ์",
                                     message: "กรุณาร่วมบริจาคในรอบงบประมาณนี้ก่อนทำการโหวต"
                                 });
                                 return;
@@ -343,7 +343,7 @@ export default function VotePage() {
                         ) : canVote ? (
                             "โหวต" 
                         ) : (
-                            "ไม่มีสิทธิ์โหวต"
+                            "ไม่มีสิทธิ์"
                         )}
                     </PrimaryButton>
                   </CardFooter>
@@ -375,7 +375,6 @@ export default function VotePage() {
                 <div key={round.id} className="relative mb-8 last:mb-0">
                   
                   <div className="flex items-center gap-2 mb-4 sticky top-0 bg-gray-50/95 py-3 z-10 backdrop-blur-sm">
-                    <div className="w-1.5 h-6 bg-orange-500 rounded-full"></div>
                     <h3 className="text-xl font-medium text-gray-700">
                       {round.name}
                     </h3>
